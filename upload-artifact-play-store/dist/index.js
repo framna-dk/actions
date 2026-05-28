@@ -53272,8 +53272,13 @@ async function run() {
         info(`Internal sharing URL: ${internalSharingUrl}`);
     }
     catch (error) {
-        if (error instanceof Error)
+        if (error instanceof Error) {
             setFailed(error.message);
+        }
+        else {
+            const serialized = typeof error === "object" ? JSON.stringify(error) : String(error);
+            setFailed(`Non-Error thrown: ${serialized}`);
+        }
     }
 }
 run();
