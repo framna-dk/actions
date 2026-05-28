@@ -3594,9 +3594,9 @@ var hasRequiredConstants$3;
 function requireConstants$3 () {
 	if (hasRequiredConstants$3) return constants$3;
 	hasRequiredConstants$3 = 1;
-	(function (exports$1) {
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.SPECIAL_HEADERS = exports$1.HEADER_STATE = exports$1.MINOR = exports$1.MAJOR = exports$1.CONNECTION_TOKEN_CHARS = exports$1.HEADER_CHARS = exports$1.TOKEN = exports$1.STRICT_TOKEN = exports$1.HEX = exports$1.URL_CHAR = exports$1.STRICT_URL_CHAR = exports$1.USERINFO_CHARS = exports$1.MARK = exports$1.ALPHANUM = exports$1.NUM = exports$1.HEX_MAP = exports$1.NUM_MAP = exports$1.ALPHA = exports$1.FINISH = exports$1.H_METHOD_MAP = exports$1.METHOD_MAP = exports$1.METHODS_RTSP = exports$1.METHODS_ICE = exports$1.METHODS_HTTP = exports$1.METHODS = exports$1.LENIENT_FLAGS = exports$1.FLAGS = exports$1.TYPE = exports$1.ERROR = void 0;
+	(function (exports) {
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.SPECIAL_HEADERS = exports.HEADER_STATE = exports.MINOR = exports.MAJOR = exports.CONNECTION_TOKEN_CHARS = exports.HEADER_CHARS = exports.TOKEN = exports.STRICT_TOKEN = exports.HEX = exports.URL_CHAR = exports.STRICT_URL_CHAR = exports.USERINFO_CHARS = exports.MARK = exports.ALPHANUM = exports.NUM = exports.HEX_MAP = exports.NUM_MAP = exports.ALPHA = exports.FINISH = exports.H_METHOD_MAP = exports.METHOD_MAP = exports.METHODS_RTSP = exports.METHODS_ICE = exports.METHODS_HTTP = exports.METHODS = exports.LENIENT_FLAGS = exports.FLAGS = exports.TYPE = exports.ERROR = void 0;
 		const utils_1 = requireUtils$1();
 		(function (ERROR) {
 		    ERROR[ERROR["OK"] = 0] = "OK";
@@ -3624,12 +3624,12 @@ function requireConstants$3 () {
 		    ERROR[ERROR["PAUSED_UPGRADE"] = 22] = "PAUSED_UPGRADE";
 		    ERROR[ERROR["PAUSED_H2_UPGRADE"] = 23] = "PAUSED_H2_UPGRADE";
 		    ERROR[ERROR["USER"] = 24] = "USER";
-		})(exports$1.ERROR || (exports$1.ERROR = {}));
+		})(exports.ERROR || (exports.ERROR = {}));
 		(function (TYPE) {
 		    TYPE[TYPE["BOTH"] = 0] = "BOTH";
 		    TYPE[TYPE["REQUEST"] = 1] = "REQUEST";
 		    TYPE[TYPE["RESPONSE"] = 2] = "RESPONSE";
-		})(exports$1.TYPE || (exports$1.TYPE = {}));
+		})(exports.TYPE || (exports.TYPE = {}));
 		(function (FLAGS) {
 		    FLAGS[FLAGS["CONNECTION_KEEP_ALIVE"] = 1] = "CONNECTION_KEEP_ALIVE";
 		    FLAGS[FLAGS["CONNECTION_CLOSE"] = 2] = "CONNECTION_CLOSE";
@@ -3641,12 +3641,12 @@ function requireConstants$3 () {
 		    FLAGS[FLAGS["TRAILING"] = 128] = "TRAILING";
 		    // 1 << 8 is unused
 		    FLAGS[FLAGS["TRANSFER_ENCODING"] = 512] = "TRANSFER_ENCODING";
-		})(exports$1.FLAGS || (exports$1.FLAGS = {}));
+		})(exports.FLAGS || (exports.FLAGS = {}));
 		(function (LENIENT_FLAGS) {
 		    LENIENT_FLAGS[LENIENT_FLAGS["HEADERS"] = 1] = "HEADERS";
 		    LENIENT_FLAGS[LENIENT_FLAGS["CHUNKED_LENGTH"] = 2] = "CHUNKED_LENGTH";
 		    LENIENT_FLAGS[LENIENT_FLAGS["KEEP_ALIVE"] = 4] = "KEEP_ALIVE";
-		})(exports$1.LENIENT_FLAGS || (exports$1.LENIENT_FLAGS = {}));
+		})(exports.LENIENT_FLAGS || (exports.LENIENT_FLAGS = {}));
 		var METHODS;
 		(function (METHODS) {
 		    METHODS[METHODS["DELETE"] = 0] = "DELETE";
@@ -3706,8 +3706,8 @@ function requireConstants$3 () {
 		    METHODS[METHODS["RECORD"] = 44] = "RECORD";
 		    /* RAOP */
 		    METHODS[METHODS["FLUSH"] = 45] = "FLUSH";
-		})(METHODS = exports$1.METHODS || (exports$1.METHODS = {}));
-		exports$1.METHODS_HTTP = [
+		})(METHODS = exports.METHODS || (exports.METHODS = {}));
+		exports.METHODS_HTTP = [
 		    METHODS.DELETE,
 		    METHODS.GET,
 		    METHODS.HEAD,
@@ -3745,10 +3745,10 @@ function requireConstants$3 () {
 		    // TODO(indutny): should we allow it with HTTP?
 		    METHODS.SOURCE,
 		];
-		exports$1.METHODS_ICE = [
+		exports.METHODS_ICE = [
 		    METHODS.SOURCE,
 		];
-		exports$1.METHODS_RTSP = [
+		exports.METHODS_RTSP = [
 		    METHODS.OPTIONS,
 		    METHODS.DESCRIBE,
 		    METHODS.ANNOUNCE,
@@ -3765,59 +3765,59 @@ function requireConstants$3 () {
 		    METHODS.GET,
 		    METHODS.POST,
 		];
-		exports$1.METHOD_MAP = utils_1.enumToMap(METHODS);
-		exports$1.H_METHOD_MAP = {};
-		Object.keys(exports$1.METHOD_MAP).forEach((key) => {
+		exports.METHOD_MAP = utils_1.enumToMap(METHODS);
+		exports.H_METHOD_MAP = {};
+		Object.keys(exports.METHOD_MAP).forEach((key) => {
 		    if (/^H/.test(key)) {
-		        exports$1.H_METHOD_MAP[key] = exports$1.METHOD_MAP[key];
+		        exports.H_METHOD_MAP[key] = exports.METHOD_MAP[key];
 		    }
 		});
 		(function (FINISH) {
 		    FINISH[FINISH["SAFE"] = 0] = "SAFE";
 		    FINISH[FINISH["SAFE_WITH_CB"] = 1] = "SAFE_WITH_CB";
 		    FINISH[FINISH["UNSAFE"] = 2] = "UNSAFE";
-		})(exports$1.FINISH || (exports$1.FINISH = {}));
-		exports$1.ALPHA = [];
+		})(exports.FINISH || (exports.FINISH = {}));
+		exports.ALPHA = [];
 		for (let i = 'A'.charCodeAt(0); i <= 'Z'.charCodeAt(0); i++) {
 		    // Upper case
-		    exports$1.ALPHA.push(String.fromCharCode(i));
+		    exports.ALPHA.push(String.fromCharCode(i));
 		    // Lower case
-		    exports$1.ALPHA.push(String.fromCharCode(i + 0x20));
+		    exports.ALPHA.push(String.fromCharCode(i + 0x20));
 		}
-		exports$1.NUM_MAP = {
+		exports.NUM_MAP = {
 		    0: 0, 1: 1, 2: 2, 3: 3, 4: 4,
 		    5: 5, 6: 6, 7: 7, 8: 8, 9: 9,
 		};
-		exports$1.HEX_MAP = {
+		exports.HEX_MAP = {
 		    0: 0, 1: 1, 2: 2, 3: 3, 4: 4,
 		    5: 5, 6: 6, 7: 7, 8: 8, 9: 9,
 		    A: 0XA, B: 0XB, C: 0XC, D: 0XD, E: 0XE, F: 0XF,
 		    a: 0xa, b: 0xb, c: 0xc, d: 0xd, e: 0xe, f: 0xf,
 		};
-		exports$1.NUM = [
+		exports.NUM = [
 		    '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 		];
-		exports$1.ALPHANUM = exports$1.ALPHA.concat(exports$1.NUM);
-		exports$1.MARK = ['-', '_', '.', '!', '~', '*', '\'', '(', ')'];
-		exports$1.USERINFO_CHARS = exports$1.ALPHANUM
-		    .concat(exports$1.MARK)
+		exports.ALPHANUM = exports.ALPHA.concat(exports.NUM);
+		exports.MARK = ['-', '_', '.', '!', '~', '*', '\'', '(', ')'];
+		exports.USERINFO_CHARS = exports.ALPHANUM
+		    .concat(exports.MARK)
 		    .concat(['%', ';', ':', '&', '=', '+', '$', ',']);
 		// TODO(indutny): use RFC
-		exports$1.STRICT_URL_CHAR = [
+		exports.STRICT_URL_CHAR = [
 		    '!', '"', '$', '%', '&', '\'',
 		    '(', ')', '*', '+', ',', '-', '.', '/',
 		    ':', ';', '<', '=', '>',
 		    '@', '[', '\\', ']', '^', '_',
 		    '`',
 		    '{', '|', '}', '~',
-		].concat(exports$1.ALPHANUM);
-		exports$1.URL_CHAR = exports$1.STRICT_URL_CHAR
+		].concat(exports.ALPHANUM);
+		exports.URL_CHAR = exports.STRICT_URL_CHAR
 		    .concat(['\t', '\f']);
 		// All characters with 0x80 bit set to 1
 		for (let i = 0x80; i <= 0xff; i++) {
-		    exports$1.URL_CHAR.push(i);
+		    exports.URL_CHAR.push(i);
 		}
-		exports$1.HEX = exports$1.NUM.concat(['a', 'b', 'c', 'd', 'e', 'f', 'A', 'B', 'C', 'D', 'E', 'F']);
+		exports.HEX = exports.NUM.concat(['a', 'b', 'c', 'd', 'e', 'f', 'A', 'B', 'C', 'D', 'E', 'F']);
 		/* Tokens as defined by rfc 2616. Also lowercases them.
 		 *        token       = 1*<any CHAR except CTLs or separators>
 		 *     separators     = "(" | ")" | "<" | ">" | "@"
@@ -3825,27 +3825,27 @@ function requireConstants$3 () {
 		 *                    | "/" | "[" | "]" | "?" | "="
 		 *                    | "{" | "}" | SP | HT
 		 */
-		exports$1.STRICT_TOKEN = [
+		exports.STRICT_TOKEN = [
 		    '!', '#', '$', '%', '&', '\'',
 		    '*', '+', '-', '.',
 		    '^', '_', '`',
 		    '|', '~',
-		].concat(exports$1.ALPHANUM);
-		exports$1.TOKEN = exports$1.STRICT_TOKEN.concat([' ']);
+		].concat(exports.ALPHANUM);
+		exports.TOKEN = exports.STRICT_TOKEN.concat([' ']);
 		/*
 		 * Verify that a char is a valid visible (printable) US-ASCII
 		 * character or %x80-FF
 		 */
-		exports$1.HEADER_CHARS = ['\t'];
+		exports.HEADER_CHARS = ['\t'];
 		for (let i = 32; i <= 255; i++) {
 		    if (i !== 127) {
-		        exports$1.HEADER_CHARS.push(i);
+		        exports.HEADER_CHARS.push(i);
 		    }
 		}
 		// ',' = \x44
-		exports$1.CONNECTION_TOKEN_CHARS = exports$1.HEADER_CHARS.filter((c) => c !== 44);
-		exports$1.MAJOR = exports$1.NUM_MAP;
-		exports$1.MINOR = exports$1.MAJOR;
+		exports.CONNECTION_TOKEN_CHARS = exports.HEADER_CHARS.filter((c) => c !== 44);
+		exports.MAJOR = exports.NUM_MAP;
+		exports.MINOR = exports.MAJOR;
 		var HEADER_STATE;
 		(function (HEADER_STATE) {
 		    HEADER_STATE[HEADER_STATE["GENERAL"] = 0] = "GENERAL";
@@ -3857,8 +3857,8 @@ function requireConstants$3 () {
 		    HEADER_STATE[HEADER_STATE["CONNECTION_CLOSE"] = 6] = "CONNECTION_CLOSE";
 		    HEADER_STATE[HEADER_STATE["CONNECTION_UPGRADE"] = 7] = "CONNECTION_UPGRADE";
 		    HEADER_STATE[HEADER_STATE["TRANSFER_ENCODING_CHUNKED"] = 8] = "TRANSFER_ENCODING_CHUNKED";
-		})(HEADER_STATE = exports$1.HEADER_STATE || (exports$1.HEADER_STATE = {}));
-		exports$1.SPECIAL_HEADERS = {
+		})(HEADER_STATE = exports.HEADER_STATE || (exports.HEADER_STATE = {}));
+		exports.SPECIAL_HEADERS = {
 		    'connection': HEADER_STATE.CONNECTION,
 		    'content-length': HEADER_STATE.CONTENT_LENGTH,
 		    'proxy-connection': HEADER_STATE.CONNECTION,
@@ -8749,10 +8749,10 @@ function requireClientH1 () {
 	const TIMEOUT_KEEP_ALIVE = 8 | USE_NATIVE_TIMER;
 
 	class Parser {
-	  constructor (client, socket, { exports: exports$1 }) {
+	  constructor (client, socket, { exports }) {
 	    assert(Number.isFinite(client[kMaxHeadersSize]) && client[kMaxHeadersSize] > 0);
 
-	    this.llhttp = exports$1;
+	    this.llhttp = exports;
 	    this.ptr = this.llhttp.llhttp_alloc(constants.TYPE.RESPONSE);
 	    this.client = client;
 	    this.socket = socket;
@@ -28332,7 +28332,7 @@ var hasRequiredCommon$1;
 function requireCommon$1 () {
 	if (hasRequiredCommon$1) return common$1;
 	hasRequiredCommon$1 = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2018 Google LLC
 		// Licensed under the Apache License, Version 2.0 (the "License");
 		// you may not use this file except in compliance with the License.
@@ -28348,9 +28348,9 @@ function requireCommon$1 () {
 		var __importDefault = (common$1 && common$1.__importDefault) || function (mod) {
 		    return (mod && mod.__esModule) ? mod : { "default": mod };
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.GaxiosError = exports$1.GAXIOS_ERROR_SYMBOL = void 0;
-		exports$1.defaultErrorRedactor = defaultErrorRedactor;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.GaxiosError = exports.GAXIOS_ERROR_SYMBOL = void 0;
+		exports.defaultErrorRedactor = defaultErrorRedactor;
 		const extend_1 = __importDefault(requireExtend());
 		const util_cjs_1 = __importDefault(requireUtil$2());
 		const pkg = util_cjs_1.default.pkg;
@@ -28359,7 +28359,7 @@ function requireCommon$1 () {
 		 *
 		 * @see {@link GaxiosError[Symbol.hasInstance]}
 		 */
-		exports$1.GAXIOS_ERROR_SYMBOL = Symbol.for(`${pkg.name}-gaxios-error`);
+		exports.GAXIOS_ERROR_SYMBOL = Symbol.for(`${pkg.name}-gaxios-error`);
 		class GaxiosError extends Error {
 		    config;
 		    response;
@@ -28413,7 +28413,7 @@ function requireCommon$1 () {
 		     * @see {@link https://stackoverflow.com/questions/46618852/require-and-instanceof}
 		     * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Function/@@hasInstance#reverting_to_default_instanceof_behavior}
 		     */
-		    [exports$1.GAXIOS_ERROR_SYMBOL] = pkg.version;
+		    [exports.GAXIOS_ERROR_SYMBOL] = pkg.version;
 		    /**
 		     * Support `instanceof` operator for `GaxiosError` across builds/duplicated files.
 		     *
@@ -28423,8 +28423,8 @@ function requireCommon$1 () {
 		    static [Symbol.hasInstance](instance) {
 		        if (instance &&
 		            typeof instance === 'object' &&
-		            exports$1.GAXIOS_ERROR_SYMBOL in instance &&
-		            instance[exports$1.GAXIOS_ERROR_SYMBOL] === pkg.version) {
+		            exports.GAXIOS_ERROR_SYMBOL in instance &&
+		            instance[exports.GAXIOS_ERROR_SYMBOL] === pkg.version) {
 		            return true;
 		        }
 		        // fallback to native
@@ -28542,7 +28542,7 @@ function requireCommon$1 () {
 		        };
 		    }
 		}
-		exports$1.GaxiosError = GaxiosError;
+		exports.GaxiosError = GaxiosError;
 		function translateData(responseType, data) {
 		    switch (responseType) {
 		        case 'stream':
@@ -29426,7 +29426,7 @@ var hasRequiredSrc$5;
 function requireSrc$5 () {
 	if (hasRequiredSrc$5) return src$3;
 	hasRequiredSrc$5 = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2018 Google LLC
 		// Licensed under the Apache License, Version 2.0 (the "License");
 		// you may not use this file except in compliance with the License.
@@ -29450,28 +29450,28 @@ function requireSrc$5 () {
 		    if (k2 === undefined) k2 = k;
 		    o[k2] = m[k];
 		}));
-		var __exportStar = (src$3 && src$3.__exportStar) || function(m, exports$1) {
-		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+		var __exportStar = (src$3 && src$3.__exportStar) || function(m, exports) {
+		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.instance = exports$1.Gaxios = exports$1.GaxiosError = void 0;
-		exports$1.request = request;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.instance = exports.Gaxios = exports.GaxiosError = void 0;
+		exports.request = request;
 		const gaxios_js_1 = requireGaxios();
-		Object.defineProperty(exports$1, "Gaxios", { enumerable: true, get: function () { return gaxios_js_1.Gaxios; } });
+		Object.defineProperty(exports, "Gaxios", { enumerable: true, get: function () { return gaxios_js_1.Gaxios; } });
 		var common_js_1 = requireCommon$1();
-		Object.defineProperty(exports$1, "GaxiosError", { enumerable: true, get: function () { return common_js_1.GaxiosError; } });
-		__exportStar(requireInterceptor(), exports$1);
+		Object.defineProperty(exports, "GaxiosError", { enumerable: true, get: function () { return common_js_1.GaxiosError; } });
+		__exportStar(requireInterceptor(), exports);
 		/**
 		 * The default instance used when the `request` method is directly
 		 * invoked.
 		 */
-		exports$1.instance = new gaxios_js_1.Gaxios();
+		exports.instance = new gaxios_js_1.Gaxios();
 		/**
 		 * Make an HTTP request using the given options.
 		 * @param opts Options for the request
 		 */
 		async function request(opts) {
-		    return exports$1.instance.request(opts);
+		    return exports.instance.request(opts);
 		}
 		
 	} (src$3));
@@ -33279,7 +33279,7 @@ var hasRequiredGcpResidency;
 function requireGcpResidency () {
 	if (hasRequiredGcpResidency) return gcpResidency;
 	hasRequiredGcpResidency = 1;
-	(function (exports$1) {
+	(function (exports) {
 		/**
 		 * Copyright 2022 Google LLC
 		 *
@@ -33295,19 +33295,19 @@ function requireGcpResidency () {
 		 * See the License for the specific language governing permissions and
 		 * limitations under the License.
 		 */
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.GCE_LINUX_BIOS_PATHS = void 0;
-		exports$1.isGoogleCloudServerless = isGoogleCloudServerless;
-		exports$1.isGoogleComputeEngineLinux = isGoogleComputeEngineLinux;
-		exports$1.isGoogleComputeEngineMACAddress = isGoogleComputeEngineMACAddress;
-		exports$1.isGoogleComputeEngine = isGoogleComputeEngine;
-		exports$1.detectGCPResidency = detectGCPResidency;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.GCE_LINUX_BIOS_PATHS = void 0;
+		exports.isGoogleCloudServerless = isGoogleCloudServerless;
+		exports.isGoogleComputeEngineLinux = isGoogleComputeEngineLinux;
+		exports.isGoogleComputeEngineMACAddress = isGoogleComputeEngineMACAddress;
+		exports.isGoogleComputeEngine = isGoogleComputeEngine;
+		exports.detectGCPResidency = detectGCPResidency;
 		const fs_1 = fs__default;
 		const os_1 = os__default;
 		/**
 		 * Known paths unique to Google Compute Engine Linux instances
 		 */
-		exports$1.GCE_LINUX_BIOS_PATHS = {
+		exports.GCE_LINUX_BIOS_PATHS = {
 		    BIOS_DATE: '/sys/class/dmi/id/bios_date',
 		    BIOS_VENDOR: '/sys/class/dmi/id/bios_vendor',
 		};
@@ -33348,9 +33348,9 @@ function requireGcpResidency () {
 		        return false;
 		    try {
 		        // ensure this file exist
-		        (0, fs_1.statSync)(exports$1.GCE_LINUX_BIOS_PATHS.BIOS_DATE);
+		        (0, fs_1.statSync)(exports.GCE_LINUX_BIOS_PATHS.BIOS_DATE);
 		        // ensure this file exist and matches
-		        const biosVendor = (0, fs_1.readFileSync)(exports$1.GCE_LINUX_BIOS_PATHS.BIOS_VENDOR, 'utf8');
+		        const biosVendor = (0, fs_1.readFileSync)(exports.GCE_LINUX_BIOS_PATHS.BIOS_VENDOR, 'utf8');
 		        return /Google/.test(biosVendor);
 		    }
 		    catch {
@@ -33496,7 +33496,7 @@ var hasRequiredLoggingUtils;
 function requireLoggingUtils () {
 	if (hasRequiredLoggingUtils) return loggingUtils;
 	hasRequiredLoggingUtils = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2021-2024 Google LLC
 		//
 		// Licensed under the Apache License, Version 2.0 (the "License");
@@ -33543,13 +33543,13 @@ function requireLoggingUtils () {
 		        return result;
 		    };
 		})();
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.env = exports$1.DebugLogBackendBase = exports$1.placeholder = exports$1.AdhocDebugLogger = exports$1.LogSeverity = void 0;
-		exports$1.getNodeBackend = getNodeBackend;
-		exports$1.getDebugBackend = getDebugBackend;
-		exports$1.getStructuredBackend = getStructuredBackend;
-		exports$1.setBackend = setBackend;
-		exports$1.log = log;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.env = exports.DebugLogBackendBase = exports.placeholder = exports.AdhocDebugLogger = exports.LogSeverity = void 0;
+		exports.getNodeBackend = getNodeBackend;
+		exports.getDebugBackend = getDebugBackend;
+		exports.getStructuredBackend = getStructuredBackend;
+		exports.setBackend = setBackend;
+		exports.log = log;
 		const events_1 = events$1;
 		const process = __importStar(require$$1$5);
 		const util = __importStar(require$$2);
@@ -33582,7 +33582,7 @@ function requireLoggingUtils () {
 		    LogSeverity["INFO"] = "INFO";
 		    LogSeverity["WARNING"] = "WARNING";
 		    LogSeverity["ERROR"] = "ERROR";
-		})(LogSeverity || (exports$1.LogSeverity = LogSeverity = {}));
+		})(LogSeverity || (exports.LogSeverity = LogSeverity = {}));
 		/**
 		 * Our logger instance. This actually contains the meat of dealing
 		 * with log lines, including EventEmitter. This contains the function
@@ -33632,11 +33632,11 @@ function requireLoggingUtils () {
 		        this.invoke({ severity }, ...args);
 		    }
 		}
-		exports$1.AdhocDebugLogger = AdhocDebugLogger;
+		exports.AdhocDebugLogger = AdhocDebugLogger;
 		/**
 		 * This can be used in place of a real logger while waiting for Promises or disabling logging.
 		 */
-		exports$1.placeholder = new AdhocDebugLogger('', () => { }).func;
+		exports.placeholder = new AdhocDebugLogger('', () => { }).func;
 		/**
 		 * The base class for debug logging backends. It's possible to use this, but the
 		 * same non-guarantees above still apply (unstable interface, etc).
@@ -33652,7 +33652,7 @@ function requireLoggingUtils () {
 		        this.filtersSet = false;
 		        // Look for the Node config variable for what systems to enable. We'll store
 		        // these for the log method below, which will call setFilters() once.
-		        let nodeFlag = (_a = process.env[exports$1.env.nodeEnables]) !== null && _a !== void 0 ? _a : '*';
+		        let nodeFlag = (_a = process.env[exports.env.nodeEnables]) !== null && _a !== void 0 ? _a : '*';
 		        if (nodeFlag === 'all') {
 		            nodeFlag = '*';
 		        }
@@ -33679,7 +33679,7 @@ function requireLoggingUtils () {
 		        }
 		    }
 		}
-		exports$1.DebugLogBackendBase = DebugLogBackendBase;
+		exports.DebugLogBackendBase = DebugLogBackendBase;
 		// The basic backend. This one definitely works, but it's less feature-filled.
 		//
 		// Rather than using util.debuglog, this implements the same basic logic directly.
@@ -33842,7 +33842,7 @@ function requireLoggingUtils () {
 		/**
 		 * The environment variables that we standardized on, for all ad-hoc logging.
 		 */
-		exports$1.env = {
+		exports.env = {
 		    /**
 		     * Filter wildcards specific to the Node syntax, and similar to the built-in
 		     * utils.debuglog() environment variable. If missing, disables logging.
@@ -33881,15 +33881,15 @@ function requireLoggingUtils () {
 		    // can still choose to set a backend of their choice using the manual
 		    // `setBackend()`.
 		    if (!cachedBackend) {
-		        const enablesFlag = process.env[exports$1.env.nodeEnables];
+		        const enablesFlag = process.env[exports.env.nodeEnables];
 		        if (!enablesFlag) {
-		            return exports$1.placeholder;
+		            return exports.placeholder;
 		        }
 		    }
 		    // This might happen mostly if the typings are dropped in a user's code,
 		    // or if they're calling from JavaScript.
 		    if (!namespace) {
-		        return exports$1.placeholder;
+		        return exports.placeholder;
 		    }
 		    // Handle sub-loggers.
 		    if (parent) {
@@ -33903,7 +33903,7 @@ function requireLoggingUtils () {
 		    // Do we have a backend yet?
 		    if (cachedBackend === null) {
 		        // Explicitly disabled.
-		        return exports$1.placeholder;
+		        return exports.placeholder;
 		    }
 		    else if (cachedBackend === undefined) {
 		        // One hasn't been made yet, so default to Node.
@@ -33942,7 +33942,7 @@ var hasRequiredSrc$4;
 function requireSrc$4 () {
 	if (hasRequiredSrc$4) return src$1;
 	hasRequiredSrc$4 = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2024 Google LLC
 		//
 		// Licensed under the Apache License, Version 2.0 (the "License");
@@ -33967,11 +33967,11 @@ function requireSrc$4 () {
 		    if (k2 === undefined) k2 = k;
 		    o[k2] = m[k];
 		}));
-		var __exportStar = (src$1 && src$1.__exportStar) || function(m, exports$1) {
-		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+		var __exportStar = (src$1 && src$1.__exportStar) || function(m, exports) {
+		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		__exportStar(requireLoggingUtils(), exports$1);
+		Object.defineProperty(exports, "__esModule", { value: true });
+		__exportStar(requireLoggingUtils(), exports);
 		
 	} (src$1));
 	return src$1;
@@ -33982,7 +33982,7 @@ var hasRequiredSrc$3;
 function requireSrc$3 () {
 	if (hasRequiredSrc$3) return src$2;
 	hasRequiredSrc$3 = 1;
-	(function (exports$1) {
+	(function (exports) {
 		var __createBinding = (src$2 && src$2.__createBinding) || (Object.create ? (function(o, m, k, k2) {
 		    if (k2 === undefined) k2 = k;
 		    var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -34016,20 +34016,20 @@ function requireSrc$3 () {
 		        return result;
 		    };
 		})();
-		var __exportStar = (src$2 && src$2.__exportStar) || function(m, exports$1) {
-		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+		var __exportStar = (src$2 && src$2.__exportStar) || function(m, exports) {
+		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.gcpResidencyCache = exports$1.METADATA_SERVER_DETECTION = exports$1.HEADERS = exports$1.HEADER_VALUE = exports$1.HEADER_NAME = exports$1.SECONDARY_HOST_ADDRESS = exports$1.HOST_ADDRESS = exports$1.BASE_PATH = void 0;
-		exports$1.instance = instance;
-		exports$1.project = project;
-		exports$1.universe = universe;
-		exports$1.bulk = bulk;
-		exports$1.isAvailable = isAvailable;
-		exports$1.resetIsAvailableCache = resetIsAvailableCache;
-		exports$1.getGCPResidency = getGCPResidency;
-		exports$1.setGCPResidency = setGCPResidency;
-		exports$1.requestTimeout = requestTimeout;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.gcpResidencyCache = exports.METADATA_SERVER_DETECTION = exports.HEADERS = exports.HEADER_VALUE = exports.HEADER_NAME = exports.SECONDARY_HOST_ADDRESS = exports.HOST_ADDRESS = exports.BASE_PATH = void 0;
+		exports.instance = instance;
+		exports.project = project;
+		exports.universe = universe;
+		exports.bulk = bulk;
+		exports.isAvailable = isAvailable;
+		exports.resetIsAvailableCache = resetIsAvailableCache;
+		exports.getGCPResidency = getGCPResidency;
+		exports.setGCPResidency = setGCPResidency;
+		exports.requestTimeout = requestTimeout;
 		/**
 		 * Copyright 2018 Google LLC
 		 *
@@ -34049,19 +34049,19 @@ function requireSrc$3 () {
 		const jsonBigint = requireJsonBigint();
 		const gcp_residency_1 = requireGcpResidency();
 		const logger = __importStar(requireSrc$4());
-		exports$1.BASE_PATH = '/computeMetadata/v1';
-		exports$1.HOST_ADDRESS = 'http://169.254.169.254';
-		exports$1.SECONDARY_HOST_ADDRESS = 'http://metadata.google.internal.';
-		exports$1.HEADER_NAME = 'Metadata-Flavor';
-		exports$1.HEADER_VALUE = 'Google';
-		exports$1.HEADERS = Object.freeze({ [exports$1.HEADER_NAME]: exports$1.HEADER_VALUE });
+		exports.BASE_PATH = '/computeMetadata/v1';
+		exports.HOST_ADDRESS = 'http://169.254.169.254';
+		exports.SECONDARY_HOST_ADDRESS = 'http://metadata.google.internal.';
+		exports.HEADER_NAME = 'Metadata-Flavor';
+		exports.HEADER_VALUE = 'Google';
+		exports.HEADERS = Object.freeze({ [exports.HEADER_NAME]: exports.HEADER_VALUE });
 		const log = logger.log('gcp-metadata');
 		/**
 		 * Metadata server detection override options.
 		 *
 		 * Available via `process.env.METADATA_SERVER_DETECTION`.
 		 */
-		exports$1.METADATA_SERVER_DETECTION = Object.freeze({
+		exports.METADATA_SERVER_DETECTION = Object.freeze({
 		    'assume-present': "don't try to ping the metadata server, but assume it's present",
 		    none: "don't try to ping the metadata server, but don't try to use it either",
 		    'bios-only': "treat the result of a BIOS probe as canonical (don't fall back to pinging)",
@@ -34078,13 +34078,13 @@ function requireSrc$3 () {
 		        baseUrl =
 		            process.env.GCE_METADATA_IP ||
 		                process.env.GCE_METADATA_HOST ||
-		                exports$1.HOST_ADDRESS;
+		                exports.HOST_ADDRESS;
 		    }
 		    // If no scheme is provided default to HTTP:
 		    if (!/^https?:\/\//.test(baseUrl)) {
 		        baseUrl = `http://${baseUrl}`;
 		    }
-		    return new URL(exports$1.BASE_PATH, baseUrl).href;
+		    return new URL(exports.BASE_PATH, baseUrl).href;
 		}
 		// Accepts an options object passed from the user to the API. In previous
 		// versions of the API, it referred to a `Request` or an `Axios` request
@@ -34106,7 +34106,7 @@ function requireSrc$3 () {
 		    });
 		}
 		async function metadataAccessor(type, options = {}, noResponseRetries = 3, fastFail = false) {
-		    const headers = new Headers(exports$1.HEADERS);
+		    const headers = new Headers(exports.HEADERS);
 		    let metadataKey = '';
 		    let params = {};
 		    if (typeof type === 'object') {
@@ -34143,9 +34143,9 @@ function requireSrc$3 () {
 		    log.info('instance request %j', req);
 		    const res = await requestMethod(req);
 		    log.info('instance metadata is %s', res.data);
-		    const metadataFlavor = res.headers.get(exports$1.HEADER_NAME);
-		    if (metadataFlavor !== exports$1.HEADER_VALUE) {
-		        throw new RangeError(`Invalid response from metadata service: incorrect ${exports$1.HEADER_NAME} header. Expected '${exports$1.HEADER_VALUE}', got ${metadataFlavor ? `'${metadataFlavor}'` : 'no header'}`);
+		    const metadataFlavor = res.headers.get(exports.HEADER_NAME);
+		    if (metadataFlavor !== exports.HEADER_VALUE) {
+		        throw new RangeError(`Invalid response from metadata service: incorrect ${exports.HEADER_NAME} header. Expected '${exports.HEADER_VALUE}', got ${metadataFlavor ? `'${metadataFlavor}'` : 'no header'}`);
 		    }
 		    if (typeof res.data === 'string') {
 		        try {
@@ -34162,7 +34162,7 @@ function requireSrc$3 () {
 		        ...options,
 		        url: options.url
 		            ?.toString()
-		            .replace(getBaseUrl(), getBaseUrl(exports$1.SECONDARY_HOST_ADDRESS)),
+		            .replace(getBaseUrl(), getBaseUrl(exports.SECONDARY_HOST_ADDRESS)),
 		    };
 		    // We race a connection between DNS/IP to metadata server. There are a couple
 		    // reasons for this:
@@ -34273,8 +34273,8 @@ function requireSrc$3 () {
 		async function isAvailable() {
 		    if (process.env.METADATA_SERVER_DETECTION) {
 		        const value = process.env.METADATA_SERVER_DETECTION.trim().toLocaleLowerCase();
-		        if (!(value in exports$1.METADATA_SERVER_DETECTION)) {
-		            throw new RangeError(`Unknown \`METADATA_SERVER_DETECTION\` env variable. Got \`${value}\`, but it should be \`${Object.keys(exports$1.METADATA_SERVER_DETECTION).join('`, `')}\`, or unset`);
+		        if (!(value in exports.METADATA_SERVER_DETECTION)) {
+		            throw new RangeError(`Unknown \`METADATA_SERVER_DETECTION\` env variable. Got \`${value}\`, but it should be \`${Object.keys(exports.METADATA_SERVER_DETECTION).join('`, `')}\`, or unset`);
 		        }
 		        switch (value) {
 		            case 'assume-present':
@@ -34346,7 +34346,7 @@ function requireSrc$3 () {
 		/**
 		 * A cache for the detected GCP Residency.
 		 */
-		exports$1.gcpResidencyCache = null;
+		exports.gcpResidencyCache = null;
 		/**
 		 * Detects GCP Residency.
 		 * Caches results to reduce costs for subsequent calls.
@@ -34354,10 +34354,10 @@ function requireSrc$3 () {
 		 * @see setGCPResidency for setting
 		 */
 		function getGCPResidency() {
-		    if (exports$1.gcpResidencyCache === null) {
+		    if (exports.gcpResidencyCache === null) {
 		        setGCPResidency();
 		    }
-		    return exports$1.gcpResidencyCache;
+		    return exports.gcpResidencyCache;
 		}
 		/**
 		 * Sets the detected GCP Residency.
@@ -34367,7 +34367,7 @@ function requireSrc$3 () {
 		 * @see getGCPResidency for getting
 		 */
 		function setGCPResidency(value = null) {
-		    exports$1.gcpResidencyCache = value !== null ? value : (0, gcp_residency_1.detectGCPResidency)();
+		    exports.gcpResidencyCache = value !== null ? value : (0, gcp_residency_1.detectGCPResidency)();
 		}
 		/**
 		 * Obtain the timeout for requests to the metadata server.
@@ -34381,7 +34381,7 @@ function requireSrc$3 () {
 		function requestTimeout() {
 		    return getGCPResidency() ? 0 : 3000;
 		}
-		__exportStar(requireGcpResidency(), exports$1);
+		__exportStar(requireGcpResidency(), exports);
 		
 	} (src$2));
 	return src$2;
@@ -34827,7 +34827,7 @@ var hasRequiredCrypto;
 function requireCrypto () {
 	if (hasRequiredCrypto) return crypto$3;
 	hasRequiredCrypto = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2019 Google LLC
 		//
 		// Licensed under the Apache License, Version 2.0 (the "License");
@@ -34853,15 +34853,15 @@ function requireCrypto () {
 		    if (k2 === undefined) k2 = k;
 		    o[k2] = m[k];
 		}));
-		var __exportStar = (crypto$3 && crypto$3.__exportStar) || function(m, exports$1) {
-		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+		var __exportStar = (crypto$3 && crypto$3.__exportStar) || function(m, exports) {
+		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.createCrypto = createCrypto;
-		exports$1.hasBrowserCrypto = hasBrowserCrypto;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.createCrypto = createCrypto;
+		exports.hasBrowserCrypto = hasBrowserCrypto;
 		const crypto_1 = requireCrypto$2();
 		const crypto_2 = requireCrypto$1();
-		__exportStar(requireShared$1(), exports$1);
+		__exportStar(requireShared$1(), exports);
 		// Crypto interface will provide required crypto functions.
 		// Use `createCrypto()` factory function to create an instance
 		// of Crypto. It will either use Node.js `crypto` module, or
@@ -34898,7 +34898,7 @@ var hasRequiredSafeBuffer;
 function requireSafeBuffer () {
 	if (hasRequiredSafeBuffer) return safeBuffer.exports;
 	hasRequiredSafeBuffer = 1;
-	(function (module, exports$1) {
+	(function (module, exports) {
 		/* eslint-disable node/no-deprecated-api */
 		var buffer = require$$0$7;
 		var Buffer = buffer.Buffer;
@@ -34913,8 +34913,8 @@ function requireSafeBuffer () {
 		  module.exports = buffer;
 		} else {
 		  // Copy properties from require('buffer')
-		  copyProps(buffer, exports$1);
-		  exports$1.Buffer = SafeBuffer;
+		  copyProps(buffer, exports);
+		  exports.Buffer = SafeBuffer;
 		}
 
 		function SafeBuffer (arg, encodingOrOffset, length) {
@@ -35524,7 +35524,7 @@ var hasRequiredAuthclient;
 function requireAuthclient () {
 	if (hasRequiredAuthclient) return authclient;
 	hasRequiredAuthclient = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2012 Google LLC
 		//
 		// Licensed under the Apache License, Version 2.0 (the "License");
@@ -35538,8 +35538,8 @@ function requireAuthclient () {
 		// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		// See the License for the specific language governing permissions and
 		// limitations under the License.
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.AuthClient = exports$1.DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS = exports$1.DEFAULT_UNIVERSE = void 0;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.AuthClient = exports.DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS = exports.DEFAULT_UNIVERSE = void 0;
 		const events_1 = events$1;
 		const gaxios_1 = requireSrc$5();
 		const util_1 = requireUtil$1();
@@ -35550,11 +35550,11 @@ function requireAuthclient () {
 		 *
 		 * @see {@link AuthJSONOptions.universe_domain}
 		 */
-		exports$1.DEFAULT_UNIVERSE = 'googleapis.com';
+		exports.DEFAULT_UNIVERSE = 'googleapis.com';
 		/**
 		 * The default {@link AuthClientOptions.eagerRefreshThresholdMillis}
 		 */
-		exports$1.DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS = 5 * 60 * 1000;
+		exports.DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS = 5 * 60 * 1000;
 		/**
 		 * The base of all Auth Clients.
 		 */
@@ -35571,9 +35571,9 @@ function requireAuthclient () {
 		     */
 		    transporter;
 		    credentials = {};
-		    eagerRefreshThresholdMillis = exports$1.DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS;
+		    eagerRefreshThresholdMillis = exports.DEFAULT_EAGER_REFRESH_THRESHOLD_MILLIS;
 		    forceRefreshOnFailure = false;
-		    universeDomain = exports$1.DEFAULT_UNIVERSE;
+		    universeDomain = exports.DEFAULT_UNIVERSE;
 		    /**
 		     * Symbols that can be added to GaxiosOptions to specify the method name that is
 		     * making an RPC call, for logging purposes, as well as a string ID that can be
@@ -35589,7 +35589,7 @@ function requireAuthclient () {
 		        this.projectId = options.get('project_id') ?? null;
 		        this.quotaProjectId = options.get('quota_project_id');
 		        this.credentials = options.get('credentials') ?? {};
-		        this.universeDomain = options.get('universe_domain') ?? exports$1.DEFAULT_UNIVERSE;
+		        this.universeDomain = options.get('universe_domain') ?? exports.DEFAULT_UNIVERSE;
 		        // Shared client options
 		        this.transporter = opts.transporter ?? new gaxios_1.Gaxios(opts.transporterOptions);
 		        if (options.get('useAuthRequestParameters') !== false) {
@@ -35808,7 +35808,7 @@ function requireAuthclient () {
 		        };
 		    }
 		}
-		exports$1.AuthClient = AuthClient;
+		exports.AuthClient = AuthClient;
 		
 	} (authclient));
 	return authclient;
@@ -39488,7 +39488,7 @@ var hasRequiredBaseexternalclient;
 function requireBaseexternalclient () {
 	if (hasRequiredBaseexternalclient) return baseexternalclient;
 	hasRequiredBaseexternalclient = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2021 Google LLC
 		//
 		// Licensed under the Apache License, Version 2.0 (the "License");
@@ -39502,8 +39502,8 @@ function requireBaseexternalclient () {
 		// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		// See the License for the specific language governing permissions and
 		// limitations under the License.
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.BaseExternalAccountClient = exports$1.CLOUD_RESOURCE_MANAGER = exports$1.EXTERNAL_ACCOUNT_TYPE = exports$1.EXPIRATION_TIME_OFFSET = void 0;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.BaseExternalAccountClient = exports.CLOUD_RESOURCE_MANAGER = exports.EXTERNAL_ACCOUNT_TYPE = exports.EXPIRATION_TIME_OFFSET = void 0;
 		const gaxios_1 = requireSrc$5();
 		const stream = require$$3;
 		const authclient_1 = requireAuthclient();
@@ -39525,7 +39525,7 @@ function requireBaseexternalclient () {
 		/**
 		 * Offset to take into account network delays and server clock skews.
 		 */
-		exports$1.EXPIRATION_TIME_OFFSET = 5 * 60 * 1000;
+		exports.EXPIRATION_TIME_OFFSET = 5 * 60 * 1000;
 		/**
 		 * The credentials JSON file type for external account clients.
 		 * There are 3 types of JSON configs:
@@ -39533,13 +39533,13 @@ function requireBaseexternalclient () {
 		 * 2. service_account => Google service account credential
 		 * 3. external_Account => non-GCP service (eg. AWS, Azure, K8s)
 		 */
-		exports$1.EXTERNAL_ACCOUNT_TYPE = 'external_account';
+		exports.EXTERNAL_ACCOUNT_TYPE = 'external_account';
 		/**
 		 * Cloud resource manager URL used to retrieve project information.
 		 *
 		 * @deprecated use {@link BaseExternalAccountClient.cloudResourceManagerURL} instead
 		 **/
-		exports$1.CLOUD_RESOURCE_MANAGER = 'https://cloudresourcemanager.googleapis.com/v1/projects/';
+		exports.CLOUD_RESOURCE_MANAGER = 'https://cloudresourcemanager.googleapis.com/v1/projects/';
 		/** The workforce audience pattern. */
 		const WORKFORCE_AUDIENCE_PATTERN = '//iam\\.googleapis\\.com/locations/[^/]+/workforcePools/[^/]+/providers/.+';
 		const DEFAULT_TOKEN_URL = 'https://sts.{universeDomain}/v1/token';
@@ -39594,8 +39594,8 @@ function requireBaseexternalclient () {
 		        super(options);
 		        const opts = (0, util_1.originalOrCamelOptions)(options);
 		        const type = opts.get('type');
-		        if (type && type !== exports$1.EXTERNAL_ACCOUNT_TYPE) {
-		            throw new Error(`Expected "${exports$1.EXTERNAL_ACCOUNT_TYPE}" type but ` +
+		        if (type && type !== exports.EXTERNAL_ACCOUNT_TYPE) {
+		            throw new Error(`Expected "${exports.EXTERNAL_ACCOUNT_TYPE}" type but ` +
 		                `received "${options.type}"`);
 		        }
 		        const clientId = opts.get('client_id');
@@ -39963,7 +39963,7 @@ function requireBaseexternalclient () {
 		        return this.tokenUrl;
 		    }
 		}
-		exports$1.BaseExternalAccountClient = BaseExternalAccountClient;
+		exports.BaseExternalAccountClient = BaseExternalAccountClient;
 		
 	} (baseexternalclient));
 	return baseexternalclient;
@@ -40151,7 +40151,7 @@ var hasRequiredCertificatesubjecttokensupplier;
 function requireCertificatesubjecttokensupplier () {
 	if (hasRequiredCertificatesubjecttokensupplier) return certificatesubjecttokensupplier;
 	hasRequiredCertificatesubjecttokensupplier = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2025 Google LLC
 		//
 		// Licensed under the Apache License, Version 2.0 (the "License");
@@ -40165,13 +40165,13 @@ function requireCertificatesubjecttokensupplier () {
 		// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		// See the License for the specific language governing permissions and
 		// limitations under the License.
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.CertificateSubjectTokenSupplier = exports$1.InvalidConfigurationError = exports$1.CertificateSourceUnavailableError = exports$1.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = void 0;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.CertificateSubjectTokenSupplier = exports.InvalidConfigurationError = exports.CertificateSourceUnavailableError = exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = void 0;
 		const util_1 = requireUtil$1();
 		const fs = fs__default;
 		const crypto_1 = crypto__default;
 		const https$1 = https;
-		exports$1.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = 'GOOGLE_API_CERTIFICATE_CONFIG';
+		exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE = 'GOOGLE_API_CERTIFICATE_CONFIG';
 		/**
 		 * Thrown when the certificate source cannot be located or accessed.
 		 */
@@ -40181,7 +40181,7 @@ function requireCertificatesubjecttokensupplier () {
 		        this.name = 'CertificateSourceUnavailableError';
 		    }
 		}
-		exports$1.CertificateSourceUnavailableError = CertificateSourceUnavailableError;
+		exports.CertificateSourceUnavailableError = CertificateSourceUnavailableError;
 		/**
 		 * Thrown for invalid configuration that is not related to file availability.
 		 */
@@ -40191,7 +40191,7 @@ function requireCertificatesubjecttokensupplier () {
 		        this.name = 'InvalidConfigurationError';
 		    }
 		}
-		exports$1.InvalidConfigurationError = InvalidConfigurationError;
+		exports.InvalidConfigurationError = InvalidConfigurationError;
 		/**
 		 * A subject token supplier that uses a client certificate for authentication.
 		 * It provides the certificate chain as the subject token for identity federation.
@@ -40254,12 +40254,12 @@ function requireCertificatesubjecttokensupplier () {
 		            throw new CertificateSourceUnavailableError(`Provided certificate config path is invalid: ${overridePath}`);
 		        }
 		        // 2. Check the standard environment variable.
-		        const envPath = process.env[exports$1.CERTIFICATE_CONFIGURATION_ENV_VARIABLE];
+		        const envPath = process.env[exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE];
 		        if (envPath) {
 		            if (await (0, util_1.isValidFile)(envPath)) {
 		                return envPath;
 		            }
-		            throw new CertificateSourceUnavailableError(`Path from environment variable "${exports$1.CERTIFICATE_CONFIGURATION_ENV_VARIABLE}" is invalid: ${envPath}`);
+		            throw new CertificateSourceUnavailableError(`Path from environment variable "${exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE}" is invalid: ${envPath}`);
 		        }
 		        // 3. Check the well-known gcloud config location.
 		        const wellKnownPath = (0, util_1.getWellKnownCertificateConfigFileLocation)();
@@ -40268,7 +40268,7 @@ function requireCertificatesubjecttokensupplier () {
 		        }
 		        // 4. If none are found, throw an error.
 		        throw new CertificateSourceUnavailableError('Could not find certificate configuration file. Searched override path, ' +
-		            `the "${exports$1.CERTIFICATE_CONFIGURATION_ENV_VARIABLE}" env var, and the gcloud path (${wellKnownPath}).`);
+		            `the "${exports.CERTIFICATE_CONFIGURATION_ENV_VARIABLE}" env var, and the gcloud path (${wellKnownPath}).`);
 		    }
 		    /**
 		     * Reads and parses the certificate config JSON file to extract the certificate and key paths.
@@ -40372,7 +40372,7 @@ function requireCertificatesubjecttokensupplier () {
 		        }
 		    }
 		}
-		exports$1.CertificateSubjectTokenSupplier = CertificateSubjectTokenSupplier;
+		exports.CertificateSubjectTokenSupplier = CertificateSubjectTokenSupplier;
 		
 	} (certificatesubjecttokensupplier));
 	return certificatesubjecttokensupplier;
@@ -41486,7 +41486,7 @@ var hasRequiredPluggableAuthClient;
 function requirePluggableAuthClient () {
 	if (hasRequiredPluggableAuthClient) return pluggableAuthClient;
 	hasRequiredPluggableAuthClient = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2022 Google LLC
 		//
 		// Licensed under the Apache License, Version 2.0 (the "License");
@@ -41500,13 +41500,13 @@ function requirePluggableAuthClient () {
 		// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		// See the License for the specific language governing permissions and
 		// limitations under the License.
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.PluggableAuthClient = exports$1.ExecutableError = void 0;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.PluggableAuthClient = exports.ExecutableError = void 0;
 		const baseexternalclient_1 = requireBaseexternalclient();
 		const executable_response_1 = requireExecutableResponse();
 		const pluggable_auth_handler_1 = requirePluggableAuthHandler();
 		var pluggable_auth_handler_2 = requirePluggableAuthHandler();
-		Object.defineProperty(exports$1, "ExecutableError", { enumerable: true, get: function () { return pluggable_auth_handler_2.ExecutableError; } });
+		Object.defineProperty(exports, "ExecutableError", { enumerable: true, get: function () { return pluggable_auth_handler_2.ExecutableError; } });
 		/**
 		 * The default executable timeout when none is provided, in milliseconds.
 		 */
@@ -41704,7 +41704,7 @@ function requirePluggableAuthClient () {
 		        return executableResponse.subjectToken;
 		    }
 		}
-		exports$1.PluggableAuthClient = PluggableAuthClient;
+		exports.PluggableAuthClient = PluggableAuthClient;
 		
 	} (pluggableAuthClient));
 	return pluggableAuthClient;
@@ -42032,7 +42032,7 @@ var hasRequiredGoogleauth;
 function requireGoogleauth () {
 	if (hasRequiredGoogleauth) return googleauth;
 	hasRequiredGoogleauth = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2019 Google LLC
 		//
 		// Licensed under the Apache License, Version 2.0 (the "License");
@@ -42046,8 +42046,8 @@ function requireGoogleauth () {
 		// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		// See the License for the specific language governing permissions and
 		// limitations under the License.
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.GoogleAuth = exports$1.GoogleAuthExceptionMessages = void 0;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.GoogleAuth = exports.GoogleAuthExceptionMessages = void 0;
 		const child_process_1 = child;
 		const fs = fs__default;
 		const gaxios_1 = requireSrc$5();
@@ -42066,7 +42066,7 @@ function requireGoogleauth () {
 		const authclient_1 = requireAuthclient();
 		const externalAccountAuthorizedUserClient_1 = requireExternalAccountAuthorizedUserClient();
 		const util_1 = requireUtil$1();
-		exports$1.GoogleAuthExceptionMessages = {
+		exports.GoogleAuthExceptionMessages = {
 		    API_KEY_WITH_CREDENTIALS: 'API Keys and Credentials are mutually exclusive authentication methods and cannot be used together.',
 		    NO_PROJECT_ID_FOUND: 'Unable to detect a Project Id in the current environment. \n' +
 		        'To learn more about authentication and Google APIs, visit: \n' +
@@ -42132,7 +42132,7 @@ function requireGoogleauth () {
 		        this.apiKey = opts.apiKey || this.clientOptions.apiKey || null;
 		        // Cannot use both API Key + Credentials
 		        if (this.apiKey && (this.jsonContent || this.clientOptions.credentials)) {
-		            throw new RangeError(exports$1.GoogleAuthExceptionMessages.API_KEY_WITH_CREDENTIALS);
+		            throw new RangeError(exports.GoogleAuthExceptionMessages.API_KEY_WITH_CREDENTIALS);
 		        }
 		        if (opts.universeDomain) {
 		            this.clientOptions.universeDomain = opts.universeDomain;
@@ -42168,7 +42168,7 @@ function requireGoogleauth () {
 		        }
 		        catch (e) {
 		            if (e instanceof Error &&
-		                e.message === exports$1.GoogleAuthExceptionMessages.NO_PROJECT_ID_FOUND) {
+		                e.message === exports.GoogleAuthExceptionMessages.NO_PROJECT_ID_FOUND) {
 		                return null;
 		            }
 		            else {
@@ -42199,7 +42199,7 @@ function requireGoogleauth () {
 		            return projectId;
 		        }
 		        else {
-		            throw new Error(exports$1.GoogleAuthExceptionMessages.NO_PROJECT_ID_FOUND);
+		            throw new Error(exports.GoogleAuthExceptionMessages.NO_PROJECT_ID_FOUND);
 		        }
 		    }
 		    async getProjectIdAsync() {
@@ -42315,7 +42315,7 @@ function requireGoogleauth () {
 		            options.scopes = this.getAnyScopes();
 		            return await this.#prepareAndCacheClient(new computeclient_1.Compute(options));
 		        }
-		        throw new Error(exports$1.GoogleAuthExceptionMessages.NO_ADC_FOUND);
+		        throw new Error(exports.GoogleAuthExceptionMessages.NO_ADC_FOUND);
 		    }
 		    async #prepareAndCacheClient(credential, quotaProjectIdOverride = process.env['GOOGLE_CLOUD_QUOTA_PROJECT'] || null) {
 		        const projectId = await this.getProjectIdOptional();
@@ -42757,7 +42757,7 @@ function requireGoogleauth () {
 		            ]);
 		            return { client_email, universe_domain };
 		        }
-		        throw new Error(exports$1.GoogleAuthExceptionMessages.NO_CREDENTIALS_FOUND);
+		        throw new Error(exports.GoogleAuthExceptionMessages.NO_CREDENTIALS_FOUND);
 		    }
 		    /**
 		     * Automatically obtain an {@link AuthClient `AuthClient`} based on the
@@ -42929,7 +42929,7 @@ function requireGoogleauth () {
 		        return res.data.signedBlob;
 		    }
 		}
-		exports$1.GoogleAuth = GoogleAuth;
+		exports.GoogleAuth = GoogleAuth;
 		
 	} (googleauth));
 	return googleauth;
@@ -42995,7 +42995,7 @@ var hasRequiredDownscopedclient;
 function requireDownscopedclient () {
 	if (hasRequiredDownscopedclient) return downscopedclient;
 	hasRequiredDownscopedclient = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2021 Google LLC
 		//
 		// Licensed under the Apache License, Version 2.0 (the "License");
@@ -43009,8 +43009,8 @@ function requireDownscopedclient () {
 		// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		// See the License for the specific language governing permissions and
 		// limitations under the License.
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.DownscopedClient = exports$1.EXPIRATION_TIME_OFFSET = exports$1.MAX_ACCESS_BOUNDARY_RULES_COUNT = void 0;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.DownscopedClient = exports.EXPIRATION_TIME_OFFSET = exports.MAX_ACCESS_BOUNDARY_RULES_COUNT = void 0;
 		const gaxios_1 = requireSrc$5();
 		const stream = require$$3;
 		const authclient_1 = requireAuthclient();
@@ -43031,11 +43031,11 @@ function requireDownscopedclient () {
 		 * The maximum number of access boundary rules a Credential Access Boundary
 		 * can contain.
 		 */
-		exports$1.MAX_ACCESS_BOUNDARY_RULES_COUNT = 10;
+		exports.MAX_ACCESS_BOUNDARY_RULES_COUNT = 10;
 		/**
 		 * Offset to take into account network delays and server clock skews.
 		 */
-		exports$1.EXPIRATION_TIME_OFFSET = 5 * 60 * 1000;
+		exports.EXPIRATION_TIME_OFFSET = 5 * 60 * 1000;
 		/**
 		 * Defines a set of Google credentials that are downscoped from an existing set
 		 * of Google OAuth2 credentials. This is useful to restrict the Identity and
@@ -43091,9 +43091,9 @@ function requireDownscopedclient () {
 		            throw new Error('At least one access boundary rule needs to be defined.');
 		        }
 		        else if (this.credentialAccessBoundary.accessBoundary.accessBoundaryRules.length >
-		            exports$1.MAX_ACCESS_BOUNDARY_RULES_COUNT) {
+		            exports.MAX_ACCESS_BOUNDARY_RULES_COUNT) {
 		            throw new Error('The provided access boundary has more than ' +
-		                `${exports$1.MAX_ACCESS_BOUNDARY_RULES_COUNT} access boundary rules.`);
+		                `${exports.MAX_ACCESS_BOUNDARY_RULES_COUNT} access boundary rules.`);
 		        }
 		        // Check at least one permission should be defined in each Access Boundary
 		        // Rule.
@@ -43266,7 +43266,7 @@ function requireDownscopedclient () {
 		            : false;
 		    }
 		}
-		exports$1.DownscopedClient = DownscopedClient;
+		exports.DownscopedClient = DownscopedClient;
 		
 	} (downscopedclient));
 	return downscopedclient;
@@ -43346,7 +43346,7 @@ var hasRequiredSrc$2;
 function requireSrc$2 () {
 	if (hasRequiredSrc$2) return src$4;
 	hasRequiredSrc$2 = 1;
-	(function (exports$1) {
+	(function (exports) {
 		var __createBinding = (src$4 && src$4.__createBinding) || (Object.create ? (function(o, m, k, k2) {
 		    if (k2 === undefined) k2 = k;
 		    var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -43358,11 +43358,11 @@ function requireSrc$2 () {
 		    if (k2 === undefined) k2 = k;
 		    o[k2] = m[k];
 		}));
-		var __exportStar = (src$4 && src$4.__exportStar) || function(m, exports$1) {
-		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+		var __exportStar = (src$4 && src$4.__exportStar) || function(m, exports) {
+		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.GoogleAuth = exports$1.auth = exports$1.PassThroughClient = exports$1.ExternalAccountAuthorizedUserClient = exports$1.EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = exports$1.ExecutableError = exports$1.PluggableAuthClient = exports$1.DownscopedClient = exports$1.BaseExternalAccountClient = exports$1.ExternalAccountClient = exports$1.IdentityPoolClient = exports$1.AwsRequestSigner = exports$1.AwsClient = exports$1.UserRefreshClient = exports$1.LoginTicket = exports$1.ClientAuthentication = exports$1.OAuth2Client = exports$1.CodeChallengeMethod = exports$1.Impersonated = exports$1.JWT = exports$1.JWTAccess = exports$1.IdTokenClient = exports$1.IAMAuth = exports$1.GCPEnv = exports$1.Compute = exports$1.DEFAULT_UNIVERSE = exports$1.AuthClient = exports$1.gaxios = exports$1.gcpMetadata = void 0;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.GoogleAuth = exports.auth = exports.PassThroughClient = exports.ExternalAccountAuthorizedUserClient = exports.EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE = exports.ExecutableError = exports.PluggableAuthClient = exports.DownscopedClient = exports.BaseExternalAccountClient = exports.ExternalAccountClient = exports.IdentityPoolClient = exports.AwsRequestSigner = exports.AwsClient = exports.UserRefreshClient = exports.LoginTicket = exports.ClientAuthentication = exports.OAuth2Client = exports.CodeChallengeMethod = exports.Impersonated = exports.JWT = exports.JWTAccess = exports.IdTokenClient = exports.IAMAuth = exports.GCPEnv = exports.Compute = exports.DEFAULT_UNIVERSE = exports.AuthClient = exports.gaxios = exports.gcpMetadata = void 0;
 		// Copyright 2017 Google LLC
 		//
 		// Licensed under the Apache License, Version 2.0 (the "License");
@@ -43377,59 +43377,59 @@ function requireSrc$2 () {
 		// See the License for the specific language governing permissions and
 		// limitations under the License.
 		const googleauth_1 = requireGoogleauth();
-		Object.defineProperty(exports$1, "GoogleAuth", { enumerable: true, get: function () { return googleauth_1.GoogleAuth; } });
+		Object.defineProperty(exports, "GoogleAuth", { enumerable: true, get: function () { return googleauth_1.GoogleAuth; } });
 		// Export common deps to ensure types/instances are the exact match. Useful
 		// for consistently configuring the library across versions.
-		exports$1.gcpMetadata = requireSrc$3();
-		exports$1.gaxios = requireSrc$5();
+		exports.gcpMetadata = requireSrc$3();
+		exports.gaxios = requireSrc$5();
 		var authclient_1 = requireAuthclient();
-		Object.defineProperty(exports$1, "AuthClient", { enumerable: true, get: function () { return authclient_1.AuthClient; } });
-		Object.defineProperty(exports$1, "DEFAULT_UNIVERSE", { enumerable: true, get: function () { return authclient_1.DEFAULT_UNIVERSE; } });
+		Object.defineProperty(exports, "AuthClient", { enumerable: true, get: function () { return authclient_1.AuthClient; } });
+		Object.defineProperty(exports, "DEFAULT_UNIVERSE", { enumerable: true, get: function () { return authclient_1.DEFAULT_UNIVERSE; } });
 		var computeclient_1 = requireComputeclient();
-		Object.defineProperty(exports$1, "Compute", { enumerable: true, get: function () { return computeclient_1.Compute; } });
+		Object.defineProperty(exports, "Compute", { enumerable: true, get: function () { return computeclient_1.Compute; } });
 		var envDetect_1 = requireEnvDetect();
-		Object.defineProperty(exports$1, "GCPEnv", { enumerable: true, get: function () { return envDetect_1.GCPEnv; } });
+		Object.defineProperty(exports, "GCPEnv", { enumerable: true, get: function () { return envDetect_1.GCPEnv; } });
 		var iam_1 = requireIam();
-		Object.defineProperty(exports$1, "IAMAuth", { enumerable: true, get: function () { return iam_1.IAMAuth; } });
+		Object.defineProperty(exports, "IAMAuth", { enumerable: true, get: function () { return iam_1.IAMAuth; } });
 		var idtokenclient_1 = requireIdtokenclient();
-		Object.defineProperty(exports$1, "IdTokenClient", { enumerable: true, get: function () { return idtokenclient_1.IdTokenClient; } });
+		Object.defineProperty(exports, "IdTokenClient", { enumerable: true, get: function () { return idtokenclient_1.IdTokenClient; } });
 		var jwtaccess_1 = requireJwtaccess();
-		Object.defineProperty(exports$1, "JWTAccess", { enumerable: true, get: function () { return jwtaccess_1.JWTAccess; } });
+		Object.defineProperty(exports, "JWTAccess", { enumerable: true, get: function () { return jwtaccess_1.JWTAccess; } });
 		var jwtclient_1 = requireJwtclient();
-		Object.defineProperty(exports$1, "JWT", { enumerable: true, get: function () { return jwtclient_1.JWT; } });
+		Object.defineProperty(exports, "JWT", { enumerable: true, get: function () { return jwtclient_1.JWT; } });
 		var impersonated_1 = requireImpersonated();
-		Object.defineProperty(exports$1, "Impersonated", { enumerable: true, get: function () { return impersonated_1.Impersonated; } });
+		Object.defineProperty(exports, "Impersonated", { enumerable: true, get: function () { return impersonated_1.Impersonated; } });
 		var oauth2client_1 = requireOauth2client();
-		Object.defineProperty(exports$1, "CodeChallengeMethod", { enumerable: true, get: function () { return oauth2client_1.CodeChallengeMethod; } });
-		Object.defineProperty(exports$1, "OAuth2Client", { enumerable: true, get: function () { return oauth2client_1.OAuth2Client; } });
-		Object.defineProperty(exports$1, "ClientAuthentication", { enumerable: true, get: function () { return oauth2client_1.ClientAuthentication; } });
+		Object.defineProperty(exports, "CodeChallengeMethod", { enumerable: true, get: function () { return oauth2client_1.CodeChallengeMethod; } });
+		Object.defineProperty(exports, "OAuth2Client", { enumerable: true, get: function () { return oauth2client_1.OAuth2Client; } });
+		Object.defineProperty(exports, "ClientAuthentication", { enumerable: true, get: function () { return oauth2client_1.ClientAuthentication; } });
 		var loginticket_1 = requireLoginticket();
-		Object.defineProperty(exports$1, "LoginTicket", { enumerable: true, get: function () { return loginticket_1.LoginTicket; } });
+		Object.defineProperty(exports, "LoginTicket", { enumerable: true, get: function () { return loginticket_1.LoginTicket; } });
 		var refreshclient_1 = requireRefreshclient();
-		Object.defineProperty(exports$1, "UserRefreshClient", { enumerable: true, get: function () { return refreshclient_1.UserRefreshClient; } });
+		Object.defineProperty(exports, "UserRefreshClient", { enumerable: true, get: function () { return refreshclient_1.UserRefreshClient; } });
 		var awsclient_1 = requireAwsclient();
-		Object.defineProperty(exports$1, "AwsClient", { enumerable: true, get: function () { return awsclient_1.AwsClient; } });
+		Object.defineProperty(exports, "AwsClient", { enumerable: true, get: function () { return awsclient_1.AwsClient; } });
 		var awsrequestsigner_1 = requireAwsrequestsigner();
-		Object.defineProperty(exports$1, "AwsRequestSigner", { enumerable: true, get: function () { return awsrequestsigner_1.AwsRequestSigner; } });
+		Object.defineProperty(exports, "AwsRequestSigner", { enumerable: true, get: function () { return awsrequestsigner_1.AwsRequestSigner; } });
 		var identitypoolclient_1 = requireIdentitypoolclient();
-		Object.defineProperty(exports$1, "IdentityPoolClient", { enumerable: true, get: function () { return identitypoolclient_1.IdentityPoolClient; } });
+		Object.defineProperty(exports, "IdentityPoolClient", { enumerable: true, get: function () { return identitypoolclient_1.IdentityPoolClient; } });
 		var externalclient_1 = requireExternalclient();
-		Object.defineProperty(exports$1, "ExternalAccountClient", { enumerable: true, get: function () { return externalclient_1.ExternalAccountClient; } });
+		Object.defineProperty(exports, "ExternalAccountClient", { enumerable: true, get: function () { return externalclient_1.ExternalAccountClient; } });
 		var baseexternalclient_1 = requireBaseexternalclient();
-		Object.defineProperty(exports$1, "BaseExternalAccountClient", { enumerable: true, get: function () { return baseexternalclient_1.BaseExternalAccountClient; } });
+		Object.defineProperty(exports, "BaseExternalAccountClient", { enumerable: true, get: function () { return baseexternalclient_1.BaseExternalAccountClient; } });
 		var downscopedclient_1 = requireDownscopedclient();
-		Object.defineProperty(exports$1, "DownscopedClient", { enumerable: true, get: function () { return downscopedclient_1.DownscopedClient; } });
+		Object.defineProperty(exports, "DownscopedClient", { enumerable: true, get: function () { return downscopedclient_1.DownscopedClient; } });
 		var pluggable_auth_client_1 = requirePluggableAuthClient();
-		Object.defineProperty(exports$1, "PluggableAuthClient", { enumerable: true, get: function () { return pluggable_auth_client_1.PluggableAuthClient; } });
-		Object.defineProperty(exports$1, "ExecutableError", { enumerable: true, get: function () { return pluggable_auth_client_1.ExecutableError; } });
+		Object.defineProperty(exports, "PluggableAuthClient", { enumerable: true, get: function () { return pluggable_auth_client_1.PluggableAuthClient; } });
+		Object.defineProperty(exports, "ExecutableError", { enumerable: true, get: function () { return pluggable_auth_client_1.ExecutableError; } });
 		var externalAccountAuthorizedUserClient_1 = requireExternalAccountAuthorizedUserClient();
-		Object.defineProperty(exports$1, "EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE", { enumerable: true, get: function () { return externalAccountAuthorizedUserClient_1.EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE; } });
-		Object.defineProperty(exports$1, "ExternalAccountAuthorizedUserClient", { enumerable: true, get: function () { return externalAccountAuthorizedUserClient_1.ExternalAccountAuthorizedUserClient; } });
+		Object.defineProperty(exports, "EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE", { enumerable: true, get: function () { return externalAccountAuthorizedUserClient_1.EXTERNAL_ACCOUNT_AUTHORIZED_USER_TYPE; } });
+		Object.defineProperty(exports, "ExternalAccountAuthorizedUserClient", { enumerable: true, get: function () { return externalAccountAuthorizedUserClient_1.ExternalAccountAuthorizedUserClient; } });
 		var passthrough_1 = requirePassthrough();
-		Object.defineProperty(exports$1, "PassThroughClient", { enumerable: true, get: function () { return passthrough_1.PassThroughClient; } });
-		__exportStar(requireGoogleToken(), exports$1);
+		Object.defineProperty(exports, "PassThroughClient", { enumerable: true, get: function () { return passthrough_1.PassThroughClient; } });
+		__exportStar(requireGoogleToken(), exports);
 		const auth = new googleauth_1.GoogleAuth();
-		exports$1.auth = auth;
+		exports.auth = auth;
 		
 	} (src$4));
 	return src$4;
@@ -46467,7 +46467,7 @@ var hasRequiredUrlTemplate;
 function requireUrlTemplate () {
 	if (hasRequiredUrlTemplate) return urlTemplate$1.exports;
 	hasRequiredUrlTemplate = 1;
-	(function (module, exports$1) {
+	(function (module, exports) {
 		(function (root, factory) {
 		    {
 		        module.exports = factory();
@@ -46760,7 +46760,7 @@ var hasRequiredHttp2;
 function requireHttp2 () {
 	if (hasRequiredHttp2) return http2;
 	hasRequiredHttp2 = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2020 Google LLC
 		// Licensed under the Apache License, Version 2.0 (the "License");
 		// you may not use this file except in compliance with the License.
@@ -46773,10 +46773,10 @@ function requireHttp2 () {
 		// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		// See the License for the specific language governing permissions and
 		// limitations under the License.
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.sessions = void 0;
-		exports$1.request = request;
-		exports$1.closeSession = closeSession;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.sessions = void 0;
+		exports.request = request;
+		exports.closeSession = closeSession;
 		const http2 = require$$0$8;
 		const zlib = require$$1$7;
 		const url_1 = require$$2$1;
@@ -46792,7 +46792,7 @@ function requireHttp2 () {
 		 * List of sessions current in use.
 		 * @private
 		 */
-		exports$1.sessions = {};
+		exports.sessions = {};
 		/**
 		 * Public method to make an http2 request.
 		 * @param config - Request options.
@@ -46950,7 +46950,7 @@ function requireHttp2 () {
 		 * @param host - The hostname to which the session belongs.
 		 */
 		function _getClient(host) {
-		    if (!exports$1.sessions[host]) {
+		    if (!exports.sessions[host]) {
 		        if (DEBUG) {
 		            console.log(`Creating client for ${host}`);
 		        }
@@ -46958,28 +46958,28 @@ function requireHttp2 () {
 		        session
 		            .on('error', e => {
 		            console.error(`*ERROR*: ${e}`);
-		            delete exports$1.sessions[host];
+		            delete exports.sessions[host];
 		        })
 		            .on('goaway', (errorCode, lastStreamId) => {
 		            console.error(`*GOAWAY*: ${errorCode} : ${lastStreamId}`);
-		            delete exports$1.sessions[host];
+		            delete exports.sessions[host];
 		        });
-		        exports$1.sessions[host] = { session };
+		        exports.sessions[host] = { session };
 		    }
 		    else {
 		        if (DEBUG) {
 		            console.log(`Used cached client for ${host}`);
 		        }
 		    }
-		    return exports$1.sessions[host];
+		    return exports.sessions[host];
 		}
 		async function closeSession(url) {
-		    const sessionData = exports$1.sessions[url.host];
+		    const sessionData = exports.sessions[url.host];
 		    if (!sessionData) {
 		        return;
 		    }
 		    const { session } = sessionData;
-		    delete exports$1.sessions[url.host];
+		    delete exports.sessions[url.host];
 		    if (DEBUG) {
 		        console.error(`Closing ${url.host}`);
 		    }
@@ -47715,7 +47715,7 @@ var hasRequiredSrc$1;
 function requireSrc$1 () {
 	if (hasRequiredSrc$1) return src$5;
 	hasRequiredSrc$1 = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2020 Google LLC
 		// Licensed under the Apache License, Version 2.0 (the "License");
 		// you may not use this file except in compliance with the License.
@@ -47739,38 +47739,38 @@ function requireSrc$1 () {
 		    if (k2 === undefined) k2 = k;
 		    o[k2] = m[k];
 		}));
-		var __exportStar = (src$5 && src$5.__exportStar) || function(m, exports$1) {
-		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+		var __exportStar = (src$5 && src$5.__exportStar) || function(m, exports) {
+		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.Endpoint = exports$1.Discovery = exports$1.AuthPlus = exports$1.createAPIRequest = exports$1.getAPI = exports$1.GaxiosError = exports$1.Gaxios = exports$1.AwsClient = exports$1.IdentityPoolClient = exports$1.BaseExternalAccountClient = exports$1.ExternalAccountClient = exports$1.GoogleAuth = exports$1.UserRefreshClient = exports$1.Compute = exports$1.JWT = exports$1.OAuth2Client = exports$1.gaxios = exports$1.googleAuthLibrary = void 0;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.Endpoint = exports.Discovery = exports.AuthPlus = exports.createAPIRequest = exports.getAPI = exports.GaxiosError = exports.Gaxios = exports.AwsClient = exports.IdentityPoolClient = exports.BaseExternalAccountClient = exports.ExternalAccountClient = exports.GoogleAuth = exports.UserRefreshClient = exports.Compute = exports.JWT = exports.OAuth2Client = exports.gaxios = exports.googleAuthLibrary = void 0;
 		// re-exporting key dependencies
-		exports$1.googleAuthLibrary = requireSrc$2();
-		exports$1.gaxios = requireSrc$5();
+		exports.googleAuthLibrary = requireSrc$2();
+		exports.gaxios = requireSrc$5();
 		var google_auth_library_1 = requireSrc$2();
-		Object.defineProperty(exports$1, "OAuth2Client", { enumerable: true, get: function () { return google_auth_library_1.OAuth2Client; } });
-		Object.defineProperty(exports$1, "JWT", { enumerable: true, get: function () { return google_auth_library_1.JWT; } });
-		Object.defineProperty(exports$1, "Compute", { enumerable: true, get: function () { return google_auth_library_1.Compute; } });
-		Object.defineProperty(exports$1, "UserRefreshClient", { enumerable: true, get: function () { return google_auth_library_1.UserRefreshClient; } });
-		Object.defineProperty(exports$1, "GoogleAuth", { enumerable: true, get: function () { return google_auth_library_1.GoogleAuth; } });
-		Object.defineProperty(exports$1, "ExternalAccountClient", { enumerable: true, get: function () { return google_auth_library_1.ExternalAccountClient; } });
-		Object.defineProperty(exports$1, "BaseExternalAccountClient", { enumerable: true, get: function () { return google_auth_library_1.BaseExternalAccountClient; } });
-		Object.defineProperty(exports$1, "IdentityPoolClient", { enumerable: true, get: function () { return google_auth_library_1.IdentityPoolClient; } });
-		Object.defineProperty(exports$1, "AwsClient", { enumerable: true, get: function () { return google_auth_library_1.AwsClient; } });
+		Object.defineProperty(exports, "OAuth2Client", { enumerable: true, get: function () { return google_auth_library_1.OAuth2Client; } });
+		Object.defineProperty(exports, "JWT", { enumerable: true, get: function () { return google_auth_library_1.JWT; } });
+		Object.defineProperty(exports, "Compute", { enumerable: true, get: function () { return google_auth_library_1.Compute; } });
+		Object.defineProperty(exports, "UserRefreshClient", { enumerable: true, get: function () { return google_auth_library_1.UserRefreshClient; } });
+		Object.defineProperty(exports, "GoogleAuth", { enumerable: true, get: function () { return google_auth_library_1.GoogleAuth; } });
+		Object.defineProperty(exports, "ExternalAccountClient", { enumerable: true, get: function () { return google_auth_library_1.ExternalAccountClient; } });
+		Object.defineProperty(exports, "BaseExternalAccountClient", { enumerable: true, get: function () { return google_auth_library_1.BaseExternalAccountClient; } });
+		Object.defineProperty(exports, "IdentityPoolClient", { enumerable: true, get: function () { return google_auth_library_1.IdentityPoolClient; } });
+		Object.defineProperty(exports, "AwsClient", { enumerable: true, get: function () { return google_auth_library_1.AwsClient; } });
 		var gaxios_1 = requireSrc$5();
-		Object.defineProperty(exports$1, "Gaxios", { enumerable: true, get: function () { return gaxios_1.Gaxios; } });
-		Object.defineProperty(exports$1, "GaxiosError", { enumerable: true, get: function () { return gaxios_1.GaxiosError; } });
+		Object.defineProperty(exports, "Gaxios", { enumerable: true, get: function () { return gaxios_1.Gaxios; } });
+		Object.defineProperty(exports, "GaxiosError", { enumerable: true, get: function () { return gaxios_1.GaxiosError; } });
 		var apiIndex_1 = requireApiIndex();
-		Object.defineProperty(exports$1, "getAPI", { enumerable: true, get: function () { return apiIndex_1.getAPI; } });
+		Object.defineProperty(exports, "getAPI", { enumerable: true, get: function () { return apiIndex_1.getAPI; } });
 		var apirequest_1 = requireApirequest();
-		Object.defineProperty(exports$1, "createAPIRequest", { enumerable: true, get: function () { return apirequest_1.createAPIRequest; } });
+		Object.defineProperty(exports, "createAPIRequest", { enumerable: true, get: function () { return apirequest_1.createAPIRequest; } });
 		var authplus_1 = requireAuthplus();
-		Object.defineProperty(exports$1, "AuthPlus", { enumerable: true, get: function () { return authplus_1.AuthPlus; } });
+		Object.defineProperty(exports, "AuthPlus", { enumerable: true, get: function () { return authplus_1.AuthPlus; } });
 		var discovery_1 = requireDiscovery();
-		Object.defineProperty(exports$1, "Discovery", { enumerable: true, get: function () { return discovery_1.Discovery; } });
+		Object.defineProperty(exports, "Discovery", { enumerable: true, get: function () { return discovery_1.Discovery; } });
 		var endpoint_1 = requireEndpoint();
-		Object.defineProperty(exports$1, "Endpoint", { enumerable: true, get: function () { return endpoint_1.Endpoint; } });
-		__exportStar(requireUtil(), exports$1);
+		Object.defineProperty(exports, "Endpoint", { enumerable: true, get: function () { return endpoint_1.Endpoint; } });
+		__exportStar(requireUtil(), exports);
 		
 	} (src$5));
 	return src$5;
@@ -48163,9 +48163,11 @@ function requireV3 () {
 	    class Resource$Applications {
 	        context;
 	        deviceTierConfigs;
+	        tracks;
 	        constructor(context) {
 	            this.context = context;
 	            this.deviceTierConfigs = new Resource$Applications$Devicetierconfigs(this.context);
+	            this.tracks = new Resource$Applications$Tracks(this.context);
 	        }
 	        dataSafety(paramsOrCallback, optionsOrCallback, callback) {
 	            let params = (paramsOrCallback ||
@@ -48308,6 +48310,54 @@ function requireV3 () {
 	        }
 	    }
 	    androidpublisher_v3.Resource$Applications$Devicetierconfigs = Resource$Applications$Devicetierconfigs;
+	    class Resource$Applications$Tracks {
+	        context;
+	        releases;
+	        constructor(context) {
+	            this.context = context;
+	            this.releases = new Resource$Applications$Tracks$Releases(this.context);
+	        }
+	    }
+	    androidpublisher_v3.Resource$Applications$Tracks = Resource$Applications$Tracks;
+	    class Resource$Applications$Tracks$Releases {
+	        context;
+	        constructor(context) {
+	            this.context = context;
+	        }
+	        list(paramsOrCallback, optionsOrCallback, callback) {
+	            let params = (paramsOrCallback ||
+	                {});
+	            let options = (optionsOrCallback || {});
+	            if (typeof paramsOrCallback === 'function') {
+	                callback = paramsOrCallback;
+	                params = {};
+	                options = {};
+	            }
+	            if (typeof optionsOrCallback === 'function') {
+	                callback = optionsOrCallback;
+	                options = {};
+	            }
+	            const rootUrl = options.rootUrl || 'https://androidpublisher.googleapis.com/';
+	            const parameters = {
+	                options: Object.assign({
+	                    url: (rootUrl + '/androidpublisher/v3/{+parent}/releases').replace(/([^:]\/)\/+/g, '$1'),
+	                    method: 'GET',
+	                    apiVersion: '',
+	                }, options),
+	                params,
+	                requiredParams: ['parent'],
+	                pathParams: ['parent'],
+	                context: this.context,
+	            };
+	            if (callback) {
+	                (0, googleapis_common_1.createAPIRequest)(parameters, callback);
+	            }
+	            else {
+	                return (0, googleapis_common_1.createAPIRequest)(parameters);
+	            }
+	        }
+	    }
+	    androidpublisher_v3.Resource$Applications$Tracks$Releases = Resource$Applications$Tracks$Releases;
 	    class Resource$Apprecovery {
 	        context;
 	        constructor(context) {
@@ -53054,7 +53104,7 @@ var hasRequiredBuild;
 function requireBuild () {
 	if (hasRequiredBuild) return build;
 	hasRequiredBuild = 1;
-	(function (exports$1) {
+	(function (exports) {
 		// Copyright 2020 Google LLC
 		// Licensed under the Apache License, Version 2.0 (the "License");
 		// you may not use this file except in compliance with the License.
@@ -53067,32 +53117,32 @@ function requireBuild () {
 		// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 		// See the License for the specific language governing permissions and
 		// limitations under the License.
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.AuthPlus = exports$1.androidpublisher_v3 = exports$1.androidpublisher_v2 = exports$1.androidpublisher_v1 = exports$1.androidpublisher_v1_1 = exports$1.auth = exports$1.VERSIONS = void 0;
-		exports$1.androidpublisher = androidpublisher;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.AuthPlus = exports.androidpublisher_v3 = exports.androidpublisher_v2 = exports.androidpublisher_v1 = exports.androidpublisher_v1_1 = exports.auth = exports.VERSIONS = void 0;
+		exports.androidpublisher = androidpublisher;
 		/*! THIS FILE IS AUTO-GENERATED */
 		const googleapis_common_1 = requireSrc$1();
 		const v1_1_1 = requireV1_1();
-		Object.defineProperty(exports$1, "androidpublisher_v1_1", { enumerable: true, get: function () { return v1_1_1.androidpublisher_v1_1; } });
+		Object.defineProperty(exports, "androidpublisher_v1_1", { enumerable: true, get: function () { return v1_1_1.androidpublisher_v1_1; } });
 		const v1_1 = requireV1();
-		Object.defineProperty(exports$1, "androidpublisher_v1", { enumerable: true, get: function () { return v1_1.androidpublisher_v1; } });
+		Object.defineProperty(exports, "androidpublisher_v1", { enumerable: true, get: function () { return v1_1.androidpublisher_v1; } });
 		const v2_1 = requireV2();
-		Object.defineProperty(exports$1, "androidpublisher_v2", { enumerable: true, get: function () { return v2_1.androidpublisher_v2; } });
+		Object.defineProperty(exports, "androidpublisher_v2", { enumerable: true, get: function () { return v2_1.androidpublisher_v2; } });
 		const v3_1 = requireV3();
-		Object.defineProperty(exports$1, "androidpublisher_v3", { enumerable: true, get: function () { return v3_1.androidpublisher_v3; } });
-		exports$1.VERSIONS = {
+		Object.defineProperty(exports, "androidpublisher_v3", { enumerable: true, get: function () { return v3_1.androidpublisher_v3; } });
+		exports.VERSIONS = {
 		    'v1.1': v1_1_1.androidpublisher_v1_1.Androidpublisher,
 		    v1: v1_1.androidpublisher_v1.Androidpublisher,
 		    v2: v2_1.androidpublisher_v2.Androidpublisher,
 		    v3: v3_1.androidpublisher_v3.Androidpublisher,
 		};
 		function androidpublisher(versionOrOptions) {
-		    return (0, googleapis_common_1.getAPI)('androidpublisher', versionOrOptions, exports$1.VERSIONS, this);
+		    return (0, googleapis_common_1.getAPI)('androidpublisher', versionOrOptions, exports.VERSIONS, this);
 		}
 		const auth = new googleapis_common_1.AuthPlus();
-		exports$1.auth = auth;
+		exports.auth = auth;
 		var googleapis_common_2 = requireSrc$1();
-		Object.defineProperty(exports$1, "AuthPlus", { enumerable: true, get: function () { return googleapis_common_2.AuthPlus; } });
+		Object.defineProperty(exports, "AuthPlus", { enumerable: true, get: function () { return googleapis_common_2.AuthPlus; } });
 		
 	} (build));
 	return build;
@@ -53767,17 +53817,17 @@ var hasRequiredBrowser;
 function requireBrowser () {
 	if (hasRequiredBrowser) return browser.exports;
 	hasRequiredBrowser = 1;
-	(function (module, exports$1) {
+	(function (module, exports) {
 		/**
 		 * This is the web browser implementation of `debug()`.
 		 */
 
-		exports$1.formatArgs = formatArgs;
-		exports$1.save = save;
-		exports$1.load = load;
-		exports$1.useColors = useColors;
-		exports$1.storage = localstorage();
-		exports$1.destroy = (() => {
+		exports.formatArgs = formatArgs;
+		exports.save = save;
+		exports.load = load;
+		exports.useColors = useColors;
+		exports.storage = localstorage();
+		exports.destroy = (() => {
 			let warned = false;
 
 			return () => {
@@ -53792,7 +53842,7 @@ function requireBrowser () {
 		 * Colors.
 		 */
 
-		exports$1.colors = [
+		exports.colors = [
 			'#0000CC',
 			'#0000FF',
 			'#0033CC',
@@ -53957,7 +54007,7 @@ function requireBrowser () {
 		 *
 		 * @api public
 		 */
-		exports$1.log = console.debug || console.log || (() => {});
+		exports.log = console.debug || console.log || (() => {});
 
 		/**
 		 * Save `namespaces`.
@@ -53968,9 +54018,9 @@ function requireBrowser () {
 		function save(namespaces) {
 			try {
 				if (namespaces) {
-					exports$1.storage.setItem('debug', namespaces);
+					exports.storage.setItem('debug', namespaces);
 				} else {
-					exports$1.storage.removeItem('debug');
+					exports.storage.removeItem('debug');
 				}
 			} catch (error) {
 				// Swallow
@@ -53987,7 +54037,7 @@ function requireBrowser () {
 		function load() {
 			let r;
 			try {
-				r = exports$1.storage.getItem('debug') || exports$1.storage.getItem('DEBUG') ;
+				r = exports.storage.getItem('debug') || exports.storage.getItem('DEBUG') ;
 			} catch (error) {
 				// Swallow
 				// XXX (@Qix-) should we be logging these?
@@ -54023,7 +54073,7 @@ function requireBrowser () {
 			}
 		}
 
-		module.exports = requireCommon()(exports$1);
+		module.exports = requireCommon()(exports);
 
 		const {formatters} = module.exports;
 
@@ -54212,7 +54262,7 @@ var hasRequiredNode;
 function requireNode () {
 	if (hasRequiredNode) return node.exports;
 	hasRequiredNode = 1;
-	(function (module, exports$1) {
+	(function (module, exports) {
 		const tty = require$$1$8;
 		const util = require$$2;
 
@@ -54220,13 +54270,13 @@ function requireNode () {
 		 * This is the Node.js implementation of `debug()`.
 		 */
 
-		exports$1.init = init;
-		exports$1.log = log;
-		exports$1.formatArgs = formatArgs;
-		exports$1.save = save;
-		exports$1.load = load;
-		exports$1.useColors = useColors;
-		exports$1.destroy = util.deprecate(
+		exports.init = init;
+		exports.log = log;
+		exports.formatArgs = formatArgs;
+		exports.save = save;
+		exports.load = load;
+		exports.useColors = useColors;
+		exports.destroy = util.deprecate(
 			() => {},
 			'Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.'
 		);
@@ -54235,7 +54285,7 @@ function requireNode () {
 		 * Colors.
 		 */
 
-		exports$1.colors = [6, 2, 3, 4, 5, 1];
+		exports.colors = [6, 2, 3, 4, 5, 1];
 
 		try {
 			// Optional dependency (as in, doesn't need to be installed, NOT like optionalDependencies in package.json)
@@ -54243,7 +54293,7 @@ function requireNode () {
 			const supportsColor = requireSupportsColor();
 
 			if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
-				exports$1.colors = [
+				exports.colors = [
 					20,
 					21,
 					26,
@@ -54332,7 +54382,7 @@ function requireNode () {
 		 *   $ DEBUG_COLORS=no DEBUG_DEPTH=10 DEBUG_SHOW_HIDDEN=enabled node script.js
 		 */
 
-		exports$1.inspectOpts = Object.keys(process.env).filter(key => {
+		exports.inspectOpts = Object.keys(process.env).filter(key => {
 			return /^debug_/i.test(key);
 		}).reduce((obj, key) => {
 			// Camel-case
@@ -54364,8 +54414,8 @@ function requireNode () {
 		 */
 
 		function useColors() {
-			return 'colors' in exports$1.inspectOpts ?
-				Boolean(exports$1.inspectOpts.colors) :
+			return 'colors' in exports.inspectOpts ?
+				Boolean(exports.inspectOpts.colors) :
 				tty.isatty(process.stderr.fd);
 		}
 
@@ -54391,7 +54441,7 @@ function requireNode () {
 		}
 
 		function getDate() {
-			if (exports$1.inspectOpts.hideDate) {
+			if (exports.inspectOpts.hideDate) {
 				return '';
 			}
 			return new Date().toISOString() + ' ';
@@ -54402,7 +54452,7 @@ function requireNode () {
 		 */
 
 		function log(...args) {
-			return process.stderr.write(util.formatWithOptions(exports$1.inspectOpts, ...args) + '\n');
+			return process.stderr.write(util.formatWithOptions(exports.inspectOpts, ...args) + '\n');
 		}
 
 		/**
@@ -54442,13 +54492,13 @@ function requireNode () {
 		function init(debug) {
 			debug.inspectOpts = {};
 
-			const keys = Object.keys(exports$1.inspectOpts);
+			const keys = Object.keys(exports.inspectOpts);
 			for (let i = 0; i < keys.length; i++) {
-				debug.inspectOpts[keys[i]] = exports$1.inspectOpts[keys[i]];
+				debug.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
 			}
 		}
 
-		module.exports = requireCommon()(exports$1);
+		module.exports = requireCommon()(exports);
 
 		const {formatters} = module.exports;
 
@@ -54576,7 +54626,7 @@ var hasRequiredDist$1;
 function requireDist$1 () {
 	if (hasRequiredDist$1) return dist;
 	hasRequiredDist$1 = 1;
-	(function (exports$1) {
+	(function (exports) {
 		var __createBinding = (dist && dist.__createBinding) || (Object.create ? (function(o, m, k, k2) {
 		    if (k2 === undefined) k2 = k;
 		    var desc = Object.getOwnPropertyDescriptor(m, k);
@@ -54600,15 +54650,15 @@ function requireDist$1 () {
 		    __setModuleDefault(result, mod);
 		    return result;
 		};
-		var __exportStar = (dist && dist.__exportStar) || function(m, exports$1) {
-		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports$1, p)) __createBinding(exports$1, m, p);
+		var __exportStar = (dist && dist.__exportStar) || function(m, exports) {
+		    for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 		};
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.Agent = void 0;
+		Object.defineProperty(exports, "__esModule", { value: true });
+		exports.Agent = void 0;
 		const net = __importStar(require$$0$9);
 		const http$1 = __importStar(http);
 		const https_1 = https;
-		__exportStar(requireHelpers(), exports$1);
+		__exportStar(requireHelpers(), exports);
 		const INTERNAL = Symbol('AgentBaseInternalState');
 		class Agent extends http$1.Agent {
 		    constructor(opts) {
@@ -54754,7 +54804,7 @@ function requireDist$1 () {
 		        }
 		    }
 		}
-		exports$1.Agent = Agent;
+		exports.Agent = Agent;
 		
 	} (dist));
 	return dist;
@@ -55133,10 +55183,10 @@ var hasRequiredPonyfill_es2018;
 function requirePonyfill_es2018 () {
 	if (hasRequiredPonyfill_es2018) return ponyfill_es2018$1.exports;
 	hasRequiredPonyfill_es2018 = 1;
-	(function (module, exports$1) {
+	(function (module, exports) {
 		(function (global, factory) {
-		    factory(exports$1) ;
-		})(ponyfill_es2018, (function (exports$1) {
+		    factory(exports) ;
+		})(ponyfill_es2018, (function (exports) {
 		    function noop() {
 		        return undefined;
 		    }
@@ -59845,19 +59895,19 @@ function requirePonyfill_es2018 () {
 		        return new TypeError(`TransformStream.prototype.${name} can only be used on a TransformStream`);
 		    }
 
-		    exports$1.ByteLengthQueuingStrategy = ByteLengthQueuingStrategy;
-		    exports$1.CountQueuingStrategy = CountQueuingStrategy;
-		    exports$1.ReadableByteStreamController = ReadableByteStreamController;
-		    exports$1.ReadableStream = ReadableStream;
-		    exports$1.ReadableStreamBYOBReader = ReadableStreamBYOBReader;
-		    exports$1.ReadableStreamBYOBRequest = ReadableStreamBYOBRequest;
-		    exports$1.ReadableStreamDefaultController = ReadableStreamDefaultController;
-		    exports$1.ReadableStreamDefaultReader = ReadableStreamDefaultReader;
-		    exports$1.TransformStream = TransformStream;
-		    exports$1.TransformStreamDefaultController = TransformStreamDefaultController;
-		    exports$1.WritableStream = WritableStream;
-		    exports$1.WritableStreamDefaultController = WritableStreamDefaultController;
-		    exports$1.WritableStreamDefaultWriter = WritableStreamDefaultWriter;
+		    exports.ByteLengthQueuingStrategy = ByteLengthQueuingStrategy;
+		    exports.CountQueuingStrategy = CountQueuingStrategy;
+		    exports.ReadableByteStreamController = ReadableByteStreamController;
+		    exports.ReadableStream = ReadableStream;
+		    exports.ReadableStreamBYOBReader = ReadableStreamBYOBReader;
+		    exports.ReadableStreamBYOBRequest = ReadableStreamBYOBRequest;
+		    exports.ReadableStreamDefaultController = ReadableStreamDefaultController;
+		    exports.ReadableStreamDefaultReader = ReadableStreamDefaultReader;
+		    exports.TransformStream = TransformStream;
+		    exports.TransformStreamDefaultController = TransformStreamDefaultController;
+		    exports.WritableStream = WritableStream;
+		    exports.WritableStreamDefaultController = WritableStreamDefaultController;
+		    exports.WritableStreamDefaultWriter = WritableStreamDefaultWriter;
 
 		}));
 		
