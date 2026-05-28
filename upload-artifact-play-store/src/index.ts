@@ -210,7 +210,12 @@ async function run(): Promise<void> {
     core.setOutput("internal-sharing-url", internalSharingUrl);
     core.info(`Internal sharing URL: ${internalSharingUrl}`);
   } catch (error) {
-    if (error instanceof Error) core.setFailed(error.message);
+    if (error instanceof Error) {
+      core.setFailed(error.message);
+    } else {
+      const serialized = typeof error === "object" ? JSON.stringify(error) : String(error);
+      core.setFailed(`Non-Error thrown: ${serialized}`);
+    }
   }
 }
 
