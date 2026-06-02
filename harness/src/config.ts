@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
+import { log } from "./logging.js";
 
 export interface HarnessConfig {
   tracker: {
@@ -61,17 +62,29 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 export async function loadConfig(workspacePath: string): Promise<HarnessConfig> {
   const cfgPath = join(workspacePath, ".banzai", "config.json");
-  let raw: string;
+  let raw: string | null = null;
   try {
     raw = await readFile(cfgPath, "utf8");
   } catch (e) {
-    throw new Error(`config_missing: ${cfgPath}`);
+    // A missing config file is fine: the built-in defaults plus action inputs
+    // (tracker_project_id / tracker_endpoint) are sufficient to run. Only a
+    // genuine read error (permissions, etc.) is fatal.
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      throw new Error(`config_unreadable: ${cfgPath}: ${(e as Error).message}`);
+    }
+    log.info({
+      module: "config",
+      event: "config_missing",
+      message: `${cfgPath} not found; using defaults`,
+    });
   }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch (e) {
-    throw new Error(`config_invalid_json: ${(e as Error).message}`);
+  let parsed: unknown = {};
+  if (raw !== null) {
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      throw new Error(`config_invalid_json: ${(e as Error).message}`);
+    }
   }
   const root = isRecord(parsed) ? parsed : {};
   const trackerRaw = isRecord(root.tracker) ? root.tracker : {};

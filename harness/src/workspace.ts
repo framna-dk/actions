@@ -48,7 +48,12 @@ async function run(cmd: string, args: string[], cwd?: string): Promise<void> {
 }
 
 export async function prepareWorkspace(input: PrepInput): Promise<PrepResult> {
-  const key = sanitize(input.issueIdentifier);
+  // Key the workspace by both repo and issue so a shared runner using a common
+  // workspaceRoot never reuses (and pushes to) the wrong repository when two
+  // repos happen to share an issue identifier such as `#12`.
+  const issueKey = sanitize(input.issueIdentifier);
+  const repoKey = sanitize(input.repoSlug);
+  const key = `${repoKey}__${issueKey}`;
   const workspacePath = join(input.workspaceRoot, key);
 
   await mkdir(input.workspaceRoot, { recursive: true });
@@ -69,7 +74,7 @@ export async function prepareWorkspace(input: PrepInput): Promise<PrepResult> {
 
   await assertContained(await realpathOrSelf(workspacePath), input.workspaceRoot);
 
-  const branch = `agent/${key}`;
+  const branch = `agent/${issueKey}`;
   log.info({ module: "workspace", event: "branch_reset", message: branch });
   await run("git", ["-C", workspacePath, "fetch", "origin", "--prune"]);
   await run("git", ["-C", workspacePath, "checkout", input.repoRef]);

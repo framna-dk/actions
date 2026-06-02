@@ -1,1 +1,6400 @@
-import{createRequire as e}from"module";var t={694:(t,s,i)=>{var n;n={value:true};var r=i(203);var o=i(928);var a=i(896);var l=i(982);class Token{constructor(e,t,s,i,n){this.kind=e;this.input=t;this.begin=s;this.end=i;this.file=n}getText(){return this.input.slice(this.begin,this.end)}getPosition(){let[e,t]=[1,1];for(let s=0;s<this.begin;s++){if(this.input[s]==="\n"){e++;t=1}else t++}return[e,t]}size(){return this.end-this.begin}}class Drop{liquidMethodMissing(e,t){return undefined}}const c=Object.prototype.toString;const u=String.prototype.toLowerCase;const h=Object.hasOwnProperty;function isString(e){return typeof e==="string"}function isFunction(e){return typeof e==="function"}function isPromise(e){return e&&isFunction(e.then)}function isIterator(e){return e&&isFunction(e.next)&&isFunction(e.throw)&&isFunction(e.return)}function promisify(e){return function(...t){return new Promise(((s,i)=>{e(...t,((e,t)=>{e?i(e):s(t)}))}))}}function stringify(e){e=toValue(e);if(isString(e))return e;if(isNil(e))return"";if(isArray(e))return e.map((e=>stringify(e))).join("");return String(e)}function toEnumerable(e){e=toValue(e);if(isArray(e))return e;if(isString(e)&&e.length>0)return[e];if(isIterable(e))return Array.from(e);if(isObject(e))return Object.keys(e).map((t=>[t,e[t]]));return[]}function toArray(e){e=toValue(e);if(isNil(e))return[];if(isArray(e))return e;return[e]}function toValue(e){return e instanceof Drop&&isFunction(e.valueOf)?e.valueOf():e}function toNumber(e){return+toValue(e)||0}function isNumber(e){return typeof e==="number"}function toLiquid(e){if(e&&isFunction(e.toLiquid))return toLiquid(e.toLiquid());return e}function isNil(e){return e==null}function isUndefined(e){return e===undefined}function isArray(e){return c.call(e)==="[object Array]"}function isArrayLike(e){return e&&isNumber(e.length)}function isIterable(e){return isObject(e)&&Symbol.iterator in e}function forOwn(e,t){e=e||{};for(const s in e){if(h.call(e,s)){if(t(e[s],s,e)===false)break}}return e}function last(e){return e[e.length-1]}function isObject(e){const t=typeof e;return e!==null&&(t==="object"||t==="function")}function range(e,t,s=1){const i=[];for(let n=e;n<t;n+=s){i.push(n)}return i}function padStart(e,t,s=" "){return pad(e,t,s,((e,t)=>t+e))}function padEnd(e,t,s=" "){return pad(e,t,s,((e,t)=>e+t))}function pad(e,t,s,i){e=String(e);const n=t-e.length;if(n<=0)return e;return i(e,s.repeat(n))}function identify(e){return e}function changeCase(e){const t=[...e].some((e=>e>="a"&&e<="z"));return t?e.toUpperCase():e.toLowerCase()}function ellipsis(e,t){return e.length>t?e.slice(0,t-3)+"...":e}function orderedCompare(e,t){if(isNil(e)&&isNil(t))return 0;if(isNil(e))return 1;if(isNil(t))return-1;if(e<t)return-1;if(e>t)return 1;return 0}function caseInsensitiveCompare(e,t){if(isNil(e)&&isNil(t))return 0;if(isNil(e))return 1;if(isNil(t))return-1;e=u.call(e);t=u.call(t);if(e<t)return-1;if(e>t)return 1;return 0}function argumentsToValue(e){return function(...t){return e.call(this,...t.map(toValue))}}function argumentsToNumber(e){return function(...t){return e.call(this,...t.map(toNumber))}}function*strictUniq(e){const t=new Set;for(const s of e){const e=JSON.stringify(s);if(!t.has(e)){t.add(e);yield s}}}const d="__liquidClass__";class LiquidError extends Error{constructor(e,t){super(typeof e==="string"?e:e.message);this.context="";if(typeof e!=="string")Object.defineProperty(this,"originalError",{value:e,enumerable:false});Object.defineProperty(this,"token",{value:t,enumerable:false});Object.defineProperty(this,d,{value:"LiquidError",enumerable:false})}update(){Object.defineProperty(this,"context",{value:mkContext(this.token),enumerable:false});this.message=mkMessage(this.message,this.token);this.stack=this.message+"\n"+this.context+"\n"+this.stack;if(this.originalError)this.stack+="\nFrom "+this.originalError.stack}static is(e){return e?.[d]==="LiquidError"}}class TokenizationError extends LiquidError{constructor(e,t){super(e,t);this.name="TokenizationError";super.update()}}class ParseError extends LiquidError{constructor(e,t){super(e,t);this.name="ParseError";this.message=e.message;super.update()}}class RenderError extends LiquidError{constructor(e,t){super(e,t.token);this.name="RenderError";this.message=e.message;super.update()}static is(e){return e.name==="RenderError"}}class LiquidErrors extends LiquidError{constructor(e){super(e[0],e[0].token);this.errors=e;this.name="LiquidErrors";const t=e.length>1?"s":"";this.message=`${e.length} error${t} found`;super.update()}static is(e){return e.name==="LiquidErrors"}}class UndefinedVariableError extends LiquidError{constructor(e,t){super(e,t);this.name="UndefinedVariableError";this.message=e.message;super.update()}}class InternalUndefinedVariableError extends Error{constructor(e){super(`undefined variable: ${e}`);this.name="InternalUndefinedVariableError";this.variableName=e}}class AssertionError extends Error{constructor(e){super(e);this.name="AssertionError";this.message=e+""}}function mkContext(e){const[t,s]=e.getPosition();const i=e.input.split("\n");const n=Math.max(t-2,1);const r=Math.min(t+3,i.length);const o=range(n,r+1).map((e=>{const n=e===t?">> ":"   ";const o=padStart(String(e),String(r).length);let a=`${n}${o}| `;const l=e===t?"\n"+padStart("^",s+a.length):"";a+=i[e-1];a+=l;return a})).join("\n");return o}function mkMessage(e,t){if(t.file)e+=`, file:${t.file}`;const[s,i]=t.getPosition();e+=`, line:${s}, col:${i}`;return e}const p=[0,0,0,0,0,0,0,0,0,20,4,4,4,20,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,20,2,8,0,0,0,0,8,0,0,0,64,0,65,0,0,33,33,33,33,33,33,33,33,33,33,0,0,2,2,2,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0];const f=1;const m=4;const g=8;const y=16;const k=32;const T=64;const w=128;function isWord(e){const t=e.charCodeAt(0);return t>=128?!p[t]:!!(p[t]&f)}p[160]=p[5760]=p[6158]=p[8192]=p[8193]=p[8194]=p[8195]=p[8196]=p[8197]=p[8198]=p[8199]=p[8200]=p[8201]=p[8202]=p[8232]=p[8233]=p[8239]=p[8287]=p[12288]=m;p[8220]=p[8221]=w;function assert(e,t){if(!e){const s=typeof t==="function"?t():t||`expect ${e} to be true`;throw new AssertionError(s)}}function assertEmpty(e,t=`unexpected ${JSON.stringify(e)}`){assert(!e,t)}class NullDrop extends Drop{equals(e){return isNil(toValue(e))}gt(){return false}geq(){return false}lt(){return false}leq(){return false}valueOf(){return null}}class EmptyDrop extends Drop{equals(e){if(e instanceof EmptyDrop)return false;e=toValue(e);if(isString(e)||isArray(e))return e.length===0;if(isObject(e))return Object.keys(e).length===0;return false}gt(){return false}geq(){return false}lt(){return false}leq(){return false}valueOf(){return""}static is(e){return e instanceof EmptyDrop}}class BlankDrop extends EmptyDrop{equals(e){if(e===false)return true;if(isNil(toValue(e)))return true;if(isString(e))return/^\s*$/.test(e);return super.equals(e)}static is(e){return e instanceof BlankDrop}}class ForloopDrop extends Drop{constructor(e,t,s){super();this.i=0;this.length=e;this.name=`${s}-${t}`}next(){this.i++}index0(){return this.i}index(){return this.i+1}first(){return this.i===0}last(){return this.i===this.length-1}rindex(){return this.length-this.i}rindex0(){return this.length-this.i-1}valueOf(){return JSON.stringify(this)}}class SimpleEmitter{constructor(){this.buffer=""}write(e){this.buffer+=stringify(e)}}class StreamedEmitter{constructor(){this.buffer="";this.stream=new r.PassThrough}write(e){this.stream.write(stringify(e))}error(e){this.stream.emit("error",e)}end(){this.stream.end()}}class KeepingTypeEmitter{constructor(){this.buffer=""}write(e){e=toValue(e);if(typeof e!=="string"&&this.buffer===""){this.buffer=e}else{this.buffer=stringify(this.buffer)+stringify(e)}}}class BlockDrop extends Drop{constructor(e=()=>""){super();this.superBlockRender=e}*super(){const e=new SimpleEmitter;yield this.superBlockRender(e);return e.buffer}}function isComparable(e){return e&&isFunction(e.equals)&&isFunction(e.gt)&&isFunction(e.geq)&&isFunction(e.lt)&&isFunction(e.leq)}const b=new NullDrop;const _={true:true,false:false,nil:b,null:b,empty:new EmptyDrop,blank:new BlankDrop};function createTrie(e){const t={};for(const[s,i]of Object.entries(e)){let e=t;for(let t=0;t<s.length;t++){const i=s[t];e[i]=e[i]||{};if(t===s.length-1&&isWord(s[t])){e[i].needBoundary=true}e=e[i]}e.data=i;e.end=true}return t}function toLiquidAsync(e,t){const s=t||e;return(t,...i)=>t?s(...i):e(...i)}async function toPromise(e){if(!isIterator(e))return e;let t;let s=false;let i="next";do{const n=e[i](t);s=n.done;t=n.value;i="next";try{if(isIterator(t))t=toPromise(t);if(isPromise(t))t=await t}catch(e){i="throw";t=e}}while(!s);return t}function toValueSync(e){if(!isIterator(e))return e;let t;let s=false;let i="next";do{const n=e[i](t);s=n.done;t=n.value;i="next";if(isIterator(t)){try{t=toValueSync(t)}catch(e){i="throw";t=e}}}while(!s);return t}const x=/%([-_0^#:]+)?(\d+)?([EO])?(.)/;function daysInMonth(e){const t=isLeapYear(e)?29:28;return[31,t,31,30,31,30,31,31,30,31,30,31]}function getDayOfYear(e){let t=0;for(let s=0;s<e.getMonth();++s){t+=daysInMonth(e)[s]}return t+e.getDate()}function getWeekOfYear(e,t){const s=getDayOfYear(e)+(t-e.getDay());const i=new Date(e.getFullYear(),0,1);const n=7-i.getDay()+t;return String(Math.floor((s-n)/7)+1)}function isLeapYear(e){const t=e.getFullYear();return!!((t&3)===0&&(t%100||t%400===0&&t))}function ordinal(e){const t=e.getDate();if([11,12,13].includes(t))return"th";switch(t%10){case 1:return"st";case 2:return"nd";case 3:return"rd";default:return"th"}}function century(e){return parseInt(e.getFullYear().toString().substring(0,2),10)}const S={d:2,e:2,H:2,I:2,j:3,k:2,l:2,L:3,m:2,M:2,S:2,U:2,W:2};const v=new Set("aAbBceklpP");function getTimezoneOffset(e,t){const s=Math.abs(e.getTimezoneOffset());const i=Math.floor(s/60);const n=s%60;return(e.getTimezoneOffset()>0?"-":"+")+padStart(i,2,"0")+(t.flags[":"]?":":"")+padStart(n,2,"0")}const L={a:e=>e.getShortWeekdayName(),A:e=>e.getLongWeekdayName(),b:e=>e.getShortMonthName(),B:e=>e.getLongMonthName(),c:e=>e.toLocaleString(),C:e=>century(e),d:e=>e.getDate(),e:e=>e.getDate(),H:e=>e.getHours(),I:e=>String(e.getHours()%12||12),j:e=>getDayOfYear(e),k:e=>e.getHours(),l:e=>String(e.getHours()%12||12),L:e=>e.getMilliseconds(),m:e=>e.getMonth()+1,M:e=>e.getMinutes(),N:(e,t)=>{const s=Number(t.width)||9;const i=String(e.getMilliseconds()).slice(0,s);t.memoryLimit?.use(s-i.length);return padEnd(i,s,"0")},p:e=>e.getHours()<12?"AM":"PM",P:e=>e.getHours()<12?"am":"pm",q:e=>ordinal(e),s:e=>Math.round(e.getTime()/1e3),S:e=>e.getSeconds(),u:e=>e.getDay()||7,U:e=>getWeekOfYear(e,0),w:e=>e.getDay(),W:e=>getWeekOfYear(e,1),x:e=>e.toLocaleDateString(),X:e=>e.toLocaleTimeString(),y:e=>e.getFullYear().toString().slice(2,4),Y:e=>e.getFullYear(),z:getTimezoneOffset,Z:(e,t)=>e.getTimeZoneName()||getTimezoneOffset(e,t),t:()=>"\t",n:()=>"\n","%":()=>"%"};L.h=L.b;function strftime(e,t,s){let i="";let n=t;let r;while(r=x.exec(n)){i+=n.slice(0,r.index);n=n.slice(r.index+r[0].length);i+=format(e,r,s)}return i+n}function format(e,t,s){const[i,n="",r,o,a]=t;const l=L[a];if(!l)return i;const c={};for(const e of n)c[e]=true;let u=String(l(e,{flags:c,width:r,modifier:o,memoryLimit:s}));let h=v.has(a)?" ":"0";let d=r||S[a]||0;if(c["^"])u=u.toUpperCase();else if(c["#"])u=changeCase(u);if(c["_"])h=" ";else if(c["0"])h="0";if(c["-"])d=0;s?.use(Number(d)-u.length);return padStart(u,d,h)}function getDateTimeFormat(){return typeof Intl!=="undefined"?Intl.DateTimeFormat:undefined}const F=6e4;const V=/([zZ]|([+-])(\d{2}):?(\d{2}))$/;const O=["January","February","March","April","May","June","July","August","September","October","November","December"];const j=O.map((e=>e.slice(0,3)));const I=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];const z=I.map((e=>e.slice(0,3)));class LiquidDate{constructor(e,t,s){this.locale=t;this.DateTimeFormat=getDateTimeFormat();this.date=new Date(e);this.timezoneFixed=s!==undefined;if(s===undefined){s=this.date.getTimezoneOffset()}this.timezoneOffset=isString(s)?LiquidDate.getTimezoneOffset(s,this.date):s;this.timezoneName=isString(s)?s:"";const i=(this.date.getTimezoneOffset()-this.timezoneOffset)*F;const n=this.date.getTime()+i;this.displayDate=new Date(n)}getTime(){return this.displayDate.getTime()}getMilliseconds(){return this.displayDate.getMilliseconds()}getSeconds(){return this.displayDate.getSeconds()}getMinutes(){return this.displayDate.getMinutes()}getHours(){return this.displayDate.getHours()}getDay(){return this.displayDate.getDay()}getDate(){return this.displayDate.getDate()}getMonth(){return this.displayDate.getMonth()}getFullYear(){return this.displayDate.getFullYear()}toLocaleString(e,t){if(t?.timeZone){return this.date.toLocaleString(e,t)}return this.displayDate.toLocaleString(e,t)}toLocaleTimeString(e){return this.displayDate.toLocaleTimeString(e)}toLocaleDateString(e){return this.displayDate.toLocaleDateString(e)}getTimezoneOffset(){return this.timezoneOffset}getTimeZoneName(){if(this.timezoneFixed)return this.timezoneName;if(!this.DateTimeFormat)return;return this.DateTimeFormat().resolvedOptions().timeZone}getLongMonthName(){return this.format({month:"long"})??O[this.getMonth()]}getShortMonthName(){return this.format({month:"short"})??j[this.getMonth()]}getLongWeekdayName(){return this.format({weekday:"long"})??I[this.displayDate.getDay()]}getShortWeekdayName(){return this.format({weekday:"short"})??z[this.displayDate.getDay()]}valid(){return!isNaN(this.getTime())}format(e){return this.DateTimeFormat&&this.DateTimeFormat(this.locale,e).format(this.displayDate)}static createDateFixedToTimezone(e,t){const s=e.match(V);if(s&&s[1]==="Z"){return new LiquidDate(+new Date(e),t,0)}if(s&&s[2]&&s[3]&&s[4]){const[,,i,n,r]=s;const o=(i==="+"?-1:1)*(parseInt(n,10)*60+parseInt(r,10));return new LiquidDate(+new Date(e),t,o)}return new LiquidDate(e,t)}static getTimezoneOffset(e,t){const s=t.toLocaleString("en-US",{timeZone:e});const i=t.toLocaleString("en-US",{timeZone:"UTC"});const n=new Date(s);const r=new Date(i);return(+r-+n)/(60*1e3)}}class Limiter{constructor(e,t){this.base=0;this.message=`${e} limit exceeded`;this.limit=t}use(e){if(+e>0){assert(this.base+ +e<=this.limit,this.message);this.base+=+e}}check(e){if(+e>0){assert(+e<=this.limit,this.message)}}}class DelimitedToken extends Token{constructor(e,[t,s],i,n,r,o,a,l){super(e,i,n,r,l);this.trimLeft=false;this.trimRight=false;const c=i[t]==="-";const u=i[s-1]==="-";let h=c?t+1:t;let d=u?s-1:s;while(h<d&&p[i.charCodeAt(h)]&m)h++;while(d>h&&p[i.charCodeAt(d-1)]&m)d--;this.contentRange=[h,d];this.trimLeft=c||o;this.trimRight=u||a}get content(){return this.input.slice(this.contentRange[0],this.contentRange[1])}}class TagToken extends DelimitedToken{constructor(e,t,i,n,r){const{trimTagLeft:o,trimTagRight:a,tagDelimiterLeft:l,tagDelimiterRight:c}=n;const[u,h]=[t+l.length,i-c.length];super(s.Yp.Tag,[u,h],e,t,i,o,a,r);this.tokenizer=new Tokenizer(e,n.operators,r,this.contentRange);this.name=this.tokenizer.readTagName();this.tokenizer.assert(this.name,`illegal tag syntax, tag name expected`);this.tokenizer.skipBlank();this.args=this.tokenizer.input.slice(this.tokenizer.p,this.contentRange[1])}}class OutputToken extends DelimitedToken{constructor(e,t,i,n,r){const{trimOutputLeft:o,trimOutputRight:a,outputDelimiterLeft:l,outputDelimiterRight:c}=n;const u=[t+l.length,i-c.length];super(s.Yp.Output,u,e,t,i,o,a,r)}}class HTMLToken extends Token{constructor(e,t,i,n){super(s.Yp.HTML,e,t,i,n);this.input=e;this.begin=t;this.end=i;this.file=n;this.trimLeft=0;this.trimRight=0}getContent(){return this.input.slice(this.begin+this.trimLeft,this.end-this.trimRight)}}class NumberToken extends Token{constructor(e,t,i,n){super(s.Yp.Number,e,t,i,n);this.input=e;this.begin=t;this.end=i;this.file=n;this.content=Number(this.getText())}}class IdentifierToken extends Token{constructor(e,t,i,n){super(s.Yp.Word,e,t,i,n);this.input=e;this.begin=t;this.end=i;this.file=n;this.content=this.getText()}}class LiteralToken extends Token{constructor(e,t,i,n){super(s.Yp.Literal,e,t,i,n);this.input=e;this.begin=t;this.end=i;this.file=n;this.literal=this.getText();this.content=_[this.literal]}}const q={"==":2,"!=":2,">":2,"<":2,">=":2,"<=":2,contains:2,not:1,and:0,or:0};const E={"==":0,"!=":0,">":0,"<":0,">=":0,"<=":0,contains:0,not:1,and:0,or:0};class OperatorToken extends Token{constructor(e,t,i,n){super(s.Yp.Operator,e,t,i,n);this.input=e;this.begin=t;this.end=i;this.file=n;this.operator=this.getText()}getPrecedence(){const e=this.getText();return e in q?q[e]:1}}class PropertyAccessToken extends Token{constructor(e,t,i,n,r,o){super(s.Yp.PropertyAccess,i,n,r,o);this.variable=e;this.props=t}}class FilterToken extends Token{constructor(e,t,i,n,r,o){super(s.Yp.Filter,i,n,r,o);this.name=e;this.args=t}}class HashToken extends Token{constructor(e,t,i,n,r,o){super(s.Yp.Hash,e,t,i,o);this.input=e;this.begin=t;this.end=i;this.name=n;this.value=r;this.file=o}}const A=/[\da-fA-F]/;const P=/[0-7]/;const $={b:"\b",f:"\f",n:"\n",r:"\r",t:"\t",v:"\v"};function hexVal(e){const t=e.charCodeAt(0);if(t>=97)return t-87;if(t>=65)return t-55;return t-48}function parseStringLiteral(e){let t="";for(let s=1;s<e.length-1;s++){if(e[s]!=="\\"){t+=e[s];continue}if($[e[s+1]]!==undefined){t+=$[e[++s]]}else if(e[s+1]==="u"){let i=0;let n=s+2;while(n<=s+5&&A.test(e[n])){i=i*16+hexVal(e[n++])}s=n-1;t+=String.fromCharCode(i)}else if(!P.test(e[s+1])){t+=e[++s]}else{let i=s+1;let n=0;while(i<=s+3&&P.test(e[i])){n=n*8+hexVal(e[i++])}s=i-1;t+=String.fromCharCode(n)}}return t}class QuotedToken extends Token{constructor(e,t,i,n){super(s.Yp.Quoted,e,t,i,n);this.input=e;this.begin=t;this.end=i;this.file=n;this.content=parseStringLiteral(this.getText())}}class RangeToken extends Token{constructor(e,t,i,n,r,o){super(s.Yp.Range,e,t,i,o);this.input=e;this.begin=t;this.end=i;this.lhs=n;this.rhs=r;this.file=o}}class LiquidTagToken extends DelimitedToken{constructor(e,t,i,n,r){super(s.Yp.Tag,[t,i],e,t,i,false,false,r);this.tokenizer=new Tokenizer(e,n.operators,r,this.contentRange);this.name=this.tokenizer.readTagName();this.tokenizer.assert(this.name,"illegal liquid tag syntax");this.tokenizer.skipBlank()}get args(){return this.tokenizer.input.slice(this.tokenizer.p,this.contentRange[1])}}class FilteredValueToken extends Token{constructor(e,t,i,n,r,o){super(s.Yp.FilteredValue,i,n,r,o);this.initial=e;this.filters=t;this.input=i;this.begin=n;this.end=r;this.file=o}}const N={now:()=>Date.now()};function getPerformance(){return typeof global==="object"&&global.performance||typeof window==="object"&&window.performance||N}class Render{renderTemplatesToNodeStream(e,t){const s=new StreamedEmitter;Promise.resolve().then((()=>toPromise(this.renderTemplates(e,t,s)))).then((()=>s.end()),(e=>s.error(e)));return s.stream}*renderTemplates(e,t,s){if(!s){s=t.opts.keepOutputType?new KeepingTypeEmitter:new SimpleEmitter}t.renderLimit.check(getPerformance().now());const i=[];for(const n of e){t.renderLimit.check(getPerformance().now());try{const e=yield n.render(t,s);e&&s.write(e);if(t.breakCalled||t.continueCalled)break}catch(e){const s=LiquidError.is(e)?e:new RenderError(e,n);if(t.opts.catchAllErrors)i.push(s);else throw s}}if(i.length){throw new LiquidErrors(i)}return s.buffer}}class Expression{constructor(e){this.postfix=[...toPostfix(e)]}*evaluate(e,t){assert(e,"unable to evaluate: context not defined");const s=[];for(const i of this.postfix){if(isOperatorToken(i)){const t=s.pop();let n;if(E[i.operator]===1){n=yield e.opts.operators[i.operator](t,e)}else{const r=s.pop();n=yield e.opts.operators[i.operator](r,t,e)}s.push(n)}else{s.push(yield evalToken(i,e,t))}}return s[0]}valid(){return!!this.postfix.length}}function*evalToken(e,t,s=false){if(!e)return;if("content"in e)return e.content;if(isPropertyAccessToken(e))return yield evalPropertyAccessToken(e,t,s);if(isRangeToken(e))return yield evalRangeToken(e,t)}function*evalPropertyAccessToken(e,t,s){const i=[];for(const s of e.props){i.push(yield evalToken(s,t,false))}try{if(e.variable){const n=yield evalToken(e.variable,t,s);return yield t._getFromScope(n,i)}else{return yield t._get(i)}}catch(t){if(s&&t.name==="InternalUndefinedVariableError")return null;throw new UndefinedVariableError(t,e)}}function evalQuotedToken(e){return e.content}function*evalRangeToken(e,t){const s=yield evalToken(e.lhs,t);const i=yield evalToken(e.rhs,t);t.memoryLimit.use(i-s+1);return range(+s,+i+1)}function*toPostfix(e){const t=[];for(const s of e){if(isOperatorToken(s)){while(t.length&&t[t.length-1].getPrecedence()>s.getPrecedence()){yield t.pop()}t.push(s)}else yield s}while(t.length){yield t.pop()}}function isTruthy(e,t){return!isFalsy(e,t)}function isFalsy(e,t){e=toValue(e);if(t.opts.jsTruthy){return!e}else{return e===false||undefined===e||e===null}}const D={"==":equals,"!=":(e,t)=>!equals(e,t),">":(e,t)=>{if(isComparable(e))return e.gt(t);if(isComparable(t))return t.lt(e);return toValue(e)>toValue(t)},"<":(e,t)=>{if(isComparable(e))return e.lt(t);if(isComparable(t))return t.gt(e);return toValue(e)<toValue(t)},">=":(e,t)=>{if(isComparable(e))return e.geq(t);if(isComparable(t))return t.leq(e);return toValue(e)>=toValue(t)},"<=":(e,t)=>{if(isComparable(e))return e.leq(t);if(isComparable(t))return t.geq(e);return toValue(e)<=toValue(t)},contains:(e,t)=>{e=toValue(e);if(isArray(e))return e.some((e=>equals(e,t)));if(isFunction(e?.indexOf))return e.indexOf(toValue(t))>-1;return false},not:(e,t)=>isFalsy(toValue(e),t),and:(e,t,s)=>isTruthy(toValue(e),s)&&isTruthy(toValue(t),s),or:(e,t,s)=>isTruthy(toValue(e),s)||isTruthy(toValue(t),s)};function equals(e,t){if(isComparable(e))return e.equals(t);if(isComparable(t))return t.equals(e);e=toValue(e);t=toValue(t);if(isArray(e)){return isArray(t)&&arrayEquals(e,t)}return e===t}function arrayEquals(e,t){if(e.length!==t.length)return false;return!e.some(((e,s)=>!equals(e,t[s])))}function arrayIncludes(e,t){return e.some((e=>equals(e,t)))}class Node{constructor(e,t,s,i){this.key=e;this.value=t;this.next=s;this.prev=i}}class LRU{constructor(e,t=0){this.limit=e;this.size=t;this.cache={};this.head=new Node("HEAD",null,null,null);this.tail=new Node("TAIL",null,null,null);this.head.next=this.tail;this.tail.prev=this.head}write(e,t){if(this.cache[e]){this.cache[e].value=t}else{const s=new Node(e,t,this.head.next,this.head);this.head.next.prev=s;this.head.next=s;this.cache[e]=s;this.size++;this.ensureLimit()}}read(e){if(!this.cache[e])return;const{value:t}=this.cache[e];this.remove(e);this.write(e,t);return t}remove(e){const t=this.cache[e];t.prev.next=t.next;t.next.prev=t.prev;delete this.cache[e];this.size--}clear(){this.head.next=this.tail;this.tail.prev=this.head;this.size=0;this.cache={}}ensureLimit(){if(this.size>this.limit)this.remove(this.tail.prev.key)}}const requireResolve=t=>e(import.meta.url).resolve(t,{paths:["."]});const R=promisify(a.stat);const C=promisify(a.readFile);async function exists(e){try{await R(e);return true}catch(e){return false}}function readFile(e){return C(e,"utf8")}function existsSync(e){try{a.statSync(e);return true}catch(e){return false}}function readFileSync(e){return a.readFileSync(e,"utf8")}function resolve(e,t,s){if(!o.extname(t))t+=s;return o.resolve(e,t)}function fallback(e){try{return requireResolve(e)}catch(e){}}function dirname(e){return o.dirname(e)}const M=promisify(a.realpath);async function contains(e,t){try{const s=await M(e);const i=await M(t);const n=s.endsWith(o.sep)?s:s+o.sep;return i.startsWith(n)}catch{return false}}function containsSync(e,t){try{const s=a.realpathSync(e);const i=a.realpathSync(t);const n=s.endsWith(o.sep)?s:s+o.sep;return i.startsWith(n)}catch{return false}}var B=Object.freeze({__proto__:null,exists:exists,readFile:readFile,existsSync:existsSync,readFileSync:readFileSync,resolve:resolve,fallback:fallback,dirname:dirname,contains:contains,containsSync:containsSync,sep:o.sep});function defaultFilter(e,t,...s){e=toValue(e);if(isArray(e)||isString(e))return e.length?e:t;if(e===false&&new Map(s).get("allow_false"))return false;return isFalsy(e,this.context)?t:e}function json(e,t=0){return JSON.stringify(e,null,t)}function inspect(e,t=0){const s=[];return JSON.stringify(e,(function(e,t){if(typeof t!=="object"||t===null)return t;while(s.length>0&&s[s.length-1]!==this)s.pop();if(s.includes(t))return"[Circular]";s.push(t);return t}),t)}function to_integer(e){return Number(e)}const H={raw:true,handler:identify};var U={default:defaultFilter,raw:H,jsonify:json,to_integer:to_integer,json:json,inspect:inspect};const Y={"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&#34;","'":"&#39;"};const W={"&amp;":"&","&lt;":"<","&gt;":">","&#34;":'"',"&#39;":"'"};function escape(e){e=stringify(e);this.context.memoryLimit.use(e.length);return e.replace(/&|<|>|"|'/g,(e=>Y[e]))}function xml_escape(e){return escape.call(this,e)}function unescape(e){e=stringify(e);this.context.memoryLimit.use(e.length);return e.replace(/&(amp|lt|gt|#34|#39);/g,(e=>W[e]))}function escape_once(e){return escape.call(this,unescape.call(this,e))}function newline_to_br(e){const t=stringify(e);this.context.memoryLimit.use(t.length);return t.replace(/\r?\n/gm,"<br />\n")}function strip_html(e){const t=stringify(e);this.context.memoryLimit.use(t.length);const s=new Map([["<script","<\/script>"],["<style","</style>"],["\x3c!--","--\x3e"],["<",">"]]);let i="";let n=0;while(n<t.length){const e=t.indexOf("<",n);if(e<0)return i+t.slice(n);i+=t.slice(n,e);for(const[i,r]of s){if(!t.startsWith(i,e))continue;const o=t.indexOf(r,e+i.length);if(o>=0){n=o+r.length;break}s.delete(i)}if(n===e)return i+t.slice(e)}return i}var J=Object.freeze({__proto__:null,escape:escape,xml_escape:xml_escape,escape_once:escape_once,newline_to_br:newline_to_br,strip_html:strip_html});class MapFS{constructor(e){this.mapping=e;this.sep="/"}async exists(e){return this.existsSync(e)}existsSync(e){return!isNil(this.mapping[e])}async readFile(e){return this.readFileSync(e)}readFileSync(e){const t=this.mapping[e];if(isNil(t))throw new Error(`ENOENT: ${e}`);return t}dirname(e){const t=e.split(this.sep);t.pop();return t.join(this.sep)}resolve(e,t,s){t+=s;if(e===".")return t;const i=e.split(/\/+/);for(const e of t.split(this.sep)){if(e==="."||e==="")continue;else if(e===".."){if(i.length>1||i[0]!=="")i.pop()}else i.push(e)}return i.join(this.sep)}}const Q={root:["."],layouts:["."],partials:["."],relativeReference:true,jekyllInclude:false,keyValueSeparator:":",cache:undefined,extname:"",fs:B,dynamicPartials:true,jsTruthy:false,dateFormat:"%A, %B %-e, %Y at %-l:%M %P %z",locale:"",trimTagRight:false,trimTagLeft:false,trimOutputRight:false,trimOutputLeft:false,greedy:true,tagDelimiterLeft:"{%",tagDelimiterRight:"%}",outputDelimiterLeft:"{{",outputDelimiterRight:"}}",preserveTimezones:false,strictFilters:false,strictVariables:false,ownPropertyOnly:true,lenientIf:false,globals:{},keepOutputType:false,operators:D,memoryLimit:Infinity,parseLimit:Infinity,renderLimit:Infinity};function normalize(e){if(e.hasOwnProperty("root")){if(!e.hasOwnProperty("partials"))e.partials=e.root;if(!e.hasOwnProperty("layouts"))e.layouts=e.root}if(e.hasOwnProperty("cache")){let t;if(typeof e.cache==="number")t=e.cache>0?new LRU(e.cache):undefined;else if(typeof e.cache==="object")t=e.cache;else t=e.cache?new LRU(1024):undefined;e.cache=t}e={...Q,...e.jekyllInclude?{dynamicPartials:false}:{},...e};if((!e.fs.dirname||!e.fs.sep)&&e.relativeReference){console.warn("[LiquidJS] `fs.dirname` and `fs.sep` are required for relativeReference, set relativeReference to `false` to suppress this warning");e.relativeReference=false}e.root=normalizeDirectoryList(e.root);e.partials=normalizeDirectoryList(e.partials);e.layouts=normalizeDirectoryList(e.layouts);e.outputEscape=e.outputEscape&&getOutputEscapeFunction(e.outputEscape);if(!e.locale){e.locale=getDateTimeFormat()?.().resolvedOptions().locale??"en-US"}if(e.templates){e.fs=new MapFS(e.templates);e.relativeReference=true;e.root=e.partials=e.layouts="."}return e}function getOutputEscapeFunction(e){if(e==="escape")return escape;if(e==="json")return U.json;assert(isFunction(e),"`outputEscape` need to be of type string or function");return e}function normalizeDirectoryList(e){let t=[];if(isArray(e))t=e;if(isString(e))t=[e];return t}function whiteSpaceCtrl(e,t){let s=false;for(let i=0;i<e.length;i++){const n=e[i];if(!isDelimitedToken(n))continue;if(!s&&n.trimLeft){trimLeft(e[i-1],t.greedy)}if(isTagToken(n)){if(n.name==="raw")s=true;else if(n.name==="endraw")s=false}if(!s&&n.trimRight){trimRight(e[i+1],t.greedy)}}}function trimLeft(e,t){if(!e||!isHTMLToken(e))return;const s=t?m:y;while(p[e.input.charCodeAt(e.end-1-e.trimRight)]&s)e.trimRight++}function trimRight(e,t){if(!e||!isHTMLToken(e))return;const s=t?m:y;while(p[e.input.charCodeAt(e.begin+e.trimLeft)]&s)e.trimLeft++;if(e.input.charAt(e.begin+e.trimLeft)==="\n")e.trimLeft++}class Tokenizer{constructor(e,t=Q.operators,s,i){this.input=e;this.file=s;this.rawBeginAt=-1;this.p=i?i[0]:0;this.N=i?i[1]:e.length;this.opTrie=createTrie(t);this.literalTrie=createTrie(_)}readExpression(){return new Expression(this.readExpressionTokens())}*readExpressionTokens(){while(this.p<this.N){const e=this.readOperator();if(e){yield e;continue}const t=this.readValue();if(t){yield t;continue}return}}readOperator(){this.skipBlank();const e=this.matchTrie(this.opTrie);if(e===-1)return;return new OperatorToken(this.input,this.p,this.p=e,this.file)}matchTrie(e){let t=e;let s=this.p;let i;while(t[this.input[s]]&&s<this.N){t=t[this.input[s++]];if(t["end"])i=t}if(!i)return-1;if(i["needBoundary"]&&isWord(this.peek(s-this.p)))return-1;return s}readFilteredValue(){const e=this.p;const t=this.readExpression();this.assert(t.valid(),`invalid value expression: ${this.snapshot()}`);const s=this.readFilters();return new FilteredValueToken(t,s,this.input,e,this.p,this.file)}readFilters(){const e=[];while(true){const t=this.readFilter();if(!t)return e;e.push(t)}}readFilter(){this.skipBlank();if(this.end())return null;this.assert(this.read()==="|",`expected "|" before filter`);const e=this.readIdentifier();if(!e.size()){this.assert(this.end(),`expected filter name`);return null}const t=[];this.skipBlank();if(this.peek()===":"){do{++this.p;const e=this.readFilterArg();e&&t.push(e);this.skipBlank();this.assert(this.end()||this.peek()===","||this.peek()==="|",(()=>`unexpected character ${this.snapshot()}`))}while(this.peek()===",")}else if(this.peek()==="|"||this.end());else{throw this.error('expected ":" after filter name')}return new FilterToken(e.getText(),t,this.input,e.begin,this.p,this.file)}readFilterArg(){const e=this.readValue();if(!e)return;this.skipBlank();if(this.peek()!==":")return e;++this.p;const t=this.readValue();return[e.getText(),t]}readTopLevelTokens(e=Q){const t=[];while(this.p<this.N){const s=this.readTopLevelToken(e);t.push(s)}whiteSpaceCtrl(t,e);return t}readTopLevelToken(e){const{tagDelimiterLeft:t,outputDelimiterLeft:s}=e;if(this.rawBeginAt>-1)return this.readEndrawOrRawContent(e);if(this.match(t))return this.readTagToken(e);if(this.match(s))return this.readOutputToken(e);return this.readHTMLToken([t,s])}readHTMLToken(e){const t=this.p;while(this.p<this.N){if(e.some((e=>this.match(e))))break;++this.p}return new HTMLToken(this.input,t,this.p,this.file)}readTagToken(e){const{file:t,input:s}=this;const i=this.p;if(this.readToDelimiter(e.tagDelimiterRight)===-1){throw this.error(`tag ${this.snapshot(i)} not closed`,i)}const n=new TagToken(s,i,this.p,e,t);if(n.name==="raw")this.rawBeginAt=i;return n}readToDelimiter(e,t=false){this.skipBlank();while(this.p<this.N){if(t&&this.peekType()&g){this.readQuoted();continue}++this.p;if(this.rmatch(e))return this.p}return-1}readOutputToken(e=Q){const{file:t,input:s}=this;const{outputDelimiterRight:i}=e;const n=this.p;if(this.readToDelimiter(i,true)===-1){throw this.error(`output ${this.snapshot(n)} not closed`,n)}return new OutputToken(s,n,this.p,e,t)}readEndrawOrRawContent(e){const{tagDelimiterLeft:t,tagDelimiterRight:s}=e;const i=this.p;let n=this.readTo(t)-t.length;while(this.p<this.N){if(this.readIdentifier().getText()!=="endraw"){n=this.readTo(t)-t.length;continue}while(this.p<=this.N){if(this.rmatch(s)){const t=this.p;if(i===n){this.rawBeginAt=-1;return new TagToken(this.input,i,t,e,this.file)}else{this.p=n;return new HTMLToken(this.input,i,n,this.file)}}if(this.rmatch(t))break;this.p++}}throw this.error(`raw ${this.snapshot(this.rawBeginAt)} not closed`,i)}readLiquidTagTokens(e=Q){const t=[];while(this.p<this.N){const s=this.readLiquidTagToken(e);s&&t.push(s)}return t}readLiquidTagToken(e){this.skipBlank();if(this.end())return;const t=this.p;this.readToDelimiter("\n");const s=this.p;return new LiquidTagToken(this.input,t,s,e,this.file)}error(e,t=this.p){return new TokenizationError(e,new IdentifierToken(this.input,t,this.N,this.file))}assert(e,t,s){if(!e)throw this.error(typeof t==="function"?t():t,s)}snapshot(e=this.p){return JSON.stringify(ellipsis(this.input.slice(e,this.N),32))}readWord(){return this.readIdentifier()}readIdentifier(){this.skipBlank();const e=this.p;while(!this.end()&&isWord(this.peek()))++this.p;return new IdentifierToken(this.input,e,this.p,this.file)}readNonEmptyIdentifier(){const e=this.readIdentifier();return e.size()?e:undefined}readTagName(){this.skipBlank();if(this.input[this.p]==="#")return this.input.slice(this.p,++this.p);return this.readIdentifier().getText()}readHashes(e){const t=[];while(true){const s=this.readHash(e);if(!s)return t;t.push(s)}}readHash(e){this.skipBlank();if(this.peek()===",")++this.p;const t=this.p;const s=this.readNonEmptyIdentifier();if(!s)return;let i;this.skipBlank();const n=isString(e)?e:e?"=":":";if(this.peek()===n){++this.p;i=this.readValue()}return new HashToken(this.input,t,this.p,s,i,this.file)}remaining(){return this.input.slice(this.p,this.N)}advance(e=1){this.p+=e}end(){return this.p>=this.N}read(){return this.input[this.p++]}readTo(e){while(this.p<this.N){++this.p;if(this.rmatch(e))return this.p}return-1}readValue(){this.skipBlank();const e=this.p;const t=this.readLiteral()||this.readQuoted()||this.readRange()||this.readNumber();const s=this.readProperties(!t);if(!s.length)return t;return new PropertyAccessToken(t,s,this.input,e,this.p)}readScopeValue(){this.skipBlank();const e=this.p;const t=this.readProperties();if(!t.length)return undefined;return new PropertyAccessToken(undefined,t,this.input,e,this.p)}readProperties(e=true){const t=[];while(true){if(this.peek()==="["){this.p++;const e=this.readValue()||new IdentifierToken(this.input,this.p,this.p,this.file);this.assert(this.readTo("]")!==-1,"[ not closed");t.push(e);continue}if(e&&!t.length){const e=this.readNonEmptyIdentifier();if(e){t.push(e);continue}}if(this.peek()==="."&&this.peek(1)!=="."){this.p++;const e=this.readNonEmptyIdentifier();if(!e)break;t.push(e);continue}break}return t}readNumber(){this.skipBlank();let e=false;let t=false;let s=0;if(this.peekType()&T)s++;while(this.p+s<=this.N){if(this.peekType(s)&k){t=true;s++}else if(this.peek(s)==="."&&this.peek(s+1)!=="."){if(e||!t)return;e=true;s++}else break}if(t&&!isWord(this.peek(s))){const e=new NumberToken(this.input,this.p,this.p+s,this.file);this.advance(s);return e}}readLiteral(){this.skipBlank();const e=this.matchTrie(this.literalTrie);if(e===-1)return;const t=new LiteralToken(this.input,this.p,e,this.file);this.p=e;return t}readRange(){this.skipBlank();const e=this.p;if(this.peek()!=="(")return;++this.p;const t=this.readValueOrThrow();this.skipBlank();this.assert(this.read()==="."&&this.read()===".","invalid range syntax");const s=this.readValueOrThrow();this.skipBlank();this.assert(this.read()===")","invalid range syntax");return new RangeToken(this.input,e,this.p,t,s,this.file)}readValueOrThrow(){const e=this.readValue();this.assert(e,(()=>`unexpected token ${this.snapshot()}, value expected`));return e}readQuoted(){this.skipBlank();const e=this.p;if(!(this.peekType()&g))return;++this.p;let t=false;while(this.p<this.N){++this.p;if(this.input[this.p-1]===this.input[e]&&!t)break;if(t)t=false;else if(this.input[this.p-1]==="\\")t=true}return new QuotedToken(this.input,e,this.p,this.file)}*readFileNameTemplate(e){const{outputDelimiterLeft:t}=e;const s=[","," ","\r","\n","\t",t];const i=new Set(s);while(this.p<this.N&&!i.has(this.peek())){yield this.match(t)?this.readOutputToken(e):this.readHTMLToken(s)}}match(e){for(let t=0;t<e.length;t++){if(e[t]!==this.input[this.p+t])return false}return true}rmatch(e){for(let t=0;t<e.length;t++){if(e[e.length-1-t]!==this.input[this.p-1-t])return false}return true}peekType(e=0){return this.p+e>=this.N?0:p[this.input.charCodeAt(this.p+e)]}peek(e=0){return this.p+e>=this.N?"":this.input[this.p+e]}skipBlank(){while(this.peekType()&m)++this.p}}class ParseStream{constructor(e,t){this.handlers={};this.stopRequested=false;this.tokens=e;this.parseToken=t}on(e,t){this.handlers[e]=t;return this}trigger(e,t){const s=this.handlers[e];return s?(s.call(this,t),true):false}start(){this.trigger("start");let e;while(!this.stopRequested&&(e=this.tokens.shift())){if(this.trigger("token",e))continue;if(isTagToken(e)&&this.trigger(`tag:${e.name}`,e)){continue}const t=this.parseToken(e,this.tokens);this.trigger("template",t)}if(!this.stopRequested)this.trigger("end");return this}stop(){this.stopRequested=true;return this}}class TemplateImpl{constructor(e){this.token=e}}class Tag extends TemplateImpl{constructor(e,t,s){super(e);this.name=e.name;this.liquid=s;this.tokenizer=e.tokenizer}}class Hash{constructor(e,t){this.hash={};const s=e instanceof Tokenizer?e:new Tokenizer(e,{});for(const e of s.readHashes(t)){this.hash[e.name.content]=e.value}}*render(e){const t={};for(const s of Object.keys(this.hash)){t[s]=this.hash[s]===undefined?true:yield evalToken(this.hash[s],e)}return t}}function createTagClass(e){return class extends Tag{constructor(t,s,i){super(t,s,i);if(isFunction(e.parse)){e.parse.call(this,t,s)}}*render(t,s){const i=yield new Hash(this.token.args,t.opts.keyValueSeparator).render(t);return yield e.render.call(this,t,s,i)}}}function isKeyValuePair(e){return isArray(e)}class Filter{constructor(e,t,s){this.token=e;this.name=e.name;this.handler=isFunction(t)?t:isFunction(t?.handler)?t.handler:identify;this.raw=!isFunction(t)&&!!t?.raw;this.args=e.args;this.liquid=s}*render(e,t){const s=[];for(const e of this.args){if(isKeyValuePair(e))s.push([e[0],yield evalToken(e[1],t)]);else s.push(yield evalToken(e,t))}return yield this.handler.apply({context:t,token:this.token,liquid:this.liquid},[e,...s])}}class Value{constructor(e,t){this.filters=[];const s=typeof e==="string"?new Tokenizer(e,t.options.operators).readFilteredValue():e;this.initial=s.initial;this.filters=s.filters.map((e=>new Filter(e,this.getFilter(t,e.name),t)))}*value(e,t){t=t||e.opts.lenientIf&&this.filters.length>0&&this.filters[0].name==="default";let s=yield this.initial.evaluate(e,t);for(const t of this.filters){s=yield t.render(s,e)}return s}getFilter(e,t){const s=e.filters[t];assert(s||!e.options.strictFilters,(()=>`undefined filter: ${t}`));return s}}class Output extends TemplateImpl{constructor(e,t){super(e);const s=new Tokenizer(e.input,t.options.operators,e.file,e.contentRange);this.value=new Value(s.readFilteredValue(),t);const i=this.value.filters;const n=t.options.outputEscape;if(!i[i.length-1]?.raw&&n){const e=new FilterToken(toString.call(n),[],"",0,0);i.push(new Filter(e,n,t))}}*render(e,t){const s=yield this.value.value(e,false);t.write(s)}*arguments(){yield this.value}}class HTML extends TemplateImpl{constructor(e){super(e);this.str=e.getContent()}*render(e,t){t.write(this.str)}}class Variable{constructor(e,t){this.segments=e;this.location=t}toString(){return segmentsString(this.segments,true)}toArray(){function*_visit(...e){for(const t of e){if(t instanceof Variable){yield Array.from(_visit(...t.segments))}else{yield t}}}return Array.from(_visit(...this.segments))}}class VariableMap{constructor(){this.map=new Map}get(e){const t=segmentsString([e.segments[0]]);if(!this.map.has(t)){this.map.set(t,[])}return this.map.get(t)}has(e){return this.map.has(segmentsString([e.segments[0]]))}push(e){this.get(e).push(e)}asObject(){return Object.fromEntries(this.map)}}const K={partials:true};function*_analyze(e,t,s){const i=new VariableMap;const n=new VariableMap;const r=new VariableMap;const o=new DummyScope(new Set);const a=new Set;function updateVariables(e,t){i.push(e);const s=t.alias(e);if(s!==undefined){const e=s.segments[0];if(isString(e)&&!o.has(e)){n.push(s)}}else{const s=e.segments[0];if(isString(s)&&!t.has(s)){n.push(e)}}for(const s of e.segments){if(s instanceof Variable){updateVariables(s,t)}}}function*visit(e,i){if(e.arguments){for(const t of e.arguments()){for(const e of extractVariables(t)){updateVariables(e,i)}}}if(e.localScope){for(const t of e.localScope()){i.add(t.content);i.deleteAlias(t.content);const[e,s]=t.getPosition();r.push(new Variable([t.content],{row:e,col:s,file:t.file}))}}if(e.children){if(e.partialScope){const n=e.partialScope();if(n===undefined){for(const n of yield e.children(t,s)){yield visit(n,i)}return}if(a.has(n.name))return;const r=new Set;const o=n.isolated?new DummyScope(r):i.push(r);for(const e of n.scope){if(isString(e)){r.add(e)}else{const[t,s]=e;r.add(t);const i=Array.from(extractVariables(s));if(i.length){o.setAlias(t,i[0].segments)}}}for(const i of yield e.children(t,s)){yield visit(i,o);a.add(n.name)}o.pop()}else{if(e.blockScope){i.push(new Set(e.blockScope()))}for(const n of yield e.children(t,s)){yield visit(n,i)}if(e.blockScope){i.pop()}}}}for(const t of e){yield visit(t,o)}return{variables:i.asObject(),globals:n.asObject(),locals:r.asObject()}}function analyze(e,t={}){const s={...K,...t};return toPromise(_analyze(e,s.partials,false))}function analyzeSync(e,t={}){const s={...K,...t};return toValueSync(_analyze(e,s.partials,true))}class DummyScope{constructor(e){this.stack=[{names:e,aliases:new Map}]}has(e){for(const t of this.stack){if(t.names.has(e)){return true}}return false}push(e){this.stack.push({names:e,aliases:new Map});return this}pop(){return this.stack.pop()?.names}add(e){this.stack[0].names.add(e)}alias(e){const t=e.segments[0];if(!isString(t))return undefined;const s=this.getAlias(t);if(s===undefined)return undefined;return new Variable([...s,...e.segments.slice(1)],e.location)}setAlias(e,t){this.stack[this.stack.length-1].aliases.set(e,t)}deleteAlias(e){this.stack[this.stack.length-1].aliases.delete(e)}getAlias(e){for(const t of this.stack){if(t.aliases.has(e)){return t.aliases.get(e)}if(t.names.has(e)){return undefined}}return undefined}}function*extractVariables(e){if(isValueToken(e)){yield*extractValueTokenVariables(e)}else if(e instanceof Value){yield*extractFilteredValueVariables(e)}}function*extractFilteredValueVariables(e){for(const t of e.initial.postfix){if(isValueToken(t)){yield*extractValueTokenVariables(t)}}for(const t of e.filters){for(const e of t.args){if(isKeyValuePair(e)&&e[1]){yield*extractValueTokenVariables(e[1])}else if(isValueToken(e)){yield*extractValueTokenVariables(e)}}}}function*extractValueTokenVariables(e){if(isRangeToken(e)){yield*extractValueTokenVariables(e.lhs);yield*extractValueTokenVariables(e.rhs)}else if(isPropertyAccessToken(e)){yield extractPropertyAccessVariable(e)}}function extractPropertyAccessVariable(e){const t=[];let s=e.file;const i=e.props[0];s=s||i.file;if(isQuotedToken(i)||isNumberToken(i)||isWordToken(i)){t.push(i.content)}else if(isPropertyAccessToken(i)){t.push(...extractPropertyAccessVariable(i).segments)}for(const i of e.props.slice(1)){s=s||i.file;if(isQuotedToken(i)||isNumberToken(i)||isWordToken(i)){t.push(i.content)}else if(isPropertyAccessToken(i)){t.push(extractPropertyAccessVariable(i))}}const[n,r]=e.getPosition();return new Variable(t,{row:n,col:r,file:s})}const G=/^[\u0080-\uFFFFa-zA-Z_][\u0080-\uFFFFa-zA-Z0-9_-]*$/;function segmentsString(e,t=false){const s=[];const i=e[0];if(isString(i)){if(!t||i.match(G)){s.push(`${i}`)}else{s.push(`['${i}']`)}}for(const t of e.slice(1)){if(t instanceof Variable){s.push(`[${segmentsString(t.segments)}]`)}else if(isString(t)){if(t.match(G)){s.push(`.${t}`)}else{s.push(`['${t}']`)}}else{s.push(`[${t}]`)}}return s.join("")}(function(e){e["Partials"]="partials";e["Layouts"]="layouts";e["Root"]="root"})(s.Rv||(s.Rv={}));class Loader{constructor(e){this.options=e;if(e.relativeReference){const t=e.fs.sep;assert(t,"`fs.sep` is required for relative reference");const s=["."+t,".."+t,"./","../"];this.shouldLoadRelative=e=>s.some((t=>e.startsWith(t)))}else{this.shouldLoadRelative=e=>false}const t=e.fs;this.contains=toLiquidAsync(t.contains?.bind(t)||(async()=>true),t.containsSync?.bind(t)||(()=>true));this.exists=toLiquidAsync(t.exists?.bind(t)||(async()=>false),t.existsSync?.bind(t))}*lookup(e,t,s,i){const n=this.options[t];for(const t of this.candidates(e,n,i)){let e=false;for(const i of n){if(yield this.contains(!!s,i,t)){e=true;break}}if(!e)continue;if(yield this.exists(!!s,t))return t}throw this.lookupError(e,n)}*candidates(e,t,s){const{fs:i,extname:n}=this.options;if(this.shouldLoadRelative(e)&&s){const t=i.resolve(this.dirname(s),e,n);yield t}for(const s of t){const t=i.resolve(s,e,n);yield t}if(i.fallback!==undefined){const t=i.fallback(e);if(t!==undefined)yield t}}dirname(e){const t=this.options.fs;assert(t.dirname,"`fs.dirname` is required for relative reference");return t.dirname(e)}lookupError(e,t){const s=new Error("ENOENT");s.message=`ENOENT: Failed to lookup "${e}" in "${t}"`;s.code="ENOENT";return s}}class Parser{constructor(e){this.liquid=e;this.cache=this.liquid.options.cache;this.fs=this.liquid.options.fs;this.parseFile=this.cache?this._parseFileCached:this._parseFile;this.loader=new Loader(this.liquid.options);this.parseLimit=new Limiter("parse length",e.options.parseLimit);this.readFile=toLiquidAsync(this.fs.readFile?.bind(this.fs)||(async()=>{throw new Error("readFile not implemented")}),this.fs.readFileSync?.bind(this.fs))}parse(e,t){e=String(e);this.parseLimit.use(e.length);const s=new Tokenizer(e,this.liquid.options.operators,t);const i=s.readTopLevelTokens(this.liquid.options);return this.parseTokens(i)}parseTokens(e){let t;const s=[];const i=[];while(t=e.shift()){try{s.push(this.parseToken(t,e))}catch(e){if(this.liquid.options.catchAllErrors)i.push(e);else throw e}}if(i.length)throw new LiquidErrors(i);return s}parseToken(e,t){try{if(isTagToken(e)){const s=this.liquid.tags[e.name];assert(s,`tag "${e.name}" not found`);return new s(e,t,this.liquid,this)}if(isOutputToken(e)){return new Output(e,this.liquid)}return new HTML(e)}catch(t){if(LiquidError.is(t))throw t;throw new ParseError(t,e)}}parseStream(e){return new ParseStream(e,((e,t)=>this.parseToken(e,t)))}*_parseFileCached(e,t,i=s.Rv.Root,n){const r=this.cache;const o=this.loader.shouldLoadRelative(e)?n+","+e:i+":"+e;const a=yield r.read(o);if(a)return a;const l=this._parseFile(e,t,i,n);const c=t?yield l:toPromise(l);r.write(o,c);try{return yield c}catch(e){r.remove(o);throw e}}*_parseFile(e,t,i=s.Rv.Root,n){const r=yield this.loader.lookup(e,i,t,n);return this.parse(yield this.readFile(!!t,r),r)}}(function(e){e[e["Number"]=1]="Number";e[e["Literal"]=2]="Literal";e[e["Tag"]=4]="Tag";e[e["Output"]=8]="Output";e[e["HTML"]=16]="HTML";e[e["Filter"]=32]="Filter";e[e["Hash"]=64]="Hash";e[e["PropertyAccess"]=128]="PropertyAccess";e[e["Word"]=256]="Word";e[e["Range"]=512]="Range";e[e["Quoted"]=1024]="Quoted";e[e["Operator"]=2048]="Operator";e[e["FilteredValue"]=4096]="FilteredValue";e[e["Delimited"]=12]="Delimited"})(s.Yp||(s.Yp={}));function isDelimitedToken(e){return!!(getKind(e)&s.Yp.Delimited)}function isOperatorToken(e){return getKind(e)===s.Yp.Operator}function isHTMLToken(e){return getKind(e)===s.Yp.HTML}function isOutputToken(e){return getKind(e)===s.Yp.Output}function isTagToken(e){return getKind(e)===s.Yp.Tag}function isQuotedToken(e){return getKind(e)===s.Yp.Quoted}function isLiteralToken(e){return getKind(e)===s.Yp.Literal}function isNumberToken(e){return getKind(e)===s.Yp.Number}function isPropertyAccessToken(e){return getKind(e)===s.Yp.PropertyAccess}function isWordToken(e){return getKind(e)===s.Yp.Word}function isRangeToken(e){return getKind(e)===s.Yp.Range}function isValueToken(e){return(getKind(e)&1667)>0}function getKind(e){return e?e.kind:-1}var Z=Object.freeze({__proto__:null,isDelimitedToken:isDelimitedToken,isOperatorToken:isOperatorToken,isHTMLToken:isHTMLToken,isOutputToken:isOutputToken,isTagToken:isTagToken,isQuotedToken:isQuotedToken,isLiteralToken:isLiteralToken,isNumberToken:isNumberToken,isPropertyAccessToken:isPropertyAccessToken,isWordToken:isWordToken,isRangeToken:isRangeToken,isValueToken:isValueToken});var __assign=function(){__assign=Object.assign||function __assign(e){for(var t,s=1,i=arguments.length;s<i;s++){t=arguments[s];for(var n in t)if(Object.prototype.hasOwnProperty.call(t,n))e[n]=t[n]}return e};return __assign.apply(this,arguments)};function createScope(e){const t=Object.create(null);if(e)Object.assign(t,e);return t}class Context{constructor(e={},t=Q,s={},{memoryLimit:i,renderLimit:n}={}){this.scopes=[createScope()];this.registers={};this.breakCalled=false;this.continueCalled=false;this.sync=!!s.sync;this.opts=t;this.globals=s.globals??t.globals;this.environments=isObject(e)?e:Object(e);this.strictVariables=s.strictVariables??this.opts.strictVariables;this.ownPropertyOnly=s.ownPropertyOnly??t.ownPropertyOnly;this.memoryLimit=i??new Limiter("memory alloc",s.memoryLimit??t.memoryLimit);this.renderLimit=n??new Limiter("template render",getPerformance().now()+(s.renderLimit??t.renderLimit))}getRegister(e,t=undefined){return this.registers[e]=this.registers[e]||t}setRegister(e,t){return this.registers[e]=t}saveRegister(...e){return e.map((e=>[e,this.getRegister(e)]))}restoreRegister(e){return e.forEach((([e,t])=>this.setRegister(e,t)))}getAll(){return[this.globals,this.environments,...this.scopes].reduce(((e,t)=>__assign(e,t)),{})}get(e){return this.getSync(e)}getSync(e){return toValueSync(this._get(e))}*_get(e){const t=this.findScope(e[0]);return yield this._getFromScope(t,e)}getFromScope(e,t){return toValueSync(this._getFromScope(e,t))}*_getFromScope(e,t,s=this.strictVariables){if(isString(t))t=t.split(".");for(let i=0;i<t.length;i++){e=yield this.readProperty(e,t[i]);if(s&&isUndefined(e)){throw new InternalUndefinedVariableError(t.slice(0,i+1).join("."))}}return e}push(e){return this.scopes.push(e)}pop(){return this.scopes.pop()}bottom(){return this.scopes[0]}spawn(e={}){return new Context(e,this.opts,{sync:this.sync,globals:this.globals,strictVariables:this.strictVariables,ownPropertyOnly:this.ownPropertyOnly},{renderLimit:this.renderLimit,memoryLimit:this.memoryLimit})}findScope(e){for(let t=this.scopes.length-1;t>=0;t--){const s=this.scopes[t];if(e in s)return s}if(e in this.environments)return this.environments;return this.globals}readProperty(e,t){e=toLiquid(e);t=toValue(t);if(isNil(e))return e;if(isArray(e)&&t<0)return e[e.length+ +t];const s=readJSProperty(e,t,this.ownPropertyOnly);if(s===undefined&&e instanceof Drop)return e.liquidMethodMissing(t,this);if(isFunction(s))return s.call(e);if(t==="size")return readSize(e);else if(t==="first")return readFirst(e);else if(t==="last")return readLast(e);return s}}function readJSProperty(e,t,s){if(s&&!h.call(e,t)&&!(e instanceof Drop))return undefined;return e[t]}function readFirst(e){if(isArray(e))return e[0];return e["first"]}function readLast(e){if(isArray(e))return e[e.length-1];return e["last"]}function readSize(e){if(h.call(e,"size")||e["size"]!==undefined)return e["size"];if(isArray(e)||isString(e))return e.length;if(typeof e==="object")return Object.keys(e).length}var X;(function(e){e[e["OUTPUT"]=0]="OUTPUT";e[e["STORE"]=1]="STORE"})(X||(X={}));const ee=argumentsToNumber(Math.abs);const te=argumentsToNumber(Math.max);const se=argumentsToNumber(Math.min);const ie=argumentsToNumber(Math.ceil);const ne=argumentsToNumber(((e,t,s=false)=>s?Math.floor(e/t):e/t));const re=argumentsToNumber(Math.floor);const oe=argumentsToNumber(((e,t)=>e-t));const ae=argumentsToNumber(((e,t)=>e+t));const le=argumentsToNumber(((e,t)=>e%t));const ce=argumentsToNumber(((e,t)=>e*t));function round(e,t=0){e=toNumber(e);t=toNumber(t);const s=Math.pow(10,t);const i=e*s;return Math.sign(e)*Math.round(Math.abs(i))/s}var ue=Object.freeze({__proto__:null,abs:ee,at_least:te,at_most:se,ceil:ie,divided_by:ne,floor:re,minus:oe,plus:ae,modulo:le,times:ce,round:round});const url_decode=e=>decodeURIComponent(stringify(e)).replace(/\+/g," ");const url_encode=e=>encodeURIComponent(stringify(e)).replace(/%20/g,"+");const cgi_escape=e=>encodeURIComponent(stringify(e)).replace(/%20/g,"+").replace(/[!'()*]/g,(e=>"%"+e.charCodeAt(0).toString(16).toUpperCase()));const uri_escape=e=>encodeURI(stringify(e)).replace(/%5B/g,"[").replace(/%5D/g,"]");const he=/[^\p{M}\p{L}\p{Nd}]+/gu;const de={raw:/\s+/g,default:he,pretty:/[^\p{M}\p{L}\p{Nd}._~!$&'()+,;=@]+/gu,ascii:/[^A-Za-z0-9]+/g,latin:he,none:null};function slugify(e,t="default",s=false){e=stringify(e);const i=de[t];if(i){if(t==="latin")e=removeAccents(e);e=e.replace(i,"-").replace(/^-|-$/g,"")}return s?e:e.toLowerCase()}function removeAccents(e){return e.replace(/[àáâãäå]/g,"a").replace(/[æ]/g,"ae").replace(/[ç]/g,"c").replace(/[èéêë]/g,"e").replace(/[ìíîï]/g,"i").replace(/[ð]/g,"d").replace(/[ñ]/g,"n").replace(/[òóôõöø]/g,"o").replace(/[ùúûü]/g,"u").replace(/[ýÿ]/g,"y").replace(/[ß]/g,"ss").replace(/[œ]/g,"oe").replace(/[þ]/g,"th").replace(/[ẞ]/g,"SS").replace(/[Œ]/g,"OE").replace(/[Þ]/g,"TH")}var pe=Object.freeze({__proto__:null,url_decode:url_decode,url_encode:url_encode,cgi_escape:cgi_escape,uri_escape:uri_escape,slugify:slugify});const fe=argumentsToValue((function(e,t){const s=toArray(e);const i=isNil(t)?" ":stringify(t);const n=s.length*(1+i.length);this.context.memoryLimit.use(n);return s.join(i)}));const me=argumentsToValue((e=>isArrayLike(e)?last(e):""));const ge=argumentsToValue((e=>isArrayLike(e)?e[0]:""));const ye=argumentsToValue((function(e){const t=toArray(e);this.context.memoryLimit.use(t.length);return[...t].reverse()}));function*sortBy(e,t,s){const i=[];const n=toArray(e);this.context.memoryLimit.use(n.length);for(const e of n){i.push([e,t?yield this.context._getFromScope(e,stringify(t).split("."),false):e])}return i.sort(((e,t)=>s(e[1],t[1]))).map((e=>e[0]))}function*sort(e,t){return yield*sortBy.call(this,e,t,orderedCompare)}function*sort_natural(e,t){return yield*sortBy.call(this,e,t,caseInsensitiveCompare)}const size=e=>e&&e.length||0;function*map(e,t){const s=[];const i=toArray(e);this.context.memoryLimit.use(i.length);for(const e of i){s.push(yield this.context._getFromScope(e,stringify(t),false))}return s}function*sum(e,t){let s=0;const i=toArray(e);for(const e of i){const i=Number(t?yield this.context._getFromScope(e,stringify(t),false):e);s+=Number.isNaN(i)?0:i}return s}function compact(e){const t=toArray(e);this.context.memoryLimit.use(t.length);return t.filter((e=>!isNil(toValue(e))))}function concat(e,t=[]){const s=toArray(e);const i=toArray(t);this.context.memoryLimit.use(s.length+i.length);return s.concat(i)}function push(e,t){return concat.call(this,e,[t])}function unshift(e,t){const s=toArray(e);this.context.memoryLimit.use(s.length);const i=[...s];i.unshift(t);return i}function pop(e){const t=[...toArray(e)];t.pop();return t}function shift(e){const t=toArray(e);this.context.memoryLimit.use(t.length);const s=[...t];s.shift();return s}function slice(e,t,s=1){e=toValue(e);if(isNil(e))return[];if(!isArray(e))e=stringify(e);t=t<0?e.length+t:t;this.context.memoryLimit.use(s);return e.slice(t,t+s)}function expectedMatcher(e){if(this.context.opts.jekyllWhere){return t=>EmptyDrop.is(e)?equals(t,e):isArray(t)?arrayIncludes(t,e):equals(t,e)}else if(e===undefined){return e=>isTruthy(e,this.context)}else{return t=>equals(t,e)}}function*filter(e,t,s,i){const n=[];t=toArray(t);this.context.memoryLimit.use(t.length);const r=new Tokenizer(stringify(s)).readScopeValue();for(const e of t){n.push(yield evalToken(r,this.context.spawn(e)))}const o=expectedMatcher.call(this,i);return t.filter(((t,s)=>o(n[s])===e))}function*filter_exp(e,t,s,i){const n=[];const r=new Value(stringify(i),this.liquid);const o=toArray(t);this.context.memoryLimit.use(o.length);for(const t of o){this.context.push({[s]:t});const i=yield r.value(this.context);this.context.pop();if(i===e)n.push(t)}return n}function*where(e,t,s){return yield*filter.call(this,true,e,t,s)}function*reject(e,t,s){return yield*filter.call(this,false,e,t,s)}function*where_exp(e,t,s){return yield*filter_exp.call(this,true,e,t,s)}function*reject_exp(e,t,s){return yield*filter_exp.call(this,false,e,t,s)}function*group_by(e,t){const s=new Map;e=toEnumerable(e);const i=new Tokenizer(stringify(t)).readScopeValue();this.context.memoryLimit.use(e.length);for(const t of e){const e=yield evalToken(i,this.context.spawn(t));if(!s.has(e))s.set(e,[]);s.get(e).push(t)}return[...s.entries()].map((([e,t])=>({name:e,items:t})))}function*group_by_exp(e,t,s){const i=new Map;const n=new Value(stringify(s),this.liquid);e=toEnumerable(e);this.context.memoryLimit.use(e.length);for(const s of e){this.context.push({[t]:s});const e=yield n.value(this.context);this.context.pop();if(!i.has(e))i.set(e,[]);i.get(e).push(s)}return[...i.entries()].map((([e,t])=>({name:e,items:t})))}function*search(e,t,s){const i=new Tokenizer(stringify(t)).readScopeValue();const n=toArray(e);const r=expectedMatcher.call(this,s);for(let e=0;e<n.length;e++){const t=yield evalToken(i,this.context.spawn(n[e]));if(r(t))return[e,n[e]]}}function*search_exp(e,t,s){const i=new Value(stringify(s),this.liquid);const n=toArray(e);for(let e=0;e<n.length;e++){this.context.push({[t]:n[e]});const s=yield i.value(this.context);this.context.pop();if(s)return[e,n[e]]}}function*has(e,t,s){const i=yield*search.call(this,e,t,s);return!!i}function*has_exp(e,t,s){const i=yield*search_exp.call(this,e,t,s);return!!i}function*find_index(e,t,s){const i=yield*search.call(this,e,t,s);return i?i[0]:undefined}function*find_index_exp(e,t,s){const i=yield*search_exp.call(this,e,t,s);return i?i[0]:undefined}function*find(e,t,s){const i=yield*search.call(this,e,t,s);return i?i[1]:undefined}function*find_exp(e,t,s){const i=yield*search_exp.call(this,e,t,s);return i?i[1]:undefined}function uniq(e){e=toArray(e);this.context.memoryLimit.use(e.length);return[...new Set(e)]}function sample(e,t=1){e=toValue(e);if(isNil(e))return[];if(!isArray(e))e=stringify(e);this.context.memoryLimit.use(t);const s=[...e].sort((()=>Math.random()-.5));if(t===1)return s[0];return s.slice(0,t)}var ke=Object.freeze({__proto__:null,join:fe,last:me,first:ge,reverse:ye,sort:sort,sort_natural:sort_natural,size:size,map:map,sum:sum,compact:compact,concat:concat,push:push,unshift:unshift,pop:pop,shift:shift,slice:slice,where:where,reject:reject,where_exp:where_exp,reject_exp:reject_exp,group_by:group_by,group_by_exp:group_by_exp,has:has,has_exp:has_exp,find_index:find_index,find_index_exp:find_index_exp,find:find,find_exp:find_exp,uniq:uniq,sample:sample});function date(e,t,s){const i=(e?.length??0)+(s?.length??0);this.context.memoryLimit.use(i);const n=parseDate(e,this.context.opts,s);if(!n)return e;t=toValue(t);t=isNil(t)?this.context.opts.dateFormat:stringify(t);this.context.memoryLimit.use(t.length);return strftime(n,t,this.context.memoryLimit)}function date_to_xmlschema(e){return date.call(this,e,"%Y-%m-%dT%H:%M:%S%:z")}function date_to_rfc822(e){return date.call(this,e,"%a, %d %b %Y %H:%M:%S %z")}function date_to_string(e,t,s){return stringify_date.call(this,e,"%b",t,s)}function date_to_long_string(e,t,s){return stringify_date.call(this,e,"%B",t,s)}function stringify_date(e,t,s,i){const n=parseDate(e,this.context.opts);if(!n)return e;const r=this.context.memoryLimit;if(s==="ordinal"){const e=n.getDate();return i==="US"?strftime(n,`${t} ${e}%q, %Y`,r):strftime(n,`${e}%q ${t} %Y`,r)}return strftime(n,`%d ${t} %Y`,r)}function parseDate(e,t,s){let i;const n=s??t.timezoneOffset;const r=t.locale;e=toValue(e);if(isNil(e)){return undefined}else if(e==="now"||e==="today"){i=new LiquidDate(Date.now(),r,n)}else if(isNumber(e)){i=new LiquidDate(e*1e3,r,n)}else if(isString(e)){if(/^\d+$/.test(e)){i=new LiquidDate(+e*1e3,r,n)}else if(t.preserveTimezones&&s===undefined){i=LiquidDate.createDateFixedToTimezone(e,r)}else{i=new LiquidDate(e,r,n)}}else{i=new LiquidDate(e,r,n)}return i.valid()?i:undefined}var Te=Object.freeze({__proto__:null,date:date,date_to_xmlschema:date_to_xmlschema,date_to_rfc822:date_to_rfc822,date_to_string:date_to_string,date_to_long_string:date_to_long_string});const we=/[\u4E00-\u9FFF\uF900-\uFAFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]/gu;const be=/[^\u4E00-\u9FFF\uF900-\uFAFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF\s]+/gu;function append(e,t){assert(arguments.length===2,"append expect 2 arguments");const s=stringify(e);const i=stringify(t);this.context.memoryLimit.use(s.length+i.length);return s+i}function prepend(e,t){assert(arguments.length===2,"prepend expect 2 arguments");const s=stringify(e);const i=stringify(t);this.context.memoryLimit.use(s.length+i.length);return i+s}function lstrip(e,t){const s=stringify(e);this.context.memoryLimit.use(s.length);if(t){t=stringify(t);this.context.memoryLimit.use(t.length);for(let e=0,i=new Set(t);e<s.length;e++){if(!i.has(s[e]))return s.slice(e)}return""}return s.trimStart()}function downcase(e){const t=stringify(e);this.context.memoryLimit.use(t.length);return t.toLowerCase()}function upcase(e){const t=stringify(e);this.context.memoryLimit.use(t.length);return stringify(t).toUpperCase()}function remove(e,t){const s=stringify(e);t=stringify(t);this.context.memoryLimit.use(s.length+t.length);return s.split(t).join("")}function remove_first(e,t){const s=stringify(e);t=stringify(t);this.context.memoryLimit.use(s.length+t.length);return s.replace(t,"")}function remove_last(e,t){const s=stringify(e);const i=stringify(t);this.context.memoryLimit.use(s.length+i.length);const n=s.lastIndexOf(i);if(n===-1)return s;return s.substring(0,n)+s.substring(n+i.length)}function rstrip(e,t){e=stringify(e);this.context.memoryLimit.use(e.length);if(t){t=stringify(t);this.context.memoryLimit.use(t.length);for(let s=e.length-1,i=new Set(t);s>=0;s--){if(!i.has(e[s]))return e.slice(0,s+1)}return""}return e.trimEnd()}function split(e,t){const s=stringify(e);this.context.memoryLimit.use(s.length);const i=s.split(stringify(t));while(i.length&&i[i.length-1]==="")i.pop();return i}function strip(e,t){const s=stringify(e);this.context.memoryLimit.use(s.length);if(t){const e=new Set(stringify(t));this.context.memoryLimit.use(e.size);let i=0;let n=s.length-1;while(e.has(s[i]))i++;while(n>=i&&e.has(s[n]))n--;return s.slice(i,n+1)}return s.trim()}function strip_newlines(e){const t=stringify(e);this.context.memoryLimit.use(t.length);return t.replace(/\r?\n/gm,"")}function capitalize(e){e=stringify(e);this.context.memoryLimit.use(e.length);return e.charAt(0).toUpperCase()+e.slice(1).toLowerCase()}function replace(e,t,s){const i=stringify(e);t=stringify(t);s=stringify(s);const n=i.split(t);const r=i.length+(n.length-1)*(s.length-t.length);this.context.memoryLimit.use(r);return n.join(s)}function replace_first(e,t,s){const i=stringify(e);t=stringify(t);s=stringify(s);this.context.memoryLimit.use(i.length+t.length+s.length);return i.replace(t,(()=>s))}function replace_last(e,t,s){const i=stringify(e);const n=stringify(t);const r=stringify(s);this.context.memoryLimit.use(i.length+n.length+r.length);const o=i.lastIndexOf(n);if(o===-1)return i;return i.substring(0,o)+r+i.substring(o+n.length)}function truncate(e,t=50,s="..."){const i=stringify(e);s=stringify(s);this.context.memoryLimit.use(i.length+s.length);if(i.length<=t)return e;return i.substring(0,t-s.length)+s}function truncatewords(e,t=15,s="..."){const i=stringify(e);s=stringify(s);this.context.memoryLimit.use(i.length+s.length);const n=i.split(/\s+/);if(t<=0)t=1;let r=n.slice(0,t).join(" ");if(n.length>=t)r+=s;return r}function normalize_whitespace(e){const t=stringify(e);this.context.memoryLimit.use(t.length);return t.replace(/\s+/g," ")}function number_of_words(e,t){const s=stringify(e);this.context.memoryLimit.use(s.length);e=s.trim();if(!e)return 0;switch(t){case"cjk":return(e.match(we)||[]).length+(e.match(be)||[]).length;case"auto":return we.test(e)?e.match(we).length+(e.match(be)||[]).length:e.split(/\s+/).length;default:return e.split(/\s+/).length}}function array_to_sentence_string(e,t="and"){t=stringify(t);this.context.memoryLimit.use(e.length+t.length);switch(e.length){case 0:return"";case 1:return e[0];case 2:return`${e[0]} ${t} ${e[1]}`;default:return`${e.slice(0,-1).join(", ")}, ${t} ${e[e.length-1]}`}}var _e=Object.freeze({__proto__:null,append:append,prepend:prepend,lstrip:lstrip,downcase:downcase,upcase:upcase,remove:remove,remove_first:remove_first,remove_last:remove_last,rstrip:rstrip,split:split,strip:strip,strip_newlines:strip_newlines,capitalize:capitalize,replace:replace,replace_first:replace_first,replace_last:replace_last,truncate:truncate,truncatewords:truncatewords,normalize_whitespace:normalize_whitespace,number_of_words:number_of_words,array_to_sentence_string:array_to_sentence_string});function base64Encode(e){return Buffer.from(e,"utf8").toString("base64")}function base64Decode(e){return Buffer.from(e,"base64").toString("utf8")}function base64_encode(e){if(typeof Buffer!=="undefined"&&Buffer.isBuffer(e)){this.context.memoryLimit.use(e.byteLength);return e.toString("base64")}const t=stringify(e);this.context.memoryLimit.use(t.length);return base64Encode(t)}function base64_decode(e){const t=stringify(e);this.context.memoryLimit.use(t.length);return base64Decode(t)}var xe=Object.freeze({__proto__:null,base64_encode:base64_encode,base64_decode:base64_decode});function sha256(e){return l.createHash("sha256").update(e,"utf8").digest("hex")}function hmacSha256(e,t){return l.createHmac("sha256",t).update(e,"utf8").digest("hex")}function sha256$1(e){const t=stringify(e);this.context.memoryLimit.use(t.length);return sha256(t)}function hmac_sha256(e,t){const s=stringify(e);const i=stringify(t);this.context.memoryLimit.use(s.length+i.length);return hmacSha256(s,i)}var Se=Object.freeze({__proto__:null,sha256:sha256$1,hmac_sha256:hmac_sha256});const ve={...J,...ue,...pe,...ke,...Te,..._e,...xe,...Se,...U};class AssignTag extends Tag{constructor(e,t,s){super(e,t,s);this.identifier=this.tokenizer.readIdentifier();this.key=this.identifier.content;this.tokenizer.assert(this.key,"expected variable name");this.tokenizer.skipBlank();this.tokenizer.assert(this.tokenizer.peek()==="=",'expected "="');this.tokenizer.advance();this.value=new Value(this.tokenizer.readFilteredValue(),this.liquid)}*render(e){e.bottom()[this.key]=yield this.value.value(e,this.liquid.options.lenientIf)}*arguments(){yield this.value}*localScope(){yield this.identifier}}const Le=["offset","limit","reversed"];class ForTag extends Tag{constructor(e,t,s,i){super(e,t,s);const n=this.tokenizer.readIdentifier();const r=this.tokenizer.readIdentifier();const o=this.tokenizer.readValue();if(!n.size()||r.content!=="in"||!o){throw new Error(`illegal tag: ${e.getText()}`)}this.variable=n.content;this.collection=o;this.hash=new Hash(this.tokenizer,s.options.keyValueSeparator);this.templates=[];this.elseTemplates=[];let a;const l=i.parseStream(t).on("start",(()=>a=this.templates)).on("tag:else",(e=>{assertEmpty(e.args);a=this.elseTemplates})).on("tag:endfor",(e=>{assertEmpty(e.args);l.stop()})).on("template",(e=>a.push(e))).on("end",(()=>{throw new Error(`tag ${e.getText()} not closed`)}));l.start()}*render(e,t){const s=this.liquid.renderer;let i=toEnumerable(yield evalToken(this.collection,e));if(!i.length){yield s.renderTemplates(this.elseTemplates,e,t);return}const n="continue-"+this.variable+"-"+this.collection.getText();e.push(createScope({continue:e.getRegister(n,{})}));const r=yield this.hash.render(e);e.pop();const o=this.liquid.options.orderedFilterParameters?Object.keys(r).filter((e=>Le.includes(e))):Le.filter((e=>r[e]!==undefined));i=o.reduce(((e,t)=>{if(t==="offset")return offset(e,r["offset"]);if(t==="limit")return limit(e,r["limit"]);return reversed(e)}),i);e.setRegister(n,(r["offset"]||0)+i.length);const a=createScope({forloop:new ForloopDrop(i.length,this.collection.getText(),this.variable)});e.push(a);for(const n of i){a[this.variable]=n;e.continueCalled=e.breakCalled=false;yield s.renderTemplates(this.templates,e,t);if(e.breakCalled)break;a.forloop.next()}e.continueCalled=e.breakCalled=false;e.pop()}*children(){const e=this.templates.slice();if(this.elseTemplates){e.push(...this.elseTemplates)}return e}*arguments(){yield this.collection;for(const e of Object.values(this.hash.hash)){if(isValueToken(e)){yield e}}}blockScope(){return[this.variable,"forloop"]}}function reversed(e){return[...e].reverse()}function offset(e,t){return e.slice(t)}function limit(e,t){return e.slice(0,t)}class CaptureTag extends Tag{constructor(e,t,s,i){super(e,t,s);this.templates=[];this.identifier=this.readVariable();this.variable=this.identifier.content;while(t.length){const e=t.shift();if(isTagToken(e)&&e.name==="endcapture")return;this.templates.push(i.parseToken(e,t))}throw new Error(`tag ${e.getText()} not closed`)}readVariable(){let e=this.tokenizer.readIdentifier();if(e.content)return e;e=this.tokenizer.readQuoted();if(e)return e;throw this.tokenizer.error("invalid capture name")}*render(e){const t=this.liquid.renderer;const s=yield t.renderTemplates(this.templates,e);e.bottom()[this.variable]=s}*children(){return this.templates}*localScope(){yield this.identifier}}class CaseTag extends Tag{constructor(e,t,s,i){super(e,t,s);this.branches=[];this.elseTemplates=[];this.value=new Value(this.tokenizer.readFilteredValue(),this.liquid);this.elseTemplates=[];let n=[];let r=0;const o=i.parseStream(t).on("tag:when",(e=>{if(r>0){return}n=[];const t=[];while(!e.tokenizer.end()){t.push(e.tokenizer.readValueOrThrow());e.tokenizer.skipBlank();if(e.tokenizer.peek()===","){e.tokenizer.readTo(",")}else{e.tokenizer.readTo("or")}}this.branches.push({values:t,templates:n})})).on("tag:else",(()=>{r++;n=this.elseTemplates})).on("tag:endcase",(()=>o.stop())).on("template",(e=>{if(n!==this.elseTemplates||r===1){n.push(e)}})).on("end",(()=>{throw new Error(`tag ${e.getText()} not closed`)}));o.start()}*render(e,t){const s=this.liquid.renderer;const i=toValue(yield this.value.value(e,e.opts.lenientIf));let n=false;for(const r of this.branches){for(const o of r.values){const a=yield evalToken(o,e,e.opts.lenientIf);if(equals(i,a)){yield s.renderTemplates(r.templates,e,t);n=true;break}}}if(!n){yield s.renderTemplates(this.elseTemplates,e,t)}}*arguments(){yield this.value;yield*this.branches.flatMap((e=>e.values))}*children(){const e=this.branches.flatMap((e=>e.templates));if(this.elseTemplates){e.push(...this.elseTemplates)}return e}}class CommentTag extends Tag{constructor(e,t,s){super(e,t,s);while(t.length){const e=t.shift();if(isTagToken(e)&&e.name==="endcomment")return}throw new Error(`tag ${e.getText()} not closed`)}render(){}}class RenderTag extends Tag{constructor(e,t,s,i){super(e,t,s);const n=this.tokenizer;this.file=parseFilePath(n,this.liquid,i);this.currentFile=e.file;while(!n.end()){n.skipBlank();const e=n.p;const t=n.readIdentifier();if(t.content==="with"||t.content==="for"){n.skipBlank();if(n.peek()!==":"){const e=n.readValue();if(e){const s=n.p;const i=n.readIdentifier();let r;if(i.content==="as")r=n.readIdentifier();else n.p=s;this[t.content]={value:e,alias:r&&r.content};n.skipBlank();if(n.peek()===",")n.advance();continue}}}n.p=e;break}this.hash=new Hash(n,s.options.keyValueSeparator)}*render(e,t){const{liquid:s,hash:i}=this;const n=yield renderFilePath(this["file"],e,s);assert(n,(()=>`illegal file path "${n}"`));const r=e.spawn();const o=r.bottom();__assign(o,yield i.render(e));if(this["with"]){const{value:t,alias:s}=this["with"];o[s||n]=yield evalToken(t,e)}if(this["for"]){const{value:i,alias:a}=this["for"];const l=toEnumerable(yield evalToken(i,e));o["forloop"]=new ForloopDrop(l.length,i.getText(),a);for(const e of l){o[a]=e;const i=yield s._parsePartialFile(n,r.sync,this["currentFile"]);yield s.renderer.renderTemplates(i,r,t);o["forloop"].next()}}else{const e=yield s._parsePartialFile(n,r.sync,this["currentFile"]);yield s.renderer.renderTemplates(e,r,t)}}*children(e,t){if(e&&isString(this["file"])){return yield this.liquid._parsePartialFile(this["file"],t,this["currentFile"])}return[]}partialScope(){if(isString(this["file"])){const e=Object.keys(this.hash.hash);if(this["with"]){const{value:t,alias:s}=this["with"];if(isString(s)){e.push([s,t])}else if(isString(this.file)){e.push([this.file,t])}}if(this["for"]){const{value:t,alias:s}=this["for"];if(isString(s)){e.push([s,t])}else if(isString(this.file)){e.push([this.file,t])}}return{name:this["file"],isolated:true,scope:e}}}*arguments(){for(const e of Object.values(this.hash.hash)){if(isValueToken(e)){yield e}}if(this["with"]){const{value:e}=this["with"];if(isValueToken(e)){yield e}}if(this["for"]){const{value:e}=this["for"];if(isValueToken(e)){yield e}}}}function parseFilePath(e,t,s){if(t.options.dynamicPartials){const t=e.readValue();e.assert(t,"illegal file path");if(t.getText()==="none")return;if(isQuotedToken(t)){const e=s.parse(evalQuotedToken(t));return optimize(e)}return t}const i=[...e.readFileNameTemplate(t.options)];const n=optimize(s.parseTokens(i));return n==="none"?undefined:n}function optimize(e){if(e.length===1&&isHTMLToken(e[0].token))return e[0].token.getContent();return e}function*renderFilePath(e,t,s){if(typeof e==="string")return e;if(Array.isArray(e))return s.renderer.renderTemplates(e,t);return yield evalToken(e,t)}class IncludeTag extends Tag{constructor(e,t,s,i){super(e,t,s);const{tokenizer:n}=e;this["file"]=parseFilePath(n,this.liquid,i);this["currentFile"]=e.file;const r=n.p;const o=n.readIdentifier();if(o.content==="with"){n.skipBlank();if(n.peek()!==":"){this.withVar=n.readValue()}else n.p=r}else n.p=r;this.hash=new Hash(n,s.options.jekyllInclude||s.options.keyValueSeparator)}*render(e,t){const{liquid:s,hash:i,withVar:n}=this;const{renderer:r}=s;const o=yield renderFilePath(this["file"],e,s);assert(o,(()=>`illegal file path "${o}"`));const a=e.saveRegister("blocks","blockMode");e.setRegister("blocks",{});e.setRegister("blockMode",X.OUTPUT);const l=createScope(yield i.render(e));if(n)l[o]=yield evalToken(n,e);const c=yield s._parsePartialFile(o,e.sync,this["currentFile"]);e.push(e.opts.jekyllInclude?createScope({include:l}):l);yield r.renderTemplates(c,e,t);e.pop();e.restoreRegister(a)}*children(e,t){if(e&&isString(this["file"])){return yield this.liquid._parsePartialFile(this["file"],t,this["currentFile"])}return[]}partialScope(){if(isString(this["file"])){let e;if(this.liquid.options.jekyllInclude){e=["include"]}else{e=Object.keys(this.hash.hash);if(this.withVar){e.push([this["file"],this.withVar])}}return{name:this["file"],isolated:false,scope:e}}}*arguments(){yield*Object.values(this.hash.hash).filter(isValueToken);if(isValueToken(this["file"])){yield this["file"]}if(isValueToken(this.withVar)){yield this.withVar}}}class DecrementTag extends Tag{constructor(e,t,s){super(e,t,s);this.identifier=this.tokenizer.readIdentifier();this.variable=this.identifier.content}render(e,t){const s=e.environments;if(!isNumber(s[this.variable])){s[this.variable]=0}t.write(stringify(--s[this.variable]))}*localScope(){yield this.identifier}}class CycleTag extends Tag{constructor(e,t,s){super(e,t,s);this.candidates=[];const i=this.tokenizer.readValue();this.tokenizer.skipBlank();if(i){if(this.tokenizer.peek()===":"){this.group=i;this.tokenizer.advance()}else this.candidates.push(i)}while(!this.tokenizer.end()){const e=this.tokenizer.readValue();if(e)this.candidates.push(e);this.tokenizer.readTo(",")}this.tokenizer.assert(this.candidates.length,(()=>`empty candidates: "${e.getText()}"`))}*render(e,t){const s=yield evalToken(this.group,e);const i=`cycle:${s}:`+this.candidates.join(",");const n=e.getRegister("cycle",{});let r=n[i];if(r===undefined){r=n[i]=0}const o=this.candidates[r];r=(r+1)%this.candidates.length;n[i]=r;return yield evalToken(o,e)}*arguments(){yield*this.candidates;if(this.group){yield this.group}}}class IfTag extends Tag{constructor(e,t,s,i){super(e,t,s);this.branches=[];let n=[];i.parseStream(t).on("start",(()=>this.branches.push({value:new Value(e.tokenizer.readFilteredValue(),this.liquid),templates:n=[]}))).on("tag:elsif",(e=>{assert(!this.elseTemplates,"unexpected elsif after else");this.branches.push({value:new Value(e.tokenizer.readFilteredValue(),this.liquid),templates:n=[]})})).on("tag:else",(e=>{assertEmpty(e.args);assert(!this.elseTemplates,"duplicated else");n=this.elseTemplates=[]})).on("tag:endif",(function(e){assertEmpty(e.args);this.stop()})).on("template",(e=>n.push(e))).on("end",(()=>{throw new Error(`tag ${e.getText()} not closed`)})).start()}*render(e,t){const s=this.liquid.renderer;for(const{value:i,templates:n}of this.branches){const r=yield i.value(e,e.opts.lenientIf);if(isTruthy(r,e)){yield s.renderTemplates(n,e,t);return}}yield s.renderTemplates(this.elseTemplates||[],e,t)}*children(){const e=this.branches.flatMap((e=>e.templates));if(this.elseTemplates){e.push(...this.elseTemplates)}return e}arguments(){return this.branches.map((e=>e.value))}}class IncrementTag extends Tag{constructor(e,t,s){super(e,t,s);this.identifier=this.tokenizer.readIdentifier();this.variable=this.identifier.content}render(e,t){const s=e.environments;if(!isNumber(s[this.variable])){s[this.variable]=0}const i=s[this.variable];s[this.variable]++;t.write(stringify(i))}*localScope(){yield this.identifier}}class LayoutTag extends Tag{constructor(e,t,s,i){super(e,t,s);this.file=parseFilePath(this.tokenizer,this.liquid,i);this["currentFile"]=e.file;this.args=new Hash(this.tokenizer,s.options.keyValueSeparator);this.templates=i.parseTokens(t)}*render(e,t){const{liquid:s,args:i,file:n}=this;const{renderer:r}=s;if(n===undefined){e.setRegister("blockMode",X.OUTPUT);yield r.renderTemplates(this.templates,e,t);return}const o=yield renderFilePath(this.file,e,s);assert(o,(()=>`illegal file path "${o}"`));const a=yield s._parseLayoutFile(o,e.sync,this["currentFile"]);e.setRegister("blockMode",X.STORE);const l=yield r.renderTemplates(this.templates,e);const c=e.getRegister("blocks",{});if(c[""]===undefined)c[""]=(e,t)=>t.write(l);e.setRegister("blockMode",X.OUTPUT);e.push(createScope(yield i.render(e)));yield r.renderTemplates(a,e,t);e.pop()}*children(e){const t=this.templates.slice();if(e&&isString(this.file)){t.push(...yield this.liquid._parsePartialFile(this.file,true,this["currentFile"]))}return t}*arguments(){for(const e of Object.values(this.args.hash)){if(isValueToken(e)){yield e}}if(isValueToken(this.file)){yield this.file}}partialScope(){if(isString(this.file)){return{name:this.file,isolated:false,scope:Object.keys(this.args.hash)}}}}class BlockTag extends Tag{constructor(e,t,s,i){super(e,t,s);this.templates=[];const n=/\w+/.exec(e.args);this.block=n?n[0]:"";while(t.length){const e=t.shift();if(isTagToken(e)&&e.name==="endblock")return;const s=i.parseToken(e,t);this.templates.push(s)}throw new Error(`tag ${e.getText()} not closed`)}*render(e,t){const s=this.getBlockRender(e);if(e.getRegister("blockMode")===X.STORE){e.getRegister("blocks",{})[this.block]=s}else{yield s(new BlockDrop,t)}}getBlockRender(e){const t=this;const{liquid:s,templates:i}=this;const n=e.getRegister("blocks",{})[this.block];const renderCurrent=function*(n,r){const o=e.getRegister("blockStack",[]);if(o.includes(t))throw new Error("block tag cannot be nested");o.push(t);e.push(createScope({block:n}));yield s.renderer.renderTemplates(i,e,r);e.pop();o.pop()};return n?(e,t)=>n(new BlockDrop((t=>renderCurrent(e,t))),t):renderCurrent}*children(){return this.templates}blockScope(){return["block"]}}class RawTag extends Tag{constructor(e,t,s){super(e,t,s);this.tokens=[];while(t.length){const e=t.shift();if(isTagToken(e)&&e.name==="endraw")return;this.tokens.push(e)}throw new Error(`tag ${e.getText()} not closed`)}render(){return this.tokens.map((e=>e.getText())).join("")}}class TablerowloopDrop extends ForloopDrop{constructor(e,t,s,i){super(e,s,i);this.length=e;this.cols=t}row(){return Math.floor(this.i/this.cols)+1}col0(){return this.i%this.cols}col(){return this.col0()+1}col_first(){return this.col0()===0}col_last(){return this.col()===this.cols}}class TablerowTag extends Tag{constructor(e,t,s,i){super(e,t,s);const n=this.tokenizer.readIdentifier();this.tokenizer.skipBlank();const r=this.tokenizer.readIdentifier();const o=this.tokenizer.readValue();if(r.content!=="in"||!o){throw new Error(`illegal tag: ${e.getText()}`)}this.variable=n.content;this.collection=o;this.args=new Hash(this.tokenizer,s.options.keyValueSeparator);this.templates=[];let a;const l=i.parseStream(t).on("start",(()=>a=this.templates)).on("tag:endtablerow",(()=>l.stop())).on("template",(e=>a.push(e))).on("end",(()=>{throw new Error(`tag ${e.getText()} not closed`)}));l.start()}*render(e,t){let s=toEnumerable(yield evalToken(this.collection,e));const i=yield this.args.render(e);const n=i.offset||0;const r=i.limit===undefined?s.length:i.limit;s=s.slice(n,n+r);const o=i.cols||s.length;const a=this.liquid.renderer;const l=new TablerowloopDrop(s.length,o,this.collection.getText(),this.variable);const c=createScope({tablerowloop:l});e.push(c);for(let i=0;i<s.length;i++,l.next()){c[this.variable]=s[i];if(l.col0()===0){if(l.row()!==1)t.write("</tr>");t.write(`<tr class="row${l.row()}">`)}t.write(`<td class="col${l.col()}">`);yield a.renderTemplates(this.templates,e,t);t.write("</td>")}if(s.length)t.write("</tr>");e.pop()}*children(){return this.templates}*arguments(){yield this.collection;for(const e of Object.values(this.args.hash)){if(isValueToken(e)){yield e}}}blockScope(){return[this.variable,"tablerowloop"]}}class UnlessTag extends Tag{constructor(e,t,s,i){super(e,t,s);this.branches=[];this.elseTemplates=[];let n=[];let r=0;i.parseStream(t).on("start",(()=>this.branches.push({value:new Value(e.tokenizer.readFilteredValue(),this.liquid),test:isFalsy,templates:n=[]}))).on("tag:elsif",(e=>{if(r>0){n=[];return}this.branches.push({value:new Value(e.tokenizer.readFilteredValue(),this.liquid),test:isTruthy,templates:n=[]})})).on("tag:else",(()=>{r++;n=this.elseTemplates})).on("tag:endunless",(function(){this.stop()})).on("template",(e=>{if(n!==this.elseTemplates||r===1){n.push(e)}})).on("end",(()=>{throw new Error(`tag ${e.getText()} not closed`)})).start()}*render(e,t){const s=this.liquid.renderer;for(const{value:i,test:n,templates:r}of this.branches){const o=yield i.value(e,e.opts.lenientIf);if(n(o,e)){yield s.renderTemplates(r,e,t);return}}yield s.renderTemplates(this.elseTemplates,e,t)}*children(){const e=this.branches.flatMap((e=>e.templates));if(this.elseTemplates){e.push(...this.elseTemplates)}return e}arguments(){return this.branches.map((e=>e.value))}}class BreakTag extends Tag{render(e,t){e.breakCalled=true}}class ContinueTag extends Tag{render(e,t){e.continueCalled=true}}class EchoTag extends Tag{constructor(e,t,s){super(e,t,s);this.tokenizer.skipBlank();if(!this.tokenizer.end()){this.value=new Value(this.tokenizer.readFilteredValue(),this.liquid)}}*render(e,t){if(!this.value)return;const s=yield this.value.value(e,false);t.write(s)}*arguments(){if(this.value){yield this.value}}}class LiquidTag extends Tag{constructor(e,t,s,i){super(e,t,s);const n=this.tokenizer.readLiquidTagTokens(this.liquid.options);this.templates=i.parseTokens(n)}*render(e,t){yield this.liquid.renderer.renderTemplates(this.templates,e,t)}*children(){return this.templates}}class InlineCommentTag extends Tag{constructor(e,t,s){super(e,t,s);if(e.args.search(/\n\s*[^#\s]/g)!==-1){throw new Error("every line of an inline comment must start with a '#' character")}}render(){}}const Fe={assign:AssignTag,for:ForTag,capture:CaptureTag,case:CaseTag,comment:CommentTag,include:IncludeTag,render:RenderTag,decrement:DecrementTag,increment:IncrementTag,cycle:CycleTag,if:IfTag,layout:LayoutTag,block:BlockTag,raw:RawTag,tablerow:TablerowTag,unless:UnlessTag,break:BreakTag,continue:ContinueTag,echo:EchoTag,liquid:LiquidTag,"#":InlineCommentTag};class Liquid{constructor(e={}){this.renderer=new Render;this.filters=Object.create(null);this.tags=Object.create(null);this.options=normalize(e);this.parser=new Parser(this);forOwn(Fe,((e,t)=>this.registerTag(t,e)));forOwn(ve,((e,t)=>this.registerFilter(t,e)))}parse(e,t){const s=new Parser(this);return s.parse(e,t)}_render(e,t,s){const i=t instanceof Context?t:new Context(t,this.options,s);return this.renderer.renderTemplates(e,i)}async render(e,t,s){return toPromise(this._render(e,t,{...s,sync:false}))}renderSync(e,t,s){return toValueSync(this._render(e,t,{...s,sync:true}))}renderToNodeStream(e,t,s={}){const i=new Context(t,this.options,s);return this.renderer.renderTemplatesToNodeStream(e,i)}_parseAndRender(e,t,s){const i=this.parse(e);return this._render(i,t,s)}async parseAndRender(e,t,s){return toPromise(this._parseAndRender(e,t,{...s,sync:false}))}parseAndRenderSync(e,t,s){return toValueSync(this._parseAndRender(e,t,{...s,sync:true}))}_parsePartialFile(e,t,i){return new Parser(this).parseFile(e,t,s.Rv.Partials,i)}_parseLayoutFile(e,t,i){return new Parser(this).parseFile(e,t,s.Rv.Layouts,i)}_parseFile(e,t,s,i){return new Parser(this).parseFile(e,t,s,i)}async parseFile(e,t){return toPromise(new Parser(this).parseFile(e,false,t))}parseFileSync(e,t){return toValueSync(new Parser(this).parseFile(e,true,t))}*_renderFile(e,t,s){const i=yield this._parseFile(e,s.sync,s.lookupType);return yield this._render(i,t,s)}async renderFile(e,t,s){return toPromise(this._renderFile(e,t,{...s,sync:false}))}renderFileSync(e,t,s){return toValueSync(this._renderFile(e,t,{...s,sync:true}))}async renderFileToNodeStream(e,t,s){const i=await this.parseFile(e);return this.renderToNodeStream(i,t,s)}_evalValue(e,t){const s=new Value(e,this);const i=t instanceof Context?t:new Context(t,this.options);return s.value(i)}async evalValue(e,t){return toPromise(this._evalValue(e,t))}evalValueSync(e,t){return toValueSync(this._evalValue(e,t))}registerFilter(e,t){this.filters[e]=t}registerTag(e,t){this.tags[e]=isFunction(t)?t:createTagClass(t)}plugin(e){return e.call(this,Liquid)}express(){const e=this;let t=true;return function(s,i,n){if(t){t=false;const s=normalizeDirectoryList(this.root);e.options.root.unshift(...s);e.options.layouts.unshift(...s);e.options.partials.unshift(...s)}e.renderFile(s,i).then((e=>n(null,e)),n)}}async analyze(e,t={}){return analyze(e,t)}analyzeSync(e,t={}){return analyzeSync(e,t)}async parseAndAnalyze(e,t,s={}){return analyze(this.parse(e,t),s)}parseAndAnalyzeSync(e,t,s={}){return analyzeSync(this.parse(e,t),s)}async variables(e,t={}){const s=await analyze(isString(e)?this.parse(e):e,t);return Object.keys(s.variables)}variablesSync(e,t={}){const s=analyzeSync(isString(e)?this.parse(e):e,t);return Object.keys(s.variables)}async fullVariables(e,t={}){const s=await analyze(isString(e)?this.parse(e):e,t);return Array.from(new Set(Object.values(s.variables).flatMap((e=>e.map((e=>String(e)))))))}fullVariablesSync(e,t={}){const s=analyzeSync(isString(e)?this.parse(e):e,t);return Array.from(new Set(Object.values(s.variables).flatMap((e=>e.map((e=>String(e)))))))}async variableSegments(e,t={}){const s=await analyze(isString(e)?this.parse(e):e,t);return Array.from(strictUniq(Object.values(s.variables).flatMap((e=>e.map((e=>e.toArray()))))))}variableSegmentsSync(e,t={}){const s=analyzeSync(isString(e)?this.parse(e):e,t);return Array.from(strictUniq(Object.values(s.variables).flatMap((e=>e.map((e=>e.toArray()))))))}async globalVariables(e,t={}){const s=await analyze(isString(e)?this.parse(e):e,t);return Object.keys(s.globals)}globalVariablesSync(e,t={}){const s=analyzeSync(isString(e)?this.parse(e):e,t);return Object.keys(s.globals)}async globalFullVariables(e,t={}){const s=await analyze(isString(e)?this.parse(e):e,t);return Array.from(new Set(Object.values(s.globals).flatMap((e=>e.map((e=>String(e)))))))}globalFullVariablesSync(e,t={}){const s=analyzeSync(isString(e)?this.parse(e):e,t);return Array.from(new Set(Object.values(s.globals).flatMap((e=>e.map((e=>String(e)))))))}async globalVariableSegments(e,t={}){const s=await analyze(isString(e)?this.parse(e):e,t);return Array.from(strictUniq(Object.values(s.globals).flatMap((e=>e.map((e=>e.toArray()))))))}globalVariableSegmentsSync(e,t={}){const s=analyzeSync(isString(e)?this.parse(e):e,t);return Array.from(strictUniq(Object.values(s.globals).flatMap((e=>e.map((e=>e.toArray()))))))}}const Ve="10.27.0";n=AssertionError;n=AssignTag;n=BlockTag;n=BreakTag;n=CaptureTag;n=CaseTag;n=CommentTag;n=Context;n=ContinueTag;n=CycleTag;n=DecrementTag;n=Drop;n=EchoTag;n=Expression;n=Filter;n=ForTag;n=Hash;n=IfTag;n=IncludeTag;n=IncrementTag;n=InlineCommentTag;n=LayoutTag;s.HX=Liquid;n=LiquidError;n=LiquidTag;n=Output;n=ParseError;n=ParseStream;n=Parser;n=RawTag;n=RenderError;n=RenderTag;n=TablerowTag;n=Tag;n=TagToken;n=Token;n=TokenizationError;n=Tokenizer;n=Z;n=UndefinedVariableError;n=UnlessTag;n=Value;n=Variable;n=analyze;n=analyzeSync;n=assert;n=createTrie;n=D;n=Q;n=evalQuotedToken;n=evalToken;n=ve;n=isFalsy;n=isTruthy;n=Fe;n=toPromise;n=toValue;n=toValueSync;n=Ve},982:t=>{t.exports=e(import.meta.url)("crypto")},896:t=>{t.exports=e(import.meta.url)("fs")},928:t=>{t.exports=e(import.meta.url)("path")},203:t=>{t.exports=e(import.meta.url)("stream")}};var s={};function __nccwpck_require__(e){var i=s[e];if(i!==undefined){return i.exports}var n=s[e]={exports:{}};var r=true;try{t[e](n,n.exports,__nccwpck_require__);r=false}finally{if(r)delete s[e]}return n.exports}if(typeof __nccwpck_require__!=="undefined")__nccwpck_require__.ab=new URL(".",import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/)?1:0,-1)+"/";var i={};const n=e(import.meta.url)("node:fs/promises");const r=e(import.meta.url)("node:os");const o=e(import.meta.url)("node:path");let a="info";const l={error:0,warn:1,info:2,debug:3};const c=new Set;function setLogLevel(e){if(e==="debug"||e==="info"||e==="warn"||e==="error"){a=e}}function registerSecret(e){if(e&&e.length>=4)c.add(e)}function redact(e){let t=e;for(const e of c){t=t.split(e).join("[REDACTED]")}return t}function emit(e,t){if(l[e]>l[a])return;const s={at:(new Date).toISOString(),level:e,...t};const i=redact(JSON.stringify(s));if(e==="error")console.error(i);else if(e==="warn")console.warn(i);else console.log(i)}const u={debug:e=>emit("debug",e),info:e=>emit("info",e),warn:e=>emit("warn",e),error:e=>emit("error",e)};const h=e(import.meta.url)("node:child_process");const d=/[^A-Za-z0-9._-]/g;function sanitize(e){const t=e.replace(d,"_");if(t===""||t==="."||t===".."||t.includes("/")){throw new Error(`unsafe_workspace_key: ${JSON.stringify(e)}`)}return t}async function realpathOrSelf(e){try{return await(0,n.realpath)(e)}catch{return(0,o.resolve)(e)}}async function assertContained(e,t){const s=await realpathOrSelf(e);const i=await realpathOrSelf(t);const n=i.endsWith(o.sep)?i:i+o.sep;if(s!==i&&!s.startsWith(n)){throw new Error(`unsafe_workspace_path: ${e} not under ${t}`)}}async function exists(e){try{await(0,n.stat)(e);return true}catch{return false}}async function run(e,t,s){return new Promise(((i,n)=>{const r=(0,h.spawn)(e,t,{cwd:s,stdio:["ignore","pipe","pipe"]});const o=[];const a=[];r.stdout.setEncoding("utf8");r.stderr.setEncoding("utf8");r.stdout.on("data",(e=>o.push(e)));r.stderr.on("data",(e=>a.push(e)));r.on("error",n);r.on("exit",(s=>{if(s===0)i();else{const i=o.join("").trim().slice(-500);const r=a.join("").trim().slice(-500);n(new Error(`${e} ${t.join(" ")} exited ${s}: ${r||i}`))}}))}))}async function prepareWorkspace(e){const t=sanitize(e.issueIdentifier);const s=(0,o.join)(e.workspaceRoot,t);await(0,n.mkdir)(e.workspaceRoot,{recursive:true});await assertContained(s,e.workspaceRoot);let i=false;const r=await exists(s);if(!r){u.info({module:"workspace",event:"clone",message:`${e.repoSlug} → ${s}`});await run("gh",["repo","clone",e.repoSlug,s]);i=true}else{const e=(0,o.join)(s,".git");if(!await exists(e)){throw new Error(`workspace_not_a_repo: ${s} exists but has no .git`)}}await assertContained(await realpathOrSelf(s),e.workspaceRoot);const a=`agent/${t}`;u.info({module:"workspace",event:"branch_reset",message:a});await run("git",["-C",s,"fetch","origin","--prune"]);await run("git",["-C",s,"checkout",e.repoRef]);await run("git",["-C",s,"pull","--ff-only"]);await run("git",["-C",s,"checkout","-B",a]);return{workspacePath:s,branch:a,createdNow:i}}const p={endpoint:"https://api.github.com/graphql",active_states:["Todo","In Progress"],terminal_states:["Done","Cancelled","Canceled","Duplicate","Closed"],max_turns:20,codex_command:"codex app-server",approval_policy:"never",sandbox:"danger-full-access",turn_timeout_ms:36e5};const f=new Set(["read-only","workspace-write","danger-full-access"]);function asStrArr(e,t){if(Array.isArray(e))return e.filter((e=>typeof e==="string"));return t}function asInt(e,t){if(typeof e==="number"&&Number.isFinite(e))return e|0;return t}function asStr(e,t){return typeof e==="string"?e:t}function asBool(e,t){return typeof e==="boolean"?e:t}function isRecord(e){return typeof e==="object"&&e!==null&&!Array.isArray(e)}async function loadConfig(e){const t=(0,o.join)(e,".banzai","config.json");let s;try{s=await(0,n.readFile)(t,"utf8")}catch(e){throw new Error(`config_missing: ${t}`)}let i;try{i=JSON.parse(s)}catch(e){throw new Error(`config_invalid_json: ${e.message}`)}const r=isRecord(i)?i:{};const a=isRecord(r.tracker)?r.tracker:{};const l=isRecord(r.agent)?r.agent:{};const c=isRecord(l.codex)?l.codex:{};const u=isRecord(l.tools)?l.tools:{};const h={tracker:{kind:"github_projects_v2",project_id:asStr(a.project_id,""),endpoint:asStr(a.endpoint,p.endpoint),active_states:asStrArr(a.active_states,p.active_states),terminal_states:asStrArr(a.terminal_states,p.terminal_states)},agent:{max_turns:Math.max(1,asInt(l.max_turns,p.max_turns)),codex:{command:asStr(c.command,p.codex_command),approval_policy:asStr(c.approval_policy,p.approval_policy),sandbox:(()=>{const e=asStr(c.sandbox,p.sandbox);return f.has(e)?e:p.sandbox})(),turn_timeout_ms:asInt(c.turn_timeout_ms,p.turn_timeout_ms)},tools:{github_graphql:asBool(u.github_graphql,true),set_issue_status:asBool(u.set_issue_status,true)}}};if(asStr(a.kind,"github_projects_v2")!=="github_projects_v2"){throw new Error(`config_invalid: unsupported tracker.kind ${a.kind}`)}return h}const m=`\n  query ($issueId: ID!, $projectId: ID!) {\n    issue: node(id: $issueId) {\n      ... on Issue {\n        id\n        number\n        title\n        body\n        url\n        createdAt\n        updatedAt\n        labels(first: 20) { nodes { name } }\n      }\n    }\n    project: node(id: $projectId) {\n      ... on ProjectV2 {\n        field(name: "Status") {\n          ... on ProjectV2SingleSelectField {\n            id\n            options { id name }\n          }\n        }\n        items(first: 100) {\n          nodes {\n            id\n            content {\n              ... on Issue { id }\n              ... on PullRequest { id }\n            }\n            fieldValues(first: 20) {\n              nodes {\n                __typename\n                ... on ProjectV2ItemFieldSingleSelectValue {\n                  name\n                  field { ... on ProjectV2FieldCommon { name } }\n                }\n              }\n            }\n          }\n        }\n      }\n    }\n  }\n`;async function setProjectItemStatus(e){const t=`\n    mutation ($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {\n      updateProjectV2ItemFieldValue(input: {\n        projectId: $projectId\n        itemId: $itemId\n        fieldId: $fieldId\n        value: { singleSelectOptionId: $optionId }\n      }) { projectV2Item { id } }\n    }\n  `;const s=await fetch(e.endpoint,{method:"POST",headers:{"User-Agent":"banzai-harness",Authorization:`Bearer ${e.token}`,"Content-Type":"application/json"},body:JSON.stringify({query:t,variables:{projectId:e.projectId,itemId:e.itemId,fieldId:e.fieldId,optionId:e.optionId}})});if(!s.ok)throw new Error(`status_update_failed: HTTP ${s.status}`);const i=await s.json();if(i.errors&&i.errors.length>0){throw new Error(`status_update_failed: ${i.errors.map((e=>e.message)).join("; ")}`)}}async function fetchIssueSnapshot(e){const{endpoint:t,token:s,issueId:i,projectId:n}=e;const r=await fetch(t,{method:"POST",headers:{"User-Agent":"banzai-harness",Authorization:`Bearer ${s}`,"Content-Type":"application/json"},body:JSON.stringify({query:m,variables:{issueId:i,projectId:n}})});if(!r.ok){throw new Error(`issue_fetch_failed: HTTP ${r.status}`)}const o=await r.json();if(o.errors&&o.errors.length>0){throw new Error(`issue_fetch_failed: ${o.errors.map((e=>e.message)).join("; ")}`)}if(!o.data?.issue)throw new Error(`issue_fetch_failed: issue not found`);if(!o.data?.project)throw new Error(`issue_fetch_failed: project not found`);const a=o.data.issue;const l=o.data.project;if(!l.field){throw new Error(`issue_fetch_failed: project has no Status field`)}const c=l.items.nodes.find((e=>e.content?.id===a.id));if(!c){throw new Error(`issue_fetch_failed: issue ${a.id} is not in project ${n}`)}let h="";for(const e of c.fieldValues.nodes){if(e.__typename==="ProjectV2ItemFieldSingleSelectValue"&&e.field?.name==="Status"&&typeof e.name==="string"){h=e.name}}const d={id:a.id,identifier:`#${a.number}`,title:a.title,description:a.body??null,state:h,url:a.url??null,labels:(a.labels?.nodes??[]).map((e=>e.name.toLowerCase())),created_at:a.createdAt??null,updated_at:a.updatedAt??null};const p={projectItemId:c.id,statusFieldId:l.field.id,statusOptions:l.field.options};u.info({module:"issue",event:"fetched",issue_id:d.id,issue_identifier:d.identifier,message:`state=${h} options=${p.statusOptions.map((e=>e.name)).join(",")}`});return{issue:d,projectStatus:p}}class CodexAppServerClient{proc;nextId=1;pending=new Map;toolHandlers=new Map;notificationHandler=()=>{};buf="";exited=false;exitCode=null;exitPromise;constructor(e){u.info({module:"codex",event:"spawn",message:e});const[t,...s]=parseShellWords(e);if(!t)throw new Error(`codex_startup_failed: empty command`);this.proc=(0,h.spawn)(t,s,{stdio:["pipe","pipe","pipe"]});this.exitPromise=new Promise((e=>{this.proc.on("exit",((t,s)=>{this.exited=true;this.exitCode=t;u.info({module:"codex",event:"exited",message:`code=${t} signal=${s}`});for(const e of this.pending.values()){e.reject(new Error(`codex process exited (code=${t})`))}this.pending.clear();e({code:t,signal:s})}))}));this.proc.stdout.setEncoding("utf8");this.proc.stdout.on("data",(e=>this.onStdout(e)));this.proc.stderr.setEncoding("utf8");this.proc.stderr.on("data",(e=>{const t=e.trim();if(t)u.warn({module:"codex",event:"stderr",message:t.slice(0,1e3)})}))}onNotification(e){this.notificationHandler=e}registerTool(e,t){this.toolHandlers.set(e,t)}onStdout(e){this.buf+=e;let t;while((t=this.buf.indexOf("\n"))!==-1){const e=this.buf.slice(0,t).trim();this.buf=this.buf.slice(t+1);if(e==="")continue;let s;try{s=JSON.parse(e)}catch(t){u.warn({module:"codex",event:"bad_json",message:e.slice(0,200)});continue}this.dispatch(s)}}dispatch(e){if("id"in e&&("result"in e||"error"in e)){const t=e;const s=this.pending.get(t.id);if(!s){u.warn({module:"codex",event:"orphan_response",message:`id=${t.id}`});return}this.pending.delete(t.id);if(t.error){s.reject(new Error(`${t.error.code}: ${t.error.message}`))}else{s.resolve(t.result)}return}if("id"in e&&"method"in e){this.handleServerRequest(e);return}if("method"in e){const t=e;this.notificationHandler(t.method,t.params);return}u.warn({module:"codex",event:"unknown_message",message:JSON.stringify(e).slice(0,200)})}async handleServerRequest(e){if(e.method==="item/tool/call"){const t=e.params;const s=this.toolHandlers.get(t.tool);if(!s){u.warn({module:"codex",event:"unsupported_tool_call",message:t.tool});this.sendResponse(e.id,{success:false,contentItems:[{type:"inputText",text:`Tool '${t.tool}' is not registered.`}]});return}try{const i=await s(t);this.sendResponse(e.id,i)}catch(s){u.error({module:"codex",event:"tool_handler_threw",message:String(s.message??s)});this.sendResponse(e.id,{success:false,contentItems:[{type:"inputText",text:`Tool '${t.tool}' threw: ${s.message}`}]})}return}u.info({module:"codex",event:"unhandled_server_request",message:e.method});this.sendError(e.id,-32601,`Method '${e.method}' not handled by client.`)}sendResponse(e,t){this.write({jsonrpc:"2.0",id:e,result:t})}sendError(e,t,s){this.write({jsonrpc:"2.0",id:e,error:{code:t,message:s}})}request(e,t){if(this.exited){return Promise.reject(new Error("codex process has exited"))}const s=this.nextId++;return new Promise(((i,n)=>{this.pending.set(s,{resolve:i,reject:n});this.write({jsonrpc:"2.0",id:s,method:e,params:t??{}})}))}write(e){if(this.exited)return;this.proc.stdin.write(JSON.stringify(e)+"\n")}shutdown(){if(!this.exited){try{this.proc.stdin.end()}catch{}}return this.exitPromise}isExited(){return this.exited}getExitCode(){return this.exitCode}}function parseShellWords(e){const t=[];let s="";let i=null;for(let n=0;n<e.length;n++){const r=e[n];if(i){if(r===i)i=null;else s+=r}else if(r==='"'||r==="'"){i=r}else if(r===" "||r==="\t"){if(s!==""){t.push(s);s=""}}else{s+=r}}if(s!=="")t.push(s);return t}var g=__nccwpck_require__(694);const y=`You are working on issue {{ issue.identifier }}: {{ issue.title }}.\n\n{% if issue.description %}{{ issue.description }}{% endif %}\n\nWhen the work is complete, call the \`set_issue_status\` tool with this issue's id and a non-active status name (typically "Human Review") to hand off back to a human. Do NOT leave the status in "Todo" or "In Progress" — the orchestrator will redispatch this run otherwise.\n\nIf you make code changes, push them to the \`agent/{{ issue.identifier }}\` branch and open a PR against \`main\` using \`gh pr create\`.\n\n{% if attempt %}This is attempt {{ attempt }}. Review previous work before continuing.{% endif %}\n`;const k=new g.HX({strictVariables:true,strictFilters:true});async function renderPrompt(e,t){let s;const i=(0,o.join)(e,".banzai","prompt.md");try{s=await(0,n.readFile)(i,"utf8")}catch{s=y}try{return await k.parseAndRender(s,t)}catch(e){throw new Error(`prompt_render_failed: ${e.message}`)}}function renderContinuation(e,t){return`Continue working on the issue. You are on turn ${e} of ${t}. When the work is complete, call \`set_issue_status\` to move the issue out of "Todo" / "In Progress".`}const T={name:"set_issue_status",description:"Move the current issue's status (a single-select field named 'Status' on the configured GitHub Projects v2 board) to a new value. Use this when the work is complete or when handing off to a human. Always call this before exiting if the issue is still in an active state, otherwise the orchestrator will redispatch.",inputSchema:{type:"object",additionalProperties:false,required:["status_name"],properties:{status_name:{type:"string",description:"The target status option name on the project board (e.g. 'Human Review', 'Done'). Must match an existing option of the 'Status' single-select field exactly (case-insensitive match is attempted)."}}}};function makeSetIssueStatusTool(e){const handler=async t=>{const s=t.arguments??{};if(typeof s.status_name!=="string"||s.status_name.trim()===""){return fail(`status_name must be a non-empty string`)}const i=s.status_name.trim();const n=e.snapshot();const r=n.projectStatus.statusOptions.find((e=>e.name===i||e.name.toLowerCase()===i.toLowerCase()));if(!r){const e=n.projectStatus.statusOptions.map((e=>e.name)).join(", ");return fail(`status '${i}' not found among options: ${e}`)}const o=`\n      mutation ($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {\n        updateProjectV2ItemFieldValue(input: {\n          projectId: $projectId\n          itemId: $itemId\n          fieldId: $fieldId\n          value: { singleSelectOptionId: $optionId }\n        }) { projectV2Item { id } }\n      }\n    `;const a=await fetch(e.endpoint,{method:"POST",headers:{"User-Agent":"banzai-harness",Authorization:`Bearer ${e.token}`,"Content-Type":"application/json"},body:JSON.stringify({query:o,variables:{projectId:e.projectId,itemId:n.projectStatus.projectItemId,fieldId:n.projectStatus.statusFieldId,optionId:r.id}})});if(!a.ok){return fail(`HTTP ${a.status} from GraphQL endpoint`)}const l=await a.json();if(l.errors&&l.errors.length>0){return fail(`GraphQL errors: ${l.errors.map((e=>e.message)).join("; ")}`)}u.info({module:"tool",event:"set_issue_status_ok",issue_id:n.issue.id,issue_identifier:n.issue.identifier,message:`${n.issue.state} → ${r.name}`});await e.refreshAfter();return ok(`Set issue ${n.issue.identifier} status from '${n.issue.state}' to '${r.name}'.`)};return{spec:T,handler:handler}}function ok(e){return{success:true,contentItems:[{type:"inputText",text:e}]}}function fail(e){return{success:false,contentItems:[{type:"inputText",text:e}]}}const w={name:"github_graphql",description:"Execute a single GraphQL operation against the configured GitHub GraphQL endpoint. Use only when set_issue_status cannot express what you need (e.g. complex queries). Provide a single-operation document; multi-operation documents are rejected.",inputSchema:{type:"object",additionalProperties:false,required:["query"],properties:{query:{type:"string",description:"A single GraphQL operation."},variables:{type:"object",description:"Optional variables object."}}}};const b=/\b(query|mutation|subscription)\b/gi;function makeGithubGraphqlTool(e){const handler=async t=>{const s=t.arguments??{};if(typeof s.query!=="string"||s.query.trim()===""){return github_graphql_fail("query must be a non-empty string")}const i=(s.query.match(b)??[]).length;if(i>1){return github_graphql_fail("multi-operation documents are not allowed; submit one operation per call")}let n;if(s.variables!==undefined){if(typeof s.variables!=="object"||s.variables===null||Array.isArray(s.variables)){return github_graphql_fail("variables must be an object if present")}n=s.variables}const r=await fetch(e.endpoint,{method:"POST",headers:{"User-Agent":"banzai-harness",Authorization:`Bearer ${e.token}`,"Content-Type":"application/json"},body:JSON.stringify({query:s.query,variables:n})});let o;try{o=await r.json()}catch{return github_graphql_fail(`non-JSON response from GraphQL endpoint (HTTP ${r.status})`)}if(!r.ok){return github_graphql_fail(`HTTP ${r.status}: ${JSON.stringify(o).slice(0,1e3)}`)}const a=o;if(a.errors&&a.errors.length>0){u.info({module:"tool",event:"github_graphql_errors",message:a.errors.map((e=>e.message)).join("; ")});return{success:false,contentItems:[{type:"inputText",text:JSON.stringify(a).slice(0,4e3)}]}}return github_graphql_ok(JSON.stringify(a).slice(0,8e3))};return{spec:w,handler:handler}}function github_graphql_ok(e){return{success:true,contentItems:[{type:"inputText",text:e}]}}function github_graphql_fail(e){return{success:false,contentItems:[{type:"inputText",text:e}]}}async function runTurns(e){const{workspacePath:t,cfg:s,token:i,attempt:n}=e;let r=e.initialSnapshot;let o=0;const refreshAfter=async()=>{r=await fetchIssueSnapshot({endpoint:s.tracker.endpoint,token:i,issueId:r.issue.id,projectId:s.tracker.project_id})};const a={endpoint:s.tracker.endpoint,token:i,projectId:s.tracker.project_id};const l=makeSetIssueStatusTool({...a,snapshot:()=>r,refreshAfter:refreshAfter});const c=makeGithubGraphqlTool({endpoint:a.endpoint,token:a.token});const h=[];const d=[];if(s.agent.tools.set_issue_status){h.push(l.spec);d.push([l.spec.name,l.handler])}if(s.agent.tools.github_graphql){h.push(c.spec);d.push([c.spec.name,c.handler])}const p=new CodexAppServerClient(s.agent.codex.command);for(const[e,t]of d)p.registerTool(e,t);let f=null;let m=null;let g=null;p.onNotification(((e,t)=>{if(e==="turn/completed"){const e=t;if(e.turn.id===f&&m){const t=m;m=null;g=null;f=null;t(e)}return}if(e==="thread/closed"){u.warn({module:"codex",event:e,message:shortJson(t)});if(g)g(new Error(`thread closed during turn`));return}if(e==="item/completed"){const s=summarizeItem(t);if(s)u.info({module:"codex",event:"item",message:s});else u.debug({module:"codex",event:e,message:shortJson(t)});return}if(_.has(e)){u.info({module:"codex",event:e,message:shortJson(t)});return}u.debug({module:"codex",event:e,message:shortJson(t)})}));try{await p.request("initialize",{clientInfo:{name:"banzai-harness",version:"0.1.0"},capabilities:{experimentalApi:true}});u.info({module:"codex",event:"initialized"});const e=await p.request("thread/start",{cwd:t,sandbox:s.agent.codex.sandbox,approvalPolicy:s.agent.codex.approval_policy??"never",dynamicTools:h});const i=e.thread.id;u.info({module:"codex",event:"thread_started",message:i});for(let e=1;e<=s.agent.max_turns;e++){o=e;const a=e===1?await renderPrompt(t,{issue:r.issue,attempt:n,turn:e}):renderContinuation(e,s.agent.max_turns);u.info({module:"codex",event:"turn_starting",message:`turn=${e}/${s.agent.max_turns}`});const l=new Promise(((e,t)=>{m=e;g=t}));const c=await p.request("turn/start",{threadId:i,input:[{type:"text",text:a}]});f=c.turn.id;const h=s.agent.codex.turn_timeout_ms;const d=await Promise.race([l,new Promise(((e,t)=>setTimeout((()=>t(new Error(`turn_timeout: ${h}ms`))),h)))]);u.info({module:"codex",event:"turn_completed",issue_id:r.issue.id,issue_identifier:r.issue.identifier,message:`turn=${e} id=${d.turn.id} status=${d.turn.status}`});if(d.turn.status==="failed"||d.turn.status==="interrupted"){const e=d.turn.status==="failed"?`turn_failed:${d.turn.error?.message??"unknown"}`:"turn_cancelled";u.error({module:"codex",event:"turn_nonsuccess",message:e});await p.shutdown();return{outcome:"failure",reason:e,tracker_state_at_exit:r.issue.state,turn_count:o}}await refreshAfter();const y=r.issue.state.toLowerCase();const k=s.tracker.active_states.map((e=>e.toLowerCase()));if(!k.includes(y)){u.info({module:"codex",event:"exit_state_inactive",message:`state=${r.issue.state}`});await p.shutdown();return{outcome:"success",reason:null,tracker_state_at_exit:r.issue.state,turn_count:o}}}u.warn({module:"codex",event:"exit_max_turns",message:`max_turns=${s.agent.max_turns} reached with state=${r.issue.state}`});await p.shutdown();return{outcome:"success",reason:"max_turns_reached_with_active_state",tracker_state_at_exit:r.issue.state,turn_count:o}}catch(e){const t=e.message??String(e);u.error({module:"codex",event:"turn_loop_error",message:t});await p.shutdown();return{outcome:"failure",reason:t.startsWith("turn_timeout")?"turn_timeout":t,tracker_state_at_exit:r.issue.state,turn_count:o}}}function shortJson(e){try{const t=JSON.stringify(e);return t.length>500?t.slice(0,500)+"…":t}catch{return"<unserializable>"}}const _=new Set(["thread/started","turn/started","thread/tokenUsage/updated","account/rateLimits/updated","thread/error"]);function truncate(e,t){const s=e.replace(/\s+/g," ").trim();return s.length>t?s.slice(0,t)+"…":s}function summarizeItem(e){const t=e?.item;if(!t||typeof t!=="object")return null;const s=t.type;switch(s){case"commandExecution":{const e=truncate(String(t.command??""),160);const s=t.exitCode;return`cmd: ${e}${s===null||s===undefined?"":` (exit ${s})`}`}case"agentMessage":{const e=t.phase?`[${t.phase}] `:"";return`msg: ${e}${truncate(String(t.text??""),280)}`}case"dynamicToolCall":{const e=truncate(JSON.stringify(t.arguments??{}),120);return`tool: ${t.tool}(${e}) success=${t.success}`}case"fileChange":return`file_change: ${truncate(JSON.stringify(t.changes??t),200)}`;case"reasoning":return null;default:return null}}function expand(e){return e.replace(/^\$HOME/,(0,r.homedir)()).replace(/^~/,(0,r.homedir)())}function repoSlugFromEnv(){const e=process.env.GITHUB_REPOSITORY??"";if(!e.includes("/"))throw new Error(`unknown_repo: GITHUB_REPOSITORY=${e}`);return e}async function writeOutcome(e){const t=process.env.RUNNER_TEMP??"/tmp";const s=(0,o.join)(t,"harness-outcome.json");try{await(0,n.writeFile)(s,JSON.stringify(e,null,2));u.info({module:"harness",event:"outcome_written",message:s})}catch(e){u.warn({module:"harness",event:"outcome_write_failed",message:String(e.message)})}}async function main(){const e=JSON.parse(process.env.HARNESS_INPUTS_JSON??"{}");setLogLevel(e.log_level||"info");const t=process.env.GH_TOKEN;if(!t){u.error({module:"harness",event:"missing_credentials",message:"GH_TOKEN unset"});await writeOutcome({outcome:"failure",reason:"missing_credentials"});return 1}registerSecret(t);registerSecret(process.env.OPENAI_API_KEY);u.info({module:"harness",event:"start",issue_id:e.issue_id,issue_identifier:e.issue_identifier,message:`attempt=${e.attempt} nonce=${e.dispatch_nonce} config_sha=${e.config_sha}`});const s=e.repo_url||repoSlugFromEnv();const i=expand(e.workspace_root||"$HOME/banzai-workspaces");try{const n=await prepareWorkspace({workspaceRoot:i,issueIdentifier:e.issue_identifier,repoSlug:s,repoRef:e.repo_ref||"main"});u.info({module:"harness",event:"workspace_ready",message:`${n.workspacePath} (createdNow=${n.createdNow}) branch=${n.branch}`});const r=await loadConfig(n.workspacePath);if(e.tracker_project_id)r.tracker.project_id=e.tracker_project_id;if(e.tracker_endpoint)r.tracker.endpoint=e.tracker_endpoint;let o=await fetchIssueSnapshot({endpoint:r.tracker.endpoint,token:t,issueId:e.issue_id,projectId:r.tracker.project_id});if(o.issue.state.toLowerCase()==="todo"){const s=o.projectStatus.statusOptions.find((e=>e.name.toLowerCase()==="in progress"));if(s){try{await setProjectItemStatus({endpoint:r.tracker.endpoint,token:t,projectId:r.tracker.project_id,itemId:o.projectStatus.projectItemId,fieldId:o.projectStatus.statusFieldId,optionId:s.id});u.info({module:"harness",event:"state_transition",issue_id:o.issue.id,issue_identifier:o.issue.identifier,message:"Todo → In Progress"});o=await fetchIssueSnapshot({endpoint:r.tracker.endpoint,token:t,issueId:e.issue_id,projectId:r.tracker.project_id})}catch(e){u.warn({module:"harness",event:"state_transition_failed",message:String(e.message)})}}}const a=await runTurns({workspacePath:n.workspacePath,cfg:r,token:t,attempt:parseInt(e.attempt,10)||0,initialSnapshot:o});await writeOutcome({outcome:a.outcome,reason:a.reason,tracker_state_at_exit:a.tracker_state_at_exit,turn_count:a.turn_count,ended_at_ms:Date.now()});u.info({module:"harness",event:"exit",issue_id:e.issue_id,issue_identifier:e.issue_identifier,message:`${a.outcome} reason=${a.reason} state=${a.tracker_state_at_exit} turns=${a.turn_count}`});return a.outcome==="success"?0:1}catch(e){const t=e.message??String(e);u.error({module:"harness",event:"fatal",message:t});await writeOutcome({outcome:"failure",reason:t,ended_at_ms:Date.now()});return 1}}main().then((e=>process.exit(e)));
+import { createRequire as __WEBPACK_EXTERNAL_createRequire } from "module";
+/******/ var __webpack_modules__ = ({
+
+/***/ 694:
+/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
+
+var __webpack_unused_export__;
+/*
+ * liquidjs@10.27.0, https://github.com/harttle/liquidjs
+ * (c) 2016-2026 harttle
+ * Released under the MIT License.
+ */
+
+
+__webpack_unused_export__ = ({ value: true });
+
+var stream = __nccwpck_require__(203);
+var path = __nccwpck_require__(928);
+var fs$1 = __nccwpck_require__(896);
+var crypto = __nccwpck_require__(982);
+
+class Token {
+    constructor(kind, input, begin, end, file) {
+        this.kind = kind;
+        this.input = input;
+        this.begin = begin;
+        this.end = end;
+        this.file = file;
+    }
+    getText() {
+        return this.input.slice(this.begin, this.end);
+    }
+    getPosition() {
+        let [row, col] = [1, 1];
+        for (let i = 0; i < this.begin; i++) {
+            if (this.input[i] === '\n') {
+                row++;
+                col = 1;
+            }
+            else
+                col++;
+        }
+        return [row, col];
+    }
+    size() {
+        return this.end - this.begin;
+    }
+}
+
+class Drop {
+    liquidMethodMissing(key, context) {
+        return undefined;
+    }
+}
+
+const toString$1 = Object.prototype.toString;
+const toLowerCase = String.prototype.toLowerCase;
+const hasOwnProperty = Object.hasOwnProperty;
+function isString(value) {
+    return typeof value === 'string';
+}
+// eslint-disable-next-line @typescript-eslint/ban-types
+function isFunction(value) {
+    return typeof value === 'function';
+}
+function isPromise(val) {
+    return val && isFunction(val.then);
+}
+function isIterator(val) {
+    return val && isFunction(val.next) && isFunction(val.throw) && isFunction(val.return);
+}
+function promisify(fn) {
+    return function (...args) {
+        return new Promise((resolve, reject) => {
+            fn(...args, (err, result) => {
+                err ? reject(err) : resolve(result);
+            });
+        });
+    };
+}
+function stringify(value) {
+    value = toValue(value);
+    if (isString(value))
+        return value;
+    if (isNil(value))
+        return '';
+    if (isArray(value))
+        return value.map(x => stringify(x)).join('');
+    return String(value);
+}
+function toEnumerable(val) {
+    val = toValue(val);
+    if (isArray(val))
+        return val;
+    if (isString(val) && val.length > 0)
+        return [val];
+    if (isIterable(val))
+        return Array.from(val);
+    if (isObject(val))
+        return Object.keys(val).map((key) => [key, val[key]]);
+    return [];
+}
+function toArray(val) {
+    val = toValue(val);
+    if (isNil(val))
+        return [];
+    if (isArray(val))
+        return val;
+    return [val];
+}
+function toValue(value) {
+    return (value instanceof Drop && isFunction(value.valueOf)) ? value.valueOf() : value;
+}
+function toNumber(value) {
+    return +toValue(value) || 0;
+}
+function isNumber(value) {
+    return typeof value === 'number';
+}
+function toLiquid(value) {
+    if (value && isFunction(value.toLiquid))
+        return toLiquid(value.toLiquid());
+    return value;
+}
+function isNil(value) {
+    return value == null;
+}
+function isUndefined(value) {
+    return value === undefined;
+}
+function isArray(value) {
+    // be compatible with IE 8
+    return toString$1.call(value) === '[object Array]';
+}
+function isArrayLike(value) {
+    return value && isNumber(value.length);
+}
+function isIterable(value) {
+    return isObject(value) && Symbol.iterator in value;
+}
+/*
+ * Iterates over own enumerable string keyed properties of an object and invokes iteratee for each property.
+ * The iteratee is invoked with three arguments: (value, key, object).
+ * Iteratee functions may exit iteration early by explicitly returning false.
+ * @param {Object} object The object to iterate over.
+ * @param {Function} iteratee The function invoked per iteration.
+ * @return {Object} Returns object.
+ */
+function forOwn(obj, iteratee) {
+    obj = obj || {};
+    for (const k in obj) {
+        if (hasOwnProperty.call(obj, k)) {
+            if (iteratee(obj[k], k, obj) === false)
+                break;
+        }
+    }
+    return obj;
+}
+function last(arr) {
+    return arr[arr.length - 1];
+}
+/*
+ * Checks if value is the language type of Object.
+ * (e.g. arrays, functions, objects, regexes, new Number(0), and new String(''))
+ * @param {any} value The value to check.
+ * @return {Boolean} Returns true if value is an object, else false.
+ */
+function isObject(value) {
+    const type = typeof value;
+    return value !== null && (type === 'object' || type === 'function');
+}
+function range(start, stop, step = 1) {
+    const arr = [];
+    for (let i = start; i < stop; i += step) {
+        arr.push(i);
+    }
+    return arr;
+}
+function padStart(str, length, ch = ' ') {
+    return pad(str, length, ch, (str, ch) => ch + str);
+}
+function padEnd(str, length, ch = ' ') {
+    return pad(str, length, ch, (str, ch) => str + ch);
+}
+function pad(str, length, ch, add) {
+    str = String(str);
+    const n = length - str.length;
+    if (n <= 0)
+        return str;
+    return add(str, ch.repeat(n));
+}
+function identify(val) {
+    return val;
+}
+function changeCase(str) {
+    const hasLowerCase = [...str].some(ch => ch >= 'a' && ch <= 'z');
+    return hasLowerCase ? str.toUpperCase() : str.toLowerCase();
+}
+function ellipsis(str, N) {
+    return str.length > N ? str.slice(0, N - 3) + '...' : str;
+}
+function orderedCompare(a, b) {
+    if (isNil(a) && isNil(b))
+        return 0;
+    if (isNil(a))
+        return 1;
+    if (isNil(b))
+        return -1;
+    if (a < b)
+        return -1;
+    if (a > b)
+        return 1;
+    return 0;
+}
+// compare string in case-insensitive way, undefined values to the tail
+function caseInsensitiveCompare(a, b) {
+    if (isNil(a) && isNil(b))
+        return 0;
+    if (isNil(a))
+        return 1;
+    if (isNil(b))
+        return -1;
+    a = toLowerCase.call(a);
+    b = toLowerCase.call(b);
+    if (a < b)
+        return -1;
+    if (a > b)
+        return 1;
+    return 0;
+}
+function argumentsToValue(fn) {
+    return function (...args) { return fn.call(this, ...args.map(toValue)); };
+}
+function argumentsToNumber(fn) {
+    return function (...args) { return fn.call(this, ...args.map(toNumber)); };
+}
+/** Return an array containing unique elements from _array_. Works with nested arrays and objects. */
+function* strictUniq(array) {
+    const seen = new Set();
+    for (const element of array) {
+        const key = JSON.stringify(element);
+        if (!seen.has(key)) {
+            seen.add(key);
+            yield element;
+        }
+    }
+}
+
+/**
+ * targeting ES5, extends Error won't create a proper prototype chain, need a trait to keep track of classes
+ */
+const TRAIT = '__liquidClass__';
+class LiquidError extends Error {
+    constructor(err, token) {
+        /**
+         * note: for ES5 targeting, `this` will be replaced by return value of Error(),
+         * thus everything on `this` will be lost, avoid calling `LiquidError` methods here
+         */
+        super(typeof err === 'string' ? err : err.message);
+        this.context = '';
+        if (typeof err !== 'string')
+            Object.defineProperty(this, 'originalError', { value: err, enumerable: false });
+        Object.defineProperty(this, 'token', { value: token, enumerable: false });
+        Object.defineProperty(this, TRAIT, { value: 'LiquidError', enumerable: false });
+    }
+    update() {
+        Object.defineProperty(this, 'context', { value: mkContext(this.token), enumerable: false });
+        this.message = mkMessage(this.message, this.token);
+        this.stack = this.message + '\n' + this.context +
+            '\n' + this.stack;
+        if (this.originalError)
+            this.stack += '\nFrom ' + this.originalError.stack;
+    }
+    static is(obj) {
+        return obj?.[TRAIT] === 'LiquidError';
+    }
+}
+class TokenizationError extends LiquidError {
+    constructor(message, token) {
+        super(message, token);
+        this.name = 'TokenizationError';
+        super.update();
+    }
+}
+class ParseError extends LiquidError {
+    constructor(err, token) {
+        super(err, token);
+        this.name = 'ParseError';
+        this.message = err.message;
+        super.update();
+    }
+}
+class RenderError extends LiquidError {
+    constructor(err, tpl) {
+        super(err, tpl.token);
+        this.name = 'RenderError';
+        this.message = err.message;
+        super.update();
+    }
+    static is(obj) {
+        return obj.name === 'RenderError';
+    }
+}
+class LiquidErrors extends LiquidError {
+    constructor(errors) {
+        super(errors[0], errors[0].token);
+        this.errors = errors;
+        this.name = 'LiquidErrors';
+        const s = errors.length > 1 ? 's' : '';
+        this.message = `${errors.length} error${s} found`;
+        super.update();
+    }
+    static is(obj) {
+        return obj.name === 'LiquidErrors';
+    }
+}
+class UndefinedVariableError extends LiquidError {
+    constructor(err, token) {
+        super(err, token);
+        this.name = 'UndefinedVariableError';
+        this.message = err.message;
+        super.update();
+    }
+}
+// only used internally; raised where we don't have token information,
+// so it can't be an UndefinedVariableError.
+class InternalUndefinedVariableError extends Error {
+    constructor(variableName) {
+        super(`undefined variable: ${variableName}`);
+        this.name = 'InternalUndefinedVariableError';
+        this.variableName = variableName;
+    }
+}
+class AssertionError extends Error {
+    constructor(message) {
+        super(message);
+        this.name = 'AssertionError';
+        this.message = message + '';
+    }
+}
+function mkContext(token) {
+    const [line, col] = token.getPosition();
+    const lines = token.input.split('\n');
+    const begin = Math.max(line - 2, 1);
+    const end = Math.min(line + 3, lines.length);
+    const context = range(begin, end + 1)
+        .map(lineNumber => {
+        const rowIndicator = (lineNumber === line) ? '>> ' : '   ';
+        const num = padStart(String(lineNumber), String(end).length);
+        let text = `${rowIndicator}${num}| `;
+        const colIndicator = lineNumber === line
+            ? '\n' + padStart('^', col + text.length)
+            : '';
+        text += lines[lineNumber - 1];
+        text += colIndicator;
+        return text;
+    })
+        .join('\n');
+    return context;
+}
+function mkMessage(msg, token) {
+    if (token.file)
+        msg += `, file:${token.file}`;
+    const [line, col] = token.getPosition();
+    msg += `, line:${line}, col:${col}`;
+    return msg;
+}
+
+// **DO NOT CHANGE THIS FILE**
+//
+// This file is generated by bin/character-gen.js
+// bitmask character types to boost performance
+const TYPES = [0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 4, 4, 4, 20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 20, 2, 8, 0, 0, 0, 0, 8, 0, 0, 0, 64, 0, 65, 0, 0, 33, 33, 33, 33, 33, 33, 33, 33, 33, 33, 0, 0, 2, 2, 2, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0];
+const WORD = 1;
+const BLANK = 4;
+const QUOTE = 8;
+const INLINE_BLANK = 16;
+const NUMBER = 32;
+const SIGN = 64;
+const PUNCTUATION = 128;
+function isWord(char) {
+    const code = char.charCodeAt(0);
+    return code >= 128 ? !TYPES[code] : !!(TYPES[code] & WORD);
+}
+TYPES[160] = TYPES[5760] = TYPES[6158] = TYPES[8192] = TYPES[8193] = TYPES[8194] = TYPES[8195] = TYPES[8196] = TYPES[8197] = TYPES[8198] = TYPES[8199] = TYPES[8200] = TYPES[8201] = TYPES[8202] = TYPES[8232] = TYPES[8233] = TYPES[8239] = TYPES[8287] = TYPES[12288] = BLANK;
+TYPES[8220] = TYPES[8221] = PUNCTUATION;
+
+function assert(predicate, message) {
+    if (!predicate) {
+        const msg = typeof message === 'function'
+            ? message()
+            : (message || `expect ${predicate} to be true`);
+        throw new AssertionError(msg);
+    }
+}
+function assertEmpty(predicate, message = `unexpected ${JSON.stringify(predicate)}`) {
+    assert(!predicate, message);
+}
+
+class NullDrop extends Drop {
+    equals(value) {
+        return isNil(toValue(value));
+    }
+    gt() {
+        return false;
+    }
+    geq() {
+        return false;
+    }
+    lt() {
+        return false;
+    }
+    leq() {
+        return false;
+    }
+    valueOf() {
+        return null;
+    }
+}
+
+class EmptyDrop extends Drop {
+    equals(value) {
+        if (value instanceof EmptyDrop)
+            return false;
+        value = toValue(value);
+        if (isString(value) || isArray(value))
+            return value.length === 0;
+        if (isObject(value))
+            return Object.keys(value).length === 0;
+        return false;
+    }
+    gt() {
+        return false;
+    }
+    geq() {
+        return false;
+    }
+    lt() {
+        return false;
+    }
+    leq() {
+        return false;
+    }
+    valueOf() {
+        return '';
+    }
+    static is(value) {
+        return value instanceof EmptyDrop;
+    }
+}
+
+class BlankDrop extends EmptyDrop {
+    equals(value) {
+        if (value === false)
+            return true;
+        if (isNil(toValue(value)))
+            return true;
+        if (isString(value))
+            return /^\s*$/.test(value);
+        return super.equals(value);
+    }
+    static is(value) {
+        return value instanceof BlankDrop;
+    }
+}
+
+class ForloopDrop extends Drop {
+    constructor(length, collection, variable) {
+        super();
+        this.i = 0;
+        this.length = length;
+        this.name = `${variable}-${collection}`;
+    }
+    next() {
+        this.i++;
+    }
+    index0() {
+        return this.i;
+    }
+    index() {
+        return this.i + 1;
+    }
+    first() {
+        return this.i === 0;
+    }
+    last() {
+        return this.i === this.length - 1;
+    }
+    rindex() {
+        return this.length - this.i;
+    }
+    rindex0() {
+        return this.length - this.i - 1;
+    }
+    valueOf() {
+        return JSON.stringify(this);
+    }
+}
+
+class SimpleEmitter {
+    constructor() {
+        this.buffer = '';
+    }
+    write(html) {
+        this.buffer += stringify(html);
+    }
+}
+
+class StreamedEmitter {
+    constructor() {
+        this.buffer = '';
+        this.stream = new stream.PassThrough();
+    }
+    write(html) {
+        this.stream.write(stringify(html));
+    }
+    error(err) {
+        this.stream.emit('error', err);
+    }
+    end() {
+        this.stream.end();
+    }
+}
+
+class KeepingTypeEmitter {
+    constructor() {
+        this.buffer = '';
+    }
+    write(html) {
+        html = toValue(html);
+        // This will only preserve the type if the value is isolated.
+        // I.E:
+        // {{ my-port }} -> 42
+        // {{ my-host }}:{{ my-port }} -> 'host:42'
+        if (typeof html !== 'string' && this.buffer === '') {
+            this.buffer = html;
+        }
+        else {
+            this.buffer = stringify(this.buffer) + stringify(html);
+        }
+    }
+}
+
+class BlockDrop extends Drop {
+    constructor(
+    // the block render from layout template
+    superBlockRender = () => '') {
+        super();
+        this.superBlockRender = superBlockRender;
+    }
+    /**
+     * Provide parent access in child block by
+     * {{ block.super }}
+     */
+    *super() {
+        const emitter = new SimpleEmitter();
+        yield this.superBlockRender(emitter);
+        return emitter.buffer;
+    }
+}
+
+function isComparable(arg) {
+    return (arg &&
+        isFunction(arg.equals) &&
+        isFunction(arg.gt) &&
+        isFunction(arg.geq) &&
+        isFunction(arg.lt) &&
+        isFunction(arg.leq));
+}
+
+const nil = new NullDrop();
+const literalValues = {
+    'true': true,
+    'false': false,
+    'nil': nil,
+    'null': nil,
+    'empty': new EmptyDrop(),
+    'blank': new BlankDrop()
+};
+
+function createTrie(input) {
+    const trie = {};
+    for (const [name, data] of Object.entries(input)) {
+        let node = trie;
+        for (let i = 0; i < name.length; i++) {
+            const c = name[i];
+            node[c] = node[c] || {};
+            if (i === name.length - 1 && isWord(name[i])) {
+                node[c].needBoundary = true;
+            }
+            node = node[c];
+        }
+        node.data = data;
+        node.end = true;
+    }
+    return trie;
+}
+
+function toLiquidAsync(asyncFn, syncFn) {
+    const syncImpl = syncFn || asyncFn;
+    return (sync, ...args) => {
+        return sync ? syncImpl(...args) : asyncFn(...args);
+    };
+}
+// convert an async iterator to a Promise
+async function toPromise(val) {
+    if (!isIterator(val))
+        return val;
+    let value;
+    let done = false;
+    let next = 'next';
+    do {
+        const state = val[next](value);
+        done = state.done;
+        value = state.value;
+        next = 'next';
+        try {
+            if (isIterator(value))
+                value = toPromise(value);
+            if (isPromise(value))
+                value = await value;
+        }
+        catch (err) {
+            next = 'throw';
+            value = err;
+        }
+    } while (!done);
+    return value;
+}
+// convert an async iterator to a value in a synchronous manner
+function toValueSync(val) {
+    if (!isIterator(val))
+        return val;
+    let value;
+    let done = false;
+    let next = 'next';
+    do {
+        const state = val[next](value);
+        done = state.done;
+        value = state.value;
+        next = 'next';
+        if (isIterator(value)) {
+            try {
+                value = toValueSync(value);
+            }
+            catch (err) {
+                next = 'throw';
+                value = err;
+            }
+        }
+    } while (!done);
+    return value;
+}
+
+const rFormat = /%([-_0^#:]+)?(\d+)?([EO])?(.)/;
+// prototype extensions
+function daysInMonth(d) {
+    const feb = isLeapYear(d) ? 29 : 28;
+    return [31, feb, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+}
+function getDayOfYear(d) {
+    let num = 0;
+    for (let i = 0; i < d.getMonth(); ++i) {
+        num += daysInMonth(d)[i];
+    }
+    return num + d.getDate();
+}
+function getWeekOfYear(d, startDay) {
+    // Skip to startDay of this week
+    const now = getDayOfYear(d) + (startDay - d.getDay());
+    // Find the first startDay of the year
+    const jan1 = new Date(d.getFullYear(), 0, 1);
+    const then = (7 - jan1.getDay() + startDay);
+    return String(Math.floor((now - then) / 7) + 1);
+}
+function isLeapYear(d) {
+    const year = d.getFullYear();
+    return !!((year & 3) === 0 && (year % 100 || (year % 400 === 0 && year)));
+}
+function ordinal(d) {
+    const date = d.getDate();
+    if ([11, 12, 13].includes(date))
+        return 'th';
+    switch (date % 10) {
+        case 1: return 'st';
+        case 2: return 'nd';
+        case 3: return 'rd';
+        default: return 'th';
+    }
+}
+function century(d) {
+    return parseInt(d.getFullYear().toString().substring(0, 2), 10);
+}
+// default to 0
+const padWidths = {
+    d: 2,
+    e: 2,
+    H: 2,
+    I: 2,
+    j: 3,
+    k: 2,
+    l: 2,
+    L: 3,
+    m: 2,
+    M: 2,
+    S: 2,
+    U: 2,
+    W: 2
+};
+const padSpaceChars = new Set('aAbBceklpP');
+function getTimezoneOffset(d, opts) {
+    const nOffset = Math.abs(d.getTimezoneOffset());
+    const h = Math.floor(nOffset / 60);
+    const m = nOffset % 60;
+    return (d.getTimezoneOffset() > 0 ? '-' : '+') +
+        padStart(h, 2, '0') +
+        (opts.flags[':'] ? ':' : '') +
+        padStart(m, 2, '0');
+}
+const formatCodes = {
+    a: (d) => d.getShortWeekdayName(),
+    A: (d) => d.getLongWeekdayName(),
+    b: (d) => d.getShortMonthName(),
+    B: (d) => d.getLongMonthName(),
+    c: (d) => d.toLocaleString(),
+    C: (d) => century(d),
+    d: (d) => d.getDate(),
+    e: (d) => d.getDate(),
+    H: (d) => d.getHours(),
+    I: (d) => String(d.getHours() % 12 || 12),
+    j: (d) => getDayOfYear(d),
+    k: (d) => d.getHours(),
+    l: (d) => String(d.getHours() % 12 || 12),
+    L: (d) => d.getMilliseconds(),
+    m: (d) => d.getMonth() + 1,
+    M: (d) => d.getMinutes(),
+    N: (d, opts) => {
+        const width = Number(opts.width) || 9;
+        const str = String(d.getMilliseconds()).slice(0, width);
+        opts.memoryLimit?.use(width - str.length);
+        return padEnd(str, width, '0');
+    },
+    p: (d) => (d.getHours() < 12 ? 'AM' : 'PM'),
+    P: (d) => (d.getHours() < 12 ? 'am' : 'pm'),
+    q: (d) => ordinal(d),
+    s: (d) => Math.round(d.getTime() / 1000),
+    S: (d) => d.getSeconds(),
+    u: (d) => d.getDay() || 7,
+    U: (d) => getWeekOfYear(d, 0),
+    w: (d) => d.getDay(),
+    W: (d) => getWeekOfYear(d, 1),
+    x: (d) => d.toLocaleDateString(),
+    X: (d) => d.toLocaleTimeString(),
+    y: (d) => d.getFullYear().toString().slice(2, 4),
+    Y: (d) => d.getFullYear(),
+    z: getTimezoneOffset,
+    Z: (d, opts) => d.getTimeZoneName() || getTimezoneOffset(d, opts),
+    't': () => '\t',
+    'n': () => '\n',
+    '%': () => '%'
+};
+formatCodes.h = formatCodes.b;
+function strftime(d, formatStr, memoryLimit) {
+    let output = '';
+    let remaining = formatStr;
+    let match;
+    while ((match = rFormat.exec(remaining))) {
+        output += remaining.slice(0, match.index);
+        remaining = remaining.slice(match.index + match[0].length);
+        output += format(d, match, memoryLimit);
+    }
+    return output + remaining;
+}
+function format(d, match, memoryLimit) {
+    const [input, flagStr = '', width, modifier, conversion] = match;
+    const convert = formatCodes[conversion];
+    if (!convert)
+        return input;
+    const flags = {};
+    for (const flag of flagStr)
+        flags[flag] = true;
+    let ret = String(convert(d, { flags, width, modifier, memoryLimit }));
+    let padChar = padSpaceChars.has(conversion) ? ' ' : '0';
+    let padWidth = width || padWidths[conversion] || 0;
+    if (flags['^'])
+        ret = ret.toUpperCase();
+    else if (flags['#'])
+        ret = changeCase(ret);
+    if (flags['_'])
+        padChar = ' ';
+    else if (flags['0'])
+        padChar = '0';
+    if (flags['-'])
+        padWidth = 0;
+    memoryLimit?.use(Number(padWidth) - ret.length);
+    return padStart(ret, padWidth, padChar);
+}
+
+function getDateTimeFormat() {
+    return (typeof Intl !== 'undefined' ? Intl.DateTimeFormat : undefined);
+}
+
+// one minute in milliseconds
+const OneMinute = 60000;
+/**
+ * Need support both ISO8601 and RFC2822 as in major browsers & NodeJS
+ * RFC2822: https://datatracker.ietf.org/doc/html/rfc2822#section-3.3
+ */
+const TIMEZONE_PATTERN = /([zZ]|([+-])(\d{2}):?(\d{2}))$/;
+const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June', 'July', 'August',
+    'September', 'October', 'November', 'December'
+];
+const monthNamesShort = monthNames.map(name => name.slice(0, 3));
+const dayNames = [
+    'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'
+];
+const dayNamesShort = dayNames.map(name => name.slice(0, 3));
+/**
+ * A date implementation with timezone info, just like Ruby date
+ *
+ * Implementation:
+ * - create a Date offset by it's timezone difference, avoiding overriding a bunch of methods
+ * - rewrite getTimezoneOffset() to trick strftime
+ */
+class LiquidDate {
+    constructor(init, locale, timezone) {
+        this.locale = locale;
+        this.DateTimeFormat = getDateTimeFormat();
+        this.date = new Date(init);
+        this.timezoneFixed = timezone !== undefined;
+        if (timezone === undefined) {
+            timezone = this.date.getTimezoneOffset();
+        }
+        this.timezoneOffset = isString(timezone) ? LiquidDate.getTimezoneOffset(timezone, this.date) : timezone;
+        this.timezoneName = isString(timezone) ? timezone : '';
+        const diff = (this.date.getTimezoneOffset() - this.timezoneOffset) * OneMinute;
+        const time = this.date.getTime() + diff;
+        this.displayDate = new Date(time);
+    }
+    getTime() {
+        return this.displayDate.getTime();
+    }
+    getMilliseconds() {
+        return this.displayDate.getMilliseconds();
+    }
+    getSeconds() {
+        return this.displayDate.getSeconds();
+    }
+    getMinutes() {
+        return this.displayDate.getMinutes();
+    }
+    getHours() {
+        return this.displayDate.getHours();
+    }
+    getDay() {
+        return this.displayDate.getDay();
+    }
+    getDate() {
+        return this.displayDate.getDate();
+    }
+    getMonth() {
+        return this.displayDate.getMonth();
+    }
+    getFullYear() {
+        return this.displayDate.getFullYear();
+    }
+    toLocaleString(locale, init) {
+        if (init?.timeZone) {
+            return this.date.toLocaleString(locale, init);
+        }
+        return this.displayDate.toLocaleString(locale, init);
+    }
+    toLocaleTimeString(locale) {
+        return this.displayDate.toLocaleTimeString(locale);
+    }
+    toLocaleDateString(locale) {
+        return this.displayDate.toLocaleDateString(locale);
+    }
+    getTimezoneOffset() {
+        return this.timezoneOffset;
+    }
+    getTimeZoneName() {
+        if (this.timezoneFixed)
+            return this.timezoneName;
+        if (!this.DateTimeFormat)
+            return;
+        return this.DateTimeFormat().resolvedOptions().timeZone;
+    }
+    getLongMonthName() {
+        return this.format({ month: 'long' }) ?? monthNames[this.getMonth()];
+    }
+    getShortMonthName() {
+        return this.format({ month: 'short' }) ?? monthNamesShort[this.getMonth()];
+    }
+    getLongWeekdayName() {
+        return this.format({ weekday: 'long' }) ?? dayNames[this.displayDate.getDay()];
+    }
+    getShortWeekdayName() {
+        return this.format({ weekday: 'short' }) ?? dayNamesShort[this.displayDate.getDay()];
+    }
+    valid() {
+        return !isNaN(this.getTime());
+    }
+    format(options) {
+        return this.DateTimeFormat && this.DateTimeFormat(this.locale, options).format(this.displayDate);
+    }
+    /**
+     * Create a Date object fixed to it's declared Timezone. Both
+     * - 2021-08-06T02:29:00.000Z and
+     * - 2021-08-06T02:29:00.000+08:00
+     * will always be displayed as
+     * - 2021-08-06 02:29:00
+     * regardless timezoneOffset in JavaScript realm
+     *
+     * The implementation hack:
+     * Instead of calling `.getMonth()`/`.getUTCMonth()` respect to `preserveTimezones`,
+     * we create a different Date to trick strftime, it's both simpler and more performant.
+     * Given that a template is expected to be parsed fewer times than rendered.
+     */
+    static createDateFixedToTimezone(dateString, locale) {
+        const m = dateString.match(TIMEZONE_PATTERN);
+        // representing a UTC timestamp
+        if (m && m[1] === 'Z') {
+            return new LiquidDate(+new Date(dateString), locale, 0);
+        }
+        // has a timezone specified
+        if (m && m[2] && m[3] && m[4]) {
+            const [, , sign, hours, minutes] = m;
+            const offset = (sign === '+' ? -1 : 1) * (parseInt(hours, 10) * 60 + parseInt(minutes, 10));
+            return new LiquidDate(+new Date(dateString), locale, offset);
+        }
+        return new LiquidDate(dateString, locale);
+    }
+    static getTimezoneOffset(timezoneName, date) {
+        const localDateString = date.toLocaleString('en-US', { timeZone: timezoneName });
+        const utcDateString = date.toLocaleString('en-US', { timeZone: 'UTC' });
+        const localDate = new Date(localDateString);
+        const utcDate = new Date(utcDateString);
+        return (+utcDate - +localDate) / (60 * 1000);
+    }
+}
+
+class Limiter {
+    constructor(resource, limit) {
+        this.base = 0;
+        this.message = `${resource} limit exceeded`;
+        this.limit = limit;
+    }
+    use(count) {
+        if (+count > 0) {
+            assert(this.base + +count <= this.limit, this.message);
+            this.base += +count;
+        }
+    }
+    check(count) {
+        if (+count > 0) {
+            assert(+count <= this.limit, this.message);
+        }
+    }
+}
+
+class DelimitedToken extends Token {
+    constructor(kind, [contentBegin, contentEnd], input, begin, end, trimLeft, trimRight, file) {
+        super(kind, input, begin, end, file);
+        this.trimLeft = false;
+        this.trimRight = false;
+        const tl = input[contentBegin] === '-';
+        const tr = input[contentEnd - 1] === '-';
+        let l = tl ? contentBegin + 1 : contentBegin;
+        let r = tr ? contentEnd - 1 : contentEnd;
+        while (l < r && (TYPES[input.charCodeAt(l)] & BLANK))
+            l++;
+        while (r > l && (TYPES[input.charCodeAt(r - 1)] & BLANK))
+            r--;
+        this.contentRange = [l, r];
+        this.trimLeft = tl || trimLeft;
+        this.trimRight = tr || trimRight;
+    }
+    get content() {
+        return this.input.slice(this.contentRange[0], this.contentRange[1]);
+    }
+}
+
+class TagToken extends DelimitedToken {
+    constructor(input, begin, end, options, file) {
+        const { trimTagLeft, trimTagRight, tagDelimiterLeft, tagDelimiterRight } = options;
+        const [valueBegin, valueEnd] = [begin + tagDelimiterLeft.length, end - tagDelimiterRight.length];
+        super(exports.Yp.Tag, [valueBegin, valueEnd], input, begin, end, trimTagLeft, trimTagRight, file);
+        this.tokenizer = new Tokenizer(input, options.operators, file, this.contentRange);
+        this.name = this.tokenizer.readTagName();
+        this.tokenizer.assert(this.name, `illegal tag syntax, tag name expected`);
+        this.tokenizer.skipBlank();
+        this.args = this.tokenizer.input.slice(this.tokenizer.p, this.contentRange[1]);
+    }
+}
+
+class OutputToken extends DelimitedToken {
+    constructor(input, begin, end, options, file) {
+        const { trimOutputLeft, trimOutputRight, outputDelimiterLeft, outputDelimiterRight } = options;
+        const valueRange = [begin + outputDelimiterLeft.length, end - outputDelimiterRight.length];
+        super(exports.Yp.Output, valueRange, input, begin, end, trimOutputLeft, trimOutputRight, file);
+    }
+}
+
+class HTMLToken extends Token {
+    constructor(input, begin, end, file) {
+        super(exports.Yp.HTML, input, begin, end, file);
+        this.input = input;
+        this.begin = begin;
+        this.end = end;
+        this.file = file;
+        this.trimLeft = 0;
+        this.trimRight = 0;
+    }
+    getContent() {
+        return this.input.slice(this.begin + this.trimLeft, this.end - this.trimRight);
+    }
+}
+
+class NumberToken extends Token {
+    constructor(input, begin, end, file) {
+        super(exports.Yp.Number, input, begin, end, file);
+        this.input = input;
+        this.begin = begin;
+        this.end = end;
+        this.file = file;
+        this.content = Number(this.getText());
+    }
+}
+
+class IdentifierToken extends Token {
+    constructor(input, begin, end, file) {
+        super(exports.Yp.Word, input, begin, end, file);
+        this.input = input;
+        this.begin = begin;
+        this.end = end;
+        this.file = file;
+        this.content = this.getText();
+    }
+}
+
+class LiteralToken extends Token {
+    constructor(input, begin, end, file) {
+        super(exports.Yp.Literal, input, begin, end, file);
+        this.input = input;
+        this.begin = begin;
+        this.end = end;
+        this.file = file;
+        this.literal = this.getText();
+        this.content = literalValues[this.literal];
+    }
+}
+
+const operatorPrecedences = {
+    '==': 2,
+    '!=': 2,
+    '>': 2,
+    '<': 2,
+    '>=': 2,
+    '<=': 2,
+    'contains': 2,
+    'not': 1,
+    'and': 0,
+    'or': 0
+};
+const operatorTypes = {
+    '==': 0 /* OperatorType.Binary */,
+    '!=': 0 /* OperatorType.Binary */,
+    '>': 0 /* OperatorType.Binary */,
+    '<': 0 /* OperatorType.Binary */,
+    '>=': 0 /* OperatorType.Binary */,
+    '<=': 0 /* OperatorType.Binary */,
+    'contains': 0 /* OperatorType.Binary */,
+    'not': 1 /* OperatorType.Unary */,
+    'and': 0 /* OperatorType.Binary */,
+    'or': 0 /* OperatorType.Binary */
+};
+class OperatorToken extends Token {
+    constructor(input, begin, end, file) {
+        super(exports.Yp.Operator, input, begin, end, file);
+        this.input = input;
+        this.begin = begin;
+        this.end = end;
+        this.file = file;
+        this.operator = this.getText();
+    }
+    getPrecedence() {
+        const key = this.getText();
+        return key in operatorPrecedences ? operatorPrecedences[key] : 1;
+    }
+}
+
+class PropertyAccessToken extends Token {
+    constructor(variable, props, input, begin, end, file) {
+        super(exports.Yp.PropertyAccess, input, begin, end, file);
+        this.variable = variable;
+        this.props = props;
+    }
+}
+
+class FilterToken extends Token {
+    constructor(name, args, input, begin, end, file) {
+        super(exports.Yp.Filter, input, begin, end, file);
+        this.name = name;
+        this.args = args;
+    }
+}
+
+class HashToken extends Token {
+    constructor(input, begin, end, name, value, file) {
+        super(exports.Yp.Hash, input, begin, end, file);
+        this.input = input;
+        this.begin = begin;
+        this.end = end;
+        this.name = name;
+        this.value = value;
+        this.file = file;
+    }
+}
+
+const rHex = /[\da-fA-F]/;
+const rOct = /[0-7]/;
+const escapeChar = {
+    b: '\b',
+    f: '\f',
+    n: '\n',
+    r: '\r',
+    t: '\t',
+    v: '\x0B'
+};
+function hexVal(c) {
+    const code = c.charCodeAt(0);
+    if (code >= 97)
+        return code - 87;
+    if (code >= 65)
+        return code - 55;
+    return code - 48;
+}
+function parseStringLiteral(str) {
+    let ret = '';
+    for (let i = 1; i < str.length - 1; i++) {
+        if (str[i] !== '\\') {
+            ret += str[i];
+            continue;
+        }
+        if (escapeChar[str[i + 1]] !== undefined) {
+            ret += escapeChar[str[++i]];
+        }
+        else if (str[i + 1] === 'u') {
+            let val = 0;
+            let j = i + 2;
+            while (j <= i + 5 && rHex.test(str[j])) {
+                val = val * 16 + hexVal(str[j++]);
+            }
+            i = j - 1;
+            ret += String.fromCharCode(val);
+        }
+        else if (!rOct.test(str[i + 1])) {
+            ret += str[++i];
+        }
+        else {
+            let j = i + 1;
+            let val = 0;
+            while (j <= i + 3 && rOct.test(str[j])) {
+                val = val * 8 + hexVal(str[j++]);
+            }
+            i = j - 1;
+            ret += String.fromCharCode(val);
+        }
+    }
+    return ret;
+}
+
+class QuotedToken extends Token {
+    constructor(input, begin, end, file) {
+        super(exports.Yp.Quoted, input, begin, end, file);
+        this.input = input;
+        this.begin = begin;
+        this.end = end;
+        this.file = file;
+        this.content = parseStringLiteral(this.getText());
+    }
+}
+
+class RangeToken extends Token {
+    constructor(input, begin, end, lhs, rhs, file) {
+        super(exports.Yp.Range, input, begin, end, file);
+        this.input = input;
+        this.begin = begin;
+        this.end = end;
+        this.lhs = lhs;
+        this.rhs = rhs;
+        this.file = file;
+    }
+}
+
+/**
+ * LiquidTagToken is different from TagToken by not having delimiters `{%` or `%}`
+ */
+class LiquidTagToken extends DelimitedToken {
+    constructor(input, begin, end, options, file) {
+        super(exports.Yp.Tag, [begin, end], input, begin, end, false, false, file);
+        this.tokenizer = new Tokenizer(input, options.operators, file, this.contentRange);
+        this.name = this.tokenizer.readTagName();
+        this.tokenizer.assert(this.name, 'illegal liquid tag syntax');
+        this.tokenizer.skipBlank();
+    }
+    get args() {
+        return this.tokenizer.input.slice(this.tokenizer.p, this.contentRange[1]);
+    }
+}
+
+/**
+ * value expression with optional filters
+ * e.g.
+ * {% assign foo="bar" | append: "coo" %}
+ */
+class FilteredValueToken extends Token {
+    constructor(initial, filters, input, begin, end, file) {
+        super(exports.Yp.FilteredValue, input, begin, end, file);
+        this.initial = initial;
+        this.filters = filters;
+        this.input = input;
+        this.begin = begin;
+        this.end = end;
+        this.file = file;
+    }
+}
+
+const polyfill = {
+    now: () => Date.now()
+};
+function getPerformance() {
+    return (typeof global === 'object' && global.performance) ||
+        (typeof window === 'object' && window.performance) ||
+        polyfill;
+}
+
+class Render {
+    renderTemplatesToNodeStream(templates, ctx) {
+        const emitter = new StreamedEmitter();
+        Promise.resolve().then(() => toPromise(this.renderTemplates(templates, ctx, emitter)))
+            .then(() => emitter.end(), err => emitter.error(err));
+        return emitter.stream;
+    }
+    *renderTemplates(templates, ctx, emitter) {
+        if (!emitter) {
+            emitter = ctx.opts.keepOutputType ? new KeepingTypeEmitter() : new SimpleEmitter();
+        }
+        ctx.renderLimit.check(getPerformance().now());
+        const errors = [];
+        for (const tpl of templates) {
+            ctx.renderLimit.check(getPerformance().now());
+            try {
+                // if tpl.render supports emitter, it'll return empty `html`
+                const html = yield tpl.render(ctx, emitter);
+                // if not, it'll return an `html`, write to the emitter for it
+                html && emitter.write(html);
+                if (ctx.breakCalled || ctx.continueCalled)
+                    break;
+            }
+            catch (e) {
+                const err = LiquidError.is(e) ? e : new RenderError(e, tpl);
+                if (ctx.opts.catchAllErrors)
+                    errors.push(err);
+                else
+                    throw err;
+            }
+        }
+        if (errors.length) {
+            throw new LiquidErrors(errors);
+        }
+        return emitter.buffer;
+    }
+}
+
+class Expression {
+    constructor(tokens) {
+        this.postfix = [...toPostfix(tokens)];
+    }
+    *evaluate(ctx, lenient) {
+        assert(ctx, 'unable to evaluate: context not defined');
+        const operands = [];
+        for (const token of this.postfix) {
+            if (isOperatorToken(token)) {
+                const r = operands.pop();
+                let result;
+                if (operatorTypes[token.operator] === 1 /* OperatorType.Unary */) {
+                    result = yield ctx.opts.operators[token.operator](r, ctx);
+                }
+                else {
+                    const l = operands.pop();
+                    result = yield ctx.opts.operators[token.operator](l, r, ctx);
+                }
+                operands.push(result);
+            }
+            else {
+                operands.push(yield evalToken(token, ctx, lenient));
+            }
+        }
+        return operands[0];
+    }
+    valid() {
+        return !!this.postfix.length;
+    }
+}
+function* evalToken(token, ctx, lenient = false) {
+    if (!token)
+        return;
+    if ('content' in token)
+        return token.content;
+    if (isPropertyAccessToken(token))
+        return yield evalPropertyAccessToken(token, ctx, lenient);
+    if (isRangeToken(token))
+        return yield evalRangeToken(token, ctx);
+}
+function* evalPropertyAccessToken(token, ctx, lenient) {
+    const props = [];
+    for (const prop of token.props) {
+        props.push((yield evalToken(prop, ctx, false)));
+    }
+    try {
+        if (token.variable) {
+            const variable = yield evalToken(token.variable, ctx, lenient);
+            return yield ctx._getFromScope(variable, props);
+        }
+        else {
+            return yield ctx._get(props);
+        }
+    }
+    catch (e) {
+        if (lenient && e.name === 'InternalUndefinedVariableError')
+            return null;
+        throw (new UndefinedVariableError(e, token));
+    }
+}
+function evalQuotedToken(token) {
+    return token.content;
+}
+function* evalRangeToken(token, ctx) {
+    const low = yield evalToken(token.lhs, ctx);
+    const high = yield evalToken(token.rhs, ctx);
+    ctx.memoryLimit.use(high - low + 1);
+    return range(+low, +high + 1);
+}
+function* toPostfix(tokens) {
+    const ops = [];
+    for (const token of tokens) {
+        if (isOperatorToken(token)) {
+            while (ops.length && ops[ops.length - 1].getPrecedence() > token.getPrecedence()) {
+                yield ops.pop();
+            }
+            ops.push(token);
+        }
+        else
+            yield token;
+    }
+    while (ops.length) {
+        yield ops.pop();
+    }
+}
+
+function isTruthy(val, ctx) {
+    return !isFalsy(val, ctx);
+}
+function isFalsy(val, ctx) {
+    val = toValue(val);
+    if (ctx.opts.jsTruthy) {
+        return !val;
+    }
+    else {
+        return val === false || undefined === val || val === null;
+    }
+}
+
+const defaultOperators = {
+    '==': equals,
+    '!=': (l, r) => !equals(l, r),
+    '>': (l, r) => {
+        if (isComparable(l))
+            return l.gt(r);
+        if (isComparable(r))
+            return r.lt(l);
+        return toValue(l) > toValue(r);
+    },
+    '<': (l, r) => {
+        if (isComparable(l))
+            return l.lt(r);
+        if (isComparable(r))
+            return r.gt(l);
+        return toValue(l) < toValue(r);
+    },
+    '>=': (l, r) => {
+        if (isComparable(l))
+            return l.geq(r);
+        if (isComparable(r))
+            return r.leq(l);
+        return toValue(l) >= toValue(r);
+    },
+    '<=': (l, r) => {
+        if (isComparable(l))
+            return l.leq(r);
+        if (isComparable(r))
+            return r.geq(l);
+        return toValue(l) <= toValue(r);
+    },
+    'contains': (l, r) => {
+        l = toValue(l);
+        if (isArray(l))
+            return l.some((i) => equals(i, r));
+        if (isFunction(l?.indexOf))
+            return l.indexOf(toValue(r)) > -1;
+        return false;
+    },
+    'not': (v, ctx) => isFalsy(toValue(v), ctx),
+    'and': (l, r, ctx) => isTruthy(toValue(l), ctx) && isTruthy(toValue(r), ctx),
+    'or': (l, r, ctx) => isTruthy(toValue(l), ctx) || isTruthy(toValue(r), ctx)
+};
+function equals(lhs, rhs) {
+    if (isComparable(lhs))
+        return lhs.equals(rhs);
+    if (isComparable(rhs))
+        return rhs.equals(lhs);
+    lhs = toValue(lhs);
+    rhs = toValue(rhs);
+    if (isArray(lhs)) {
+        return isArray(rhs) && arrayEquals(lhs, rhs);
+    }
+    return lhs === rhs;
+}
+function arrayEquals(lhs, rhs) {
+    if (lhs.length !== rhs.length)
+        return false;
+    return !lhs.some((value, i) => !equals(value, rhs[i]));
+}
+function arrayIncludes(arr, item) {
+    return arr.some(value => equals(value, item));
+}
+
+class Node {
+    constructor(key, value, next, prev) {
+        this.key = key;
+        this.value = value;
+        this.next = next;
+        this.prev = prev;
+    }
+}
+class LRU {
+    constructor(limit, size = 0) {
+        this.limit = limit;
+        this.size = size;
+        this.cache = {};
+        this.head = new Node('HEAD', null, null, null);
+        this.tail = new Node('TAIL', null, null, null);
+        this.head.next = this.tail;
+        this.tail.prev = this.head;
+    }
+    write(key, value) {
+        if (this.cache[key]) {
+            this.cache[key].value = value;
+        }
+        else {
+            const node = new Node(key, value, this.head.next, this.head);
+            this.head.next.prev = node;
+            this.head.next = node;
+            this.cache[key] = node;
+            this.size++;
+            this.ensureLimit();
+        }
+    }
+    read(key) {
+        if (!this.cache[key])
+            return;
+        const { value } = this.cache[key];
+        this.remove(key);
+        this.write(key, value);
+        return value;
+    }
+    remove(key) {
+        const node = this.cache[key];
+        node.prev.next = node.next;
+        node.next.prev = node.prev;
+        delete this.cache[key];
+        this.size--;
+    }
+    clear() {
+        this.head.next = this.tail;
+        this.tail.prev = this.head;
+        this.size = 0;
+        this.cache = {};
+    }
+    ensureLimit() {
+        if (this.size > this.limit)
+            this.remove(this.tail.prev.key);
+    }
+}
+
+const requireResolve = (partial) => __WEBPACK_EXTERNAL_createRequire(import.meta.url).resolve(partial, { paths: ['.'] });
+
+const statAsync = promisify(fs$1.stat);
+const readFileAsync = promisify(fs$1.readFile);
+async function exists(filepath) {
+    try {
+        await statAsync(filepath);
+        return true;
+    }
+    catch (err) {
+        return false;
+    }
+}
+function readFile(filepath) {
+    return readFileAsync(filepath, 'utf8');
+}
+function existsSync(filepath) {
+    try {
+        fs$1.statSync(filepath);
+        return true;
+    }
+    catch (err) {
+        return false;
+    }
+}
+function readFileSync(filepath) {
+    return fs$1.readFileSync(filepath, 'utf8');
+}
+function resolve(root, file, ext) {
+    if (!path.extname(file))
+        file += ext;
+    return path.resolve(root, file);
+}
+function fallback(file) {
+    try {
+        return requireResolve(file);
+    }
+    catch (e) { }
+}
+function dirname(filepath) {
+    return path.dirname(filepath);
+}
+const realpathAsync = promisify(fs$1.realpath);
+async function contains(root, file) {
+    try {
+        const realRoot = await realpathAsync(root);
+        const realFile = await realpathAsync(file);
+        const prefix = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
+        return realFile.startsWith(prefix);
+    }
+    catch {
+        return false;
+    }
+}
+function containsSync(root, file) {
+    try {
+        const realRoot = fs$1.realpathSync(root);
+        const realFile = fs$1.realpathSync(file);
+        const prefix = realRoot.endsWith(path.sep) ? realRoot : realRoot + path.sep;
+        return realFile.startsWith(prefix);
+    }
+    catch {
+        return false;
+    }
+}
+
+var fs = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  exists: exists,
+  readFile: readFile,
+  existsSync: existsSync,
+  readFileSync: readFileSync,
+  resolve: resolve,
+  fallback: fallback,
+  dirname: dirname,
+  contains: contains,
+  containsSync: containsSync,
+  sep: path.sep
+});
+
+function defaultFilter(value, defaultValue, ...args) {
+    value = toValue(value);
+    if (isArray(value) || isString(value))
+        return value.length ? value : defaultValue;
+    if (value === false && (new Map(args)).get('allow_false'))
+        return false;
+    return isFalsy(value, this.context) ? defaultValue : value;
+}
+function json(value, space = 0) {
+    return JSON.stringify(value, null, space);
+}
+function inspect(value, space = 0) {
+    const ancestors = [];
+    return JSON.stringify(value, function (_key, value) {
+        if (typeof value !== 'object' || value === null)
+            return value;
+        // `this` is the object that value is contained in, i.e., its direct parent.
+        while (ancestors.length > 0 && ancestors[ancestors.length - 1] !== this)
+            ancestors.pop();
+        if (ancestors.includes(value))
+            return '[Circular]';
+        ancestors.push(value);
+        return value;
+    }, space);
+}
+function to_integer(value) {
+    return Number(value);
+}
+const raw = {
+    raw: true,
+    handler: identify
+};
+var misc = {
+    default: defaultFilter,
+    raw,
+    jsonify: json,
+    to_integer,
+    json,
+    inspect
+};
+
+const escapeMap = {
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&#34;',
+    "'": '&#39;'
+};
+const unescapeMap = {
+    '&amp;': '&',
+    '&lt;': '<',
+    '&gt;': '>',
+    '&#34;': '"',
+    '&#39;': "'"
+};
+function escape(str) {
+    str = stringify(str);
+    this.context.memoryLimit.use(str.length);
+    return str.replace(/&|<|>|"|'/g, m => escapeMap[m]);
+}
+function xml_escape(str) {
+    return escape.call(this, str);
+}
+function unescape(str) {
+    str = stringify(str);
+    this.context.memoryLimit.use(str.length);
+    return str.replace(/&(amp|lt|gt|#34|#39);/g, m => unescapeMap[m]);
+}
+function escape_once(str) {
+    return escape.call(this, unescape.call(this, str));
+}
+function newline_to_br(v) {
+    const str = stringify(v);
+    this.context.memoryLimit.use(str.length);
+    return str.replace(/\r?\n/gm, '<br />\n');
+}
+// Raw-text blocks (HTML5) plus '<...>' as the catch-all kind; a regex
+// equivalent is O(n^2) in V8 on unclosed openers.
+function strip_html(v) {
+    const str = stringify(v);
+    this.context.memoryLimit.use(str.length);
+    const blocks = new Map([['<script', '</script>'], ['<style', '</style>'], ['<!--', '-->'], ['<', '>']]);
+    let out = '';
+    let i = 0;
+    while (i < str.length) {
+        const lt = str.indexOf('<', i);
+        if (lt < 0)
+            return out + str.slice(i);
+        out += str.slice(i, lt);
+        for (const [opener, closer] of blocks) {
+            if (!str.startsWith(opener, lt))
+                continue;
+            const e = str.indexOf(closer, lt + opener.length);
+            if (e >= 0) {
+                i = e + closer.length;
+                break;
+            }
+            blocks.delete(opener);
+        }
+        if (i === lt)
+            return out + str.slice(lt);
+    }
+    return out;
+}
+
+var htmlFilters = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  escape: escape,
+  xml_escape: xml_escape,
+  escape_once: escape_once,
+  newline_to_br: newline_to_br,
+  strip_html: strip_html
+});
+
+class MapFS {
+    constructor(mapping) {
+        this.mapping = mapping;
+        this.sep = '/';
+    }
+    async exists(filepath) {
+        return this.existsSync(filepath);
+    }
+    existsSync(filepath) {
+        return !isNil(this.mapping[filepath]);
+    }
+    async readFile(filepath) {
+        return this.readFileSync(filepath);
+    }
+    readFileSync(filepath) {
+        const content = this.mapping[filepath];
+        if (isNil(content))
+            throw new Error(`ENOENT: ${filepath}`);
+        return content;
+    }
+    dirname(filepath) {
+        const segments = filepath.split(this.sep);
+        segments.pop();
+        return segments.join(this.sep);
+    }
+    resolve(dir, file, ext) {
+        file += ext;
+        if (dir === '.')
+            return file;
+        const segments = dir.split(/\/+/);
+        for (const segment of file.split(this.sep)) {
+            if (segment === '.' || segment === '')
+                continue;
+            else if (segment === '..') {
+                if (segments.length > 1 || segments[0] !== '')
+                    segments.pop();
+            }
+            else
+                segments.push(segment);
+        }
+        return segments.join(this.sep);
+    }
+}
+
+const defaultOptions = {
+    root: ['.'],
+    layouts: ['.'],
+    partials: ['.'],
+    relativeReference: true,
+    jekyllInclude: false,
+    keyValueSeparator: ':',
+    cache: undefined,
+    extname: '',
+    fs: fs,
+    dynamicPartials: true,
+    jsTruthy: false,
+    dateFormat: '%A, %B %-e, %Y at %-l:%M %P %z',
+    locale: '',
+    trimTagRight: false,
+    trimTagLeft: false,
+    trimOutputRight: false,
+    trimOutputLeft: false,
+    greedy: true,
+    tagDelimiterLeft: '{%',
+    tagDelimiterRight: '%}',
+    outputDelimiterLeft: '{{',
+    outputDelimiterRight: '}}',
+    preserveTimezones: false,
+    strictFilters: false,
+    strictVariables: false,
+    ownPropertyOnly: true,
+    lenientIf: false,
+    globals: {},
+    keepOutputType: false,
+    operators: defaultOperators,
+    memoryLimit: Infinity,
+    parseLimit: Infinity,
+    renderLimit: Infinity
+};
+function normalize(options) {
+    if (options.hasOwnProperty('root')) {
+        if (!options.hasOwnProperty('partials'))
+            options.partials = options.root;
+        if (!options.hasOwnProperty('layouts'))
+            options.layouts = options.root;
+    }
+    if (options.hasOwnProperty('cache')) {
+        let cache;
+        if (typeof options.cache === 'number')
+            cache = options.cache > 0 ? new LRU(options.cache) : undefined;
+        else if (typeof options.cache === 'object')
+            cache = options.cache;
+        else
+            cache = options.cache ? new LRU(1024) : undefined;
+        options.cache = cache;
+    }
+    options = { ...defaultOptions, ...(options.jekyllInclude ? { dynamicPartials: false } : {}), ...options };
+    if ((!options.fs.dirname || !options.fs.sep) && options.relativeReference) {
+        console.warn('[LiquidJS] `fs.dirname` and `fs.sep` are required for relativeReference, set relativeReference to `false` to suppress this warning');
+        options.relativeReference = false;
+    }
+    options.root = normalizeDirectoryList(options.root);
+    options.partials = normalizeDirectoryList(options.partials);
+    options.layouts = normalizeDirectoryList(options.layouts);
+    options.outputEscape = options.outputEscape && getOutputEscapeFunction(options.outputEscape);
+    if (!options.locale) {
+        options.locale = getDateTimeFormat()?.().resolvedOptions().locale ?? 'en-US';
+    }
+    if (options.templates) {
+        options.fs = new MapFS(options.templates);
+        options.relativeReference = true;
+        options.root = options.partials = options.layouts = '.';
+    }
+    return options;
+}
+function getOutputEscapeFunction(nameOrFunction) {
+    if (nameOrFunction === 'escape')
+        return escape;
+    if (nameOrFunction === 'json')
+        return misc.json;
+    assert(isFunction(nameOrFunction), '`outputEscape` need to be of type string or function');
+    return nameOrFunction;
+}
+function normalizeDirectoryList(value) {
+    let list = [];
+    if (isArray(value))
+        list = value;
+    if (isString(value))
+        list = [value];
+    return list;
+}
+
+function whiteSpaceCtrl(tokens, options) {
+    let inRaw = false;
+    for (let i = 0; i < tokens.length; i++) {
+        const token = tokens[i];
+        if (!isDelimitedToken(token))
+            continue;
+        if (!inRaw && token.trimLeft) {
+            trimLeft(tokens[i - 1], options.greedy);
+        }
+        if (isTagToken(token)) {
+            if (token.name === 'raw')
+                inRaw = true;
+            else if (token.name === 'endraw')
+                inRaw = false;
+        }
+        if (!inRaw && token.trimRight) {
+            trimRight(tokens[i + 1], options.greedy);
+        }
+    }
+}
+function trimLeft(token, greedy) {
+    if (!token || !isHTMLToken(token))
+        return;
+    const mask = greedy ? BLANK : INLINE_BLANK;
+    while (TYPES[token.input.charCodeAt(token.end - 1 - token.trimRight)] & mask)
+        token.trimRight++;
+}
+function trimRight(token, greedy) {
+    if (!token || !isHTMLToken(token))
+        return;
+    const mask = greedy ? BLANK : INLINE_BLANK;
+    while (TYPES[token.input.charCodeAt(token.begin + token.trimLeft)] & mask)
+        token.trimLeft++;
+    if (token.input.charAt(token.begin + token.trimLeft) === '\n')
+        token.trimLeft++;
+}
+
+class Tokenizer {
+    constructor(input, operators = defaultOptions.operators, file, range) {
+        this.input = input;
+        this.file = file;
+        this.rawBeginAt = -1;
+        this.p = range ? range[0] : 0;
+        this.N = range ? range[1] : input.length;
+        this.opTrie = createTrie(operators);
+        this.literalTrie = createTrie(literalValues);
+    }
+    readExpression() {
+        return new Expression(this.readExpressionTokens());
+    }
+    *readExpressionTokens() {
+        while (this.p < this.N) {
+            const operator = this.readOperator();
+            if (operator) {
+                yield operator;
+                continue;
+            }
+            const operand = this.readValue();
+            if (operand) {
+                yield operand;
+                continue;
+            }
+            return;
+        }
+    }
+    readOperator() {
+        this.skipBlank();
+        const end = this.matchTrie(this.opTrie);
+        if (end === -1)
+            return;
+        return new OperatorToken(this.input, this.p, (this.p = end), this.file);
+    }
+    matchTrie(trie) {
+        let node = trie;
+        let i = this.p;
+        let info;
+        while (node[this.input[i]] && i < this.N) {
+            node = node[this.input[i++]];
+            if (node['end'])
+                info = node;
+        }
+        if (!info)
+            return -1;
+        if (info['needBoundary'] && isWord(this.peek(i - this.p)))
+            return -1;
+        return i;
+    }
+    readFilteredValue() {
+        const begin = this.p;
+        const initial = this.readExpression();
+        this.assert(initial.valid(), `invalid value expression: ${this.snapshot()}`);
+        const filters = this.readFilters();
+        return new FilteredValueToken(initial, filters, this.input, begin, this.p, this.file);
+    }
+    readFilters() {
+        const filters = [];
+        while (true) {
+            const filter = this.readFilter();
+            if (!filter)
+                return filters;
+            filters.push(filter);
+        }
+    }
+    readFilter() {
+        this.skipBlank();
+        if (this.end())
+            return null;
+        this.assert(this.read() === '|', `expected "|" before filter`);
+        const name = this.readIdentifier();
+        if (!name.size()) {
+            this.assert(this.end(), `expected filter name`);
+            return null;
+        }
+        const args = [];
+        this.skipBlank();
+        if (this.peek() === ':') {
+            do {
+                ++this.p;
+                const arg = this.readFilterArg();
+                arg && args.push(arg);
+                this.skipBlank();
+                this.assert(this.end() || this.peek() === ',' || this.peek() === '|', () => `unexpected character ${this.snapshot()}`);
+            } while (this.peek() === ',');
+        }
+        else if (this.peek() === '|' || this.end()) ;
+        else {
+            throw this.error('expected ":" after filter name');
+        }
+        return new FilterToken(name.getText(), args, this.input, name.begin, this.p, this.file);
+    }
+    readFilterArg() {
+        const key = this.readValue();
+        if (!key)
+            return;
+        this.skipBlank();
+        if (this.peek() !== ':')
+            return key;
+        ++this.p;
+        const value = this.readValue();
+        return [key.getText(), value];
+    }
+    readTopLevelTokens(options = defaultOptions) {
+        const tokens = [];
+        while (this.p < this.N) {
+            const token = this.readTopLevelToken(options);
+            tokens.push(token);
+        }
+        whiteSpaceCtrl(tokens, options);
+        return tokens;
+    }
+    readTopLevelToken(options) {
+        const { tagDelimiterLeft, outputDelimiterLeft } = options;
+        if (this.rawBeginAt > -1)
+            return this.readEndrawOrRawContent(options);
+        if (this.match(tagDelimiterLeft))
+            return this.readTagToken(options);
+        if (this.match(outputDelimiterLeft))
+            return this.readOutputToken(options);
+        return this.readHTMLToken([tagDelimiterLeft, outputDelimiterLeft]);
+    }
+    readHTMLToken(stopStrings) {
+        const begin = this.p;
+        while (this.p < this.N) {
+            if (stopStrings.some(str => this.match(str)))
+                break;
+            ++this.p;
+        }
+        return new HTMLToken(this.input, begin, this.p, this.file);
+    }
+    readTagToken(options) {
+        const { file, input } = this;
+        const begin = this.p;
+        if (this.readToDelimiter(options.tagDelimiterRight) === -1) {
+            throw this.error(`tag ${this.snapshot(begin)} not closed`, begin);
+        }
+        const token = new TagToken(input, begin, this.p, options, file);
+        if (token.name === 'raw')
+            this.rawBeginAt = begin;
+        return token;
+    }
+    readToDelimiter(delimiter, respectQuoted = false) {
+        this.skipBlank();
+        while (this.p < this.N) {
+            if (respectQuoted && (this.peekType() & QUOTE)) {
+                this.readQuoted();
+                continue;
+            }
+            ++this.p;
+            if (this.rmatch(delimiter))
+                return this.p;
+        }
+        return -1;
+    }
+    readOutputToken(options = defaultOptions) {
+        const { file, input } = this;
+        const { outputDelimiterRight } = options;
+        const begin = this.p;
+        if (this.readToDelimiter(outputDelimiterRight, true) === -1) {
+            throw this.error(`output ${this.snapshot(begin)} not closed`, begin);
+        }
+        return new OutputToken(input, begin, this.p, options, file);
+    }
+    readEndrawOrRawContent(options) {
+        const { tagDelimiterLeft, tagDelimiterRight } = options;
+        const begin = this.p;
+        let leftPos = this.readTo(tagDelimiterLeft) - tagDelimiterLeft.length;
+        while (this.p < this.N) {
+            if (this.readIdentifier().getText() !== 'endraw') {
+                leftPos = this.readTo(tagDelimiterLeft) - tagDelimiterLeft.length;
+                continue;
+            }
+            while (this.p <= this.N) {
+                if (this.rmatch(tagDelimiterRight)) {
+                    const end = this.p;
+                    if (begin === leftPos) {
+                        this.rawBeginAt = -1;
+                        return new TagToken(this.input, begin, end, options, this.file);
+                    }
+                    else {
+                        this.p = leftPos;
+                        return new HTMLToken(this.input, begin, leftPos, this.file);
+                    }
+                }
+                if (this.rmatch(tagDelimiterLeft))
+                    break;
+                this.p++;
+            }
+        }
+        throw this.error(`raw ${this.snapshot(this.rawBeginAt)} not closed`, begin);
+    }
+    readLiquidTagTokens(options = defaultOptions) {
+        const tokens = [];
+        while (this.p < this.N) {
+            const token = this.readLiquidTagToken(options);
+            token && tokens.push(token);
+        }
+        return tokens;
+    }
+    readLiquidTagToken(options) {
+        this.skipBlank();
+        if (this.end())
+            return;
+        const begin = this.p;
+        this.readToDelimiter('\n');
+        const end = this.p;
+        return new LiquidTagToken(this.input, begin, end, options, this.file);
+    }
+    error(msg, pos = this.p) {
+        return new TokenizationError(msg, new IdentifierToken(this.input, pos, this.N, this.file));
+    }
+    assert(pred, msg, pos) {
+        if (!pred)
+            throw this.error(typeof msg === 'function' ? msg() : msg, pos);
+    }
+    snapshot(begin = this.p) {
+        return JSON.stringify(ellipsis(this.input.slice(begin, this.N), 32));
+    }
+    /**
+     * @deprecated use #readIdentifier instead
+     */
+    readWord() {
+        return this.readIdentifier();
+    }
+    readIdentifier() {
+        this.skipBlank();
+        const begin = this.p;
+        while (!this.end() && isWord(this.peek()))
+            ++this.p;
+        return new IdentifierToken(this.input, begin, this.p, this.file);
+    }
+    readNonEmptyIdentifier() {
+        const id = this.readIdentifier();
+        return id.size() ? id : undefined;
+    }
+    readTagName() {
+        this.skipBlank();
+        // Handle inline comment tags
+        if (this.input[this.p] === '#')
+            return this.input.slice(this.p, ++this.p);
+        return this.readIdentifier().getText();
+    }
+    readHashes(jekyllStyle) {
+        const hashes = [];
+        while (true) {
+            const hash = this.readHash(jekyllStyle);
+            if (!hash)
+                return hashes;
+            hashes.push(hash);
+        }
+    }
+    readHash(jekyllStyle) {
+        this.skipBlank();
+        if (this.peek() === ',')
+            ++this.p;
+        const begin = this.p;
+        const name = this.readNonEmptyIdentifier();
+        if (!name)
+            return;
+        let value;
+        this.skipBlank();
+        const sep = isString(jekyllStyle) ? jekyllStyle : (jekyllStyle ? '=' : ':');
+        if (this.peek() === sep) {
+            ++this.p;
+            value = this.readValue();
+        }
+        return new HashToken(this.input, begin, this.p, name, value, this.file);
+    }
+    remaining() {
+        return this.input.slice(this.p, this.N);
+    }
+    advance(step = 1) {
+        this.p += step;
+    }
+    end() {
+        return this.p >= this.N;
+    }
+    read() {
+        return this.input[this.p++];
+    }
+    readTo(end) {
+        while (this.p < this.N) {
+            ++this.p;
+            if (this.rmatch(end))
+                return this.p;
+        }
+        return -1;
+    }
+    readValue() {
+        this.skipBlank();
+        const begin = this.p;
+        const variable = this.readLiteral() || this.readQuoted() || this.readRange() || this.readNumber();
+        const props = this.readProperties(!variable);
+        if (!props.length)
+            return variable;
+        return new PropertyAccessToken(variable, props, this.input, begin, this.p);
+    }
+    readScopeValue() {
+        this.skipBlank();
+        const begin = this.p;
+        const props = this.readProperties();
+        if (!props.length)
+            return undefined;
+        return new PropertyAccessToken(undefined, props, this.input, begin, this.p);
+    }
+    readProperties(isBegin = true) {
+        const props = [];
+        while (true) {
+            if (this.peek() === '[') {
+                this.p++;
+                const prop = this.readValue() || new IdentifierToken(this.input, this.p, this.p, this.file);
+                this.assert(this.readTo(']') !== -1, '[ not closed');
+                props.push(prop);
+                continue;
+            }
+            if (isBegin && !props.length) {
+                const prop = this.readNonEmptyIdentifier();
+                if (prop) {
+                    props.push(prop);
+                    continue;
+                }
+            }
+            if (this.peek() === '.' && this.peek(1) !== '.') { // skip range syntax
+                this.p++;
+                const prop = this.readNonEmptyIdentifier();
+                if (!prop)
+                    break;
+                props.push(prop);
+                continue;
+            }
+            break;
+        }
+        return props;
+    }
+    readNumber() {
+        this.skipBlank();
+        let decimalFound = false;
+        let digitFound = false;
+        let n = 0;
+        if (this.peekType() & SIGN)
+            n++;
+        while (this.p + n <= this.N) {
+            if (this.peekType(n) & NUMBER) {
+                digitFound = true;
+                n++;
+            }
+            else if (this.peek(n) === '.' && this.peek(n + 1) !== '.') {
+                if (decimalFound || !digitFound)
+                    return;
+                decimalFound = true;
+                n++;
+            }
+            else
+                break;
+        }
+        if (digitFound && !isWord(this.peek(n))) {
+            const num = new NumberToken(this.input, this.p, this.p + n, this.file);
+            this.advance(n);
+            return num;
+        }
+    }
+    readLiteral() {
+        this.skipBlank();
+        const end = this.matchTrie(this.literalTrie);
+        if (end === -1)
+            return;
+        const literal = new LiteralToken(this.input, this.p, end, this.file);
+        this.p = end;
+        return literal;
+    }
+    readRange() {
+        this.skipBlank();
+        const begin = this.p;
+        if (this.peek() !== '(')
+            return;
+        ++this.p;
+        const lhs = this.readValueOrThrow();
+        this.skipBlank();
+        this.assert(this.read() === '.' && this.read() === '.', 'invalid range syntax');
+        const rhs = this.readValueOrThrow();
+        this.skipBlank();
+        this.assert(this.read() === ')', 'invalid range syntax');
+        return new RangeToken(this.input, begin, this.p, lhs, rhs, this.file);
+    }
+    readValueOrThrow() {
+        const value = this.readValue();
+        this.assert(value, () => `unexpected token ${this.snapshot()}, value expected`);
+        return value;
+    }
+    readQuoted() {
+        this.skipBlank();
+        const begin = this.p;
+        if (!(this.peekType() & QUOTE))
+            return;
+        ++this.p;
+        let escaped = false;
+        while (this.p < this.N) {
+            ++this.p;
+            if (this.input[this.p - 1] === this.input[begin] && !escaped)
+                break;
+            if (escaped)
+                escaped = false;
+            else if (this.input[this.p - 1] === '\\')
+                escaped = true;
+        }
+        return new QuotedToken(this.input, begin, this.p, this.file);
+    }
+    *readFileNameTemplate(options) {
+        const { outputDelimiterLeft } = options;
+        const htmlStopStrings = [',', ' ', '\r', '\n', '\t', outputDelimiterLeft];
+        const htmlStopStringSet = new Set(htmlStopStrings);
+        // break on ',' and ' ', outputDelimiterLeft only stops HTML token
+        while (this.p < this.N && !htmlStopStringSet.has(this.peek())) {
+            yield this.match(outputDelimiterLeft)
+                ? this.readOutputToken(options)
+                : this.readHTMLToken(htmlStopStrings);
+        }
+    }
+    match(word) {
+        for (let i = 0; i < word.length; i++) {
+            if (word[i] !== this.input[this.p + i])
+                return false;
+        }
+        return true;
+    }
+    rmatch(pattern) {
+        for (let i = 0; i < pattern.length; i++) {
+            if (pattern[pattern.length - 1 - i] !== this.input[this.p - 1 - i])
+                return false;
+        }
+        return true;
+    }
+    peekType(n = 0) {
+        return this.p + n >= this.N ? 0 : TYPES[this.input.charCodeAt(this.p + n)];
+    }
+    peek(n = 0) {
+        return this.p + n >= this.N ? '' : this.input[this.p + n];
+    }
+    skipBlank() {
+        while (this.peekType() & BLANK)
+            ++this.p;
+    }
+}
+
+class ParseStream {
+    constructor(tokens, parseToken) {
+        this.handlers = {};
+        this.stopRequested = false;
+        this.tokens = tokens;
+        this.parseToken = parseToken;
+    }
+    on(name, cb) {
+        this.handlers[name] = cb;
+        return this;
+    }
+    trigger(event, arg) {
+        const h = this.handlers[event];
+        return h ? (h.call(this, arg), true) : false;
+    }
+    start() {
+        this.trigger('start');
+        let token;
+        while (!this.stopRequested && (token = this.tokens.shift())) {
+            if (this.trigger('token', token))
+                continue;
+            if (isTagToken(token) && this.trigger(`tag:${token.name}`, token)) {
+                continue;
+            }
+            const template = this.parseToken(token, this.tokens);
+            this.trigger('template', template);
+        }
+        if (!this.stopRequested)
+            this.trigger('end');
+        return this;
+    }
+    stop() {
+        this.stopRequested = true;
+        return this;
+    }
+}
+
+class TemplateImpl {
+    constructor(token) {
+        this.token = token;
+    }
+}
+
+class Tag extends TemplateImpl {
+    constructor(token, remainTokens, liquid) {
+        super(token);
+        this.name = token.name;
+        this.liquid = liquid;
+        this.tokenizer = token.tokenizer;
+    }
+}
+
+/**
+ * Key-Value Pairs Representing Tag Arguments
+ * Example:
+ *    For the markup `, foo:'bar', coo:2 reversed %}`,
+ *    hash['foo'] === 'bar'
+ *    hash['coo'] === 2
+ *    hash['reversed'] === undefined
+ */
+class Hash {
+    constructor(input, jekyllStyle) {
+        this.hash = {};
+        const tokenizer = input instanceof Tokenizer ? input : new Tokenizer(input, {});
+        for (const hash of tokenizer.readHashes(jekyllStyle)) {
+            this.hash[hash.name.content] = hash.value;
+        }
+    }
+    *render(ctx) {
+        const hash = {};
+        for (const key of Object.keys(this.hash)) {
+            hash[key] = this.hash[key] === undefined ? true : yield evalToken(this.hash[key], ctx);
+        }
+        return hash;
+    }
+}
+
+function createTagClass(options) {
+    return class extends Tag {
+        constructor(token, tokens, liquid) {
+            super(token, tokens, liquid);
+            if (isFunction(options.parse)) {
+                options.parse.call(this, token, tokens);
+            }
+        }
+        *render(ctx, emitter) {
+            const hash = (yield new Hash(this.token.args, ctx.opts.keyValueSeparator).render(ctx));
+            return yield options.render.call(this, ctx, emitter, hash);
+        }
+    };
+}
+
+function isKeyValuePair(arr) {
+    return isArray(arr);
+}
+
+class Filter {
+    constructor(token, options, liquid) {
+        this.token = token;
+        this.name = token.name;
+        this.handler = isFunction(options)
+            ? options
+            : (isFunction(options?.handler) ? options.handler : identify);
+        this.raw = !isFunction(options) && !!options?.raw;
+        this.args = token.args;
+        this.liquid = liquid;
+    }
+    *render(value, context) {
+        const argv = [];
+        for (const arg of this.args) {
+            if (isKeyValuePair(arg))
+                argv.push([arg[0], yield evalToken(arg[1], context)]);
+            else
+                argv.push(yield evalToken(arg, context));
+        }
+        return yield this.handler.apply({ context, token: this.token, liquid: this.liquid }, [value, ...argv]);
+    }
+}
+
+class Value {
+    /**
+     * @param str the value to be valuated, eg.: "foobar" | truncate: 3
+     */
+    constructor(input, liquid) {
+        this.filters = [];
+        const token = typeof input === 'string'
+            ? new Tokenizer(input, liquid.options.operators).readFilteredValue()
+            : input;
+        this.initial = token.initial;
+        this.filters = token.filters.map(token => new Filter(token, this.getFilter(liquid, token.name), liquid));
+    }
+    *value(ctx, lenient) {
+        lenient = lenient || (ctx.opts.lenientIf && this.filters.length > 0 && this.filters[0].name === 'default');
+        let val = yield this.initial.evaluate(ctx, lenient);
+        for (const filter of this.filters) {
+            val = yield filter.render(val, ctx);
+        }
+        return val;
+    }
+    getFilter(liquid, name) {
+        const impl = liquid.filters[name];
+        assert(impl || !liquid.options.strictFilters, () => `undefined filter: ${name}`);
+        return impl;
+    }
+}
+
+class Output extends TemplateImpl {
+    constructor(token, liquid) {
+        super(token);
+        const tokenizer = new Tokenizer(token.input, liquid.options.operators, token.file, token.contentRange);
+        this.value = new Value(tokenizer.readFilteredValue(), liquid);
+        const filters = this.value.filters;
+        const outputEscape = liquid.options.outputEscape;
+        if (!filters[filters.length - 1]?.raw && outputEscape) {
+            const token = new FilterToken(toString.call(outputEscape), [], '', 0, 0);
+            filters.push(new Filter(token, outputEscape, liquid));
+        }
+    }
+    *render(ctx, emitter) {
+        const val = yield this.value.value(ctx, false);
+        emitter.write(val);
+    }
+    *arguments() {
+        yield this.value;
+    }
+}
+
+class HTML extends TemplateImpl {
+    constructor(token) {
+        super(token);
+        this.str = token.getContent();
+    }
+    *render(ctx, emitter) {
+        emitter.write(this.str);
+    }
+}
+
+/**
+ * A variable's segments and location, which can be coerced to a string.
+ */
+class Variable {
+    constructor(segments, location) {
+        this.segments = segments;
+        this.location = location;
+    }
+    toString() {
+        return segmentsString(this.segments, true);
+    }
+    /** Return this variable's segments as an array, possibly with nested arrays for nested paths. */
+    toArray() {
+        function* _visit(...segments) {
+            for (const segment of segments) {
+                if (segment instanceof Variable) {
+                    yield Array.from(_visit(...segment.segments));
+                }
+                else {
+                    yield segment;
+                }
+            }
+        }
+        return Array.from(_visit(...this.segments));
+    }
+}
+/**
+ * Group variables by the string representation of their root segment.
+ */
+class VariableMap {
+    constructor() {
+        this.map = new Map();
+    }
+    get(key) {
+        const k = segmentsString([key.segments[0]]);
+        if (!this.map.has(k)) {
+            this.map.set(k, []);
+        }
+        return this.map.get(k);
+    }
+    has(key) {
+        return this.map.has(segmentsString([key.segments[0]]));
+    }
+    push(variable) {
+        this.get(variable).push(variable);
+    }
+    asObject() {
+        return Object.fromEntries(this.map);
+    }
+}
+const defaultStaticAnalysisOptions = {
+    partials: true
+};
+function* _analyze(templates, partials, sync) {
+    const variables = new VariableMap();
+    const globals = new VariableMap();
+    const locals = new VariableMap();
+    const rootScope = new DummyScope(new Set());
+    // Names of partial templates that we've already analyzed.
+    const seen = new Set();
+    function updateVariables(variable, scope) {
+        variables.push(variable);
+        const aliased = scope.alias(variable);
+        if (aliased !== undefined) {
+            const root = aliased.segments[0];
+            // TODO: What if a a template renders a rendered template? Do we need scope.parent?
+            if (isString(root) && !rootScope.has(root)) {
+                globals.push(aliased);
+            }
+        }
+        else {
+            const root = variable.segments[0];
+            if (isString(root) && !scope.has(root)) {
+                globals.push(variable);
+            }
+        }
+        // Recurse for nested Variables
+        for (const segment of variable.segments) {
+            if (segment instanceof Variable) {
+                updateVariables(segment, scope);
+            }
+        }
+    }
+    function* visit(template, scope) {
+        if (template.arguments) {
+            for (const arg of template.arguments()) {
+                for (const variable of extractVariables(arg)) {
+                    updateVariables(variable, scope);
+                }
+            }
+        }
+        if (template.localScope) {
+            for (const ident of template.localScope()) {
+                scope.add(ident.content);
+                scope.deleteAlias(ident.content);
+                const [row, col] = ident.getPosition();
+                locals.push(new Variable([ident.content], { row, col, file: ident.file }));
+            }
+        }
+        if (template.children) {
+            if (template.partialScope) {
+                const partial = template.partialScope();
+                if (partial === undefined) {
+                    // Layouts, for example, can have children that are not partials.
+                    for (const child of (yield template.children(partials, sync))) {
+                        yield visit(child, scope);
+                    }
+                    return;
+                }
+                if (seen.has(partial.name))
+                    return;
+                const partialScopeNames = new Set();
+                const partialScope = partial.isolated
+                    ? new DummyScope(partialScopeNames)
+                    : scope.push(partialScopeNames);
+                for (const name of partial.scope) {
+                    if (isString(name)) {
+                        partialScopeNames.add(name);
+                    }
+                    else {
+                        const [alias, argument] = name;
+                        partialScopeNames.add(alias);
+                        const variables = Array.from(extractVariables(argument));
+                        if (variables.length) {
+                            partialScope.setAlias(alias, variables[0].segments);
+                        }
+                    }
+                }
+                for (const child of (yield template.children(partials, sync))) {
+                    yield visit(child, partialScope);
+                    seen.add(partial.name);
+                }
+                partialScope.pop();
+            }
+            else {
+                if (template.blockScope) {
+                    scope.push(new Set(template.blockScope()));
+                }
+                for (const child of (yield template.children(partials, sync))) {
+                    yield visit(child, scope);
+                }
+                if (template.blockScope) {
+                    scope.pop();
+                }
+            }
+        }
+    }
+    for (const template of templates) {
+        yield visit(template, rootScope);
+    }
+    return {
+        variables: variables.asObject(),
+        globals: globals.asObject(),
+        locals: locals.asObject()
+    };
+}
+/**
+ * Statically analyze a template and report variable usage.
+ */
+function analyze(template, options = {}) {
+    const opts = { ...defaultStaticAnalysisOptions, ...options };
+    return toPromise(_analyze(template, opts.partials, false));
+}
+/**
+ * Statically analyze a template and report variable usage.
+ */
+function analyzeSync(template, options = {}) {
+    const opts = { ...defaultStaticAnalysisOptions, ...options };
+    return toValueSync(_analyze(template, opts.partials, true));
+}
+/**
+ * A stack to manage scopes while traversing templates during static analysis.
+ */
+class DummyScope {
+    constructor(globals) {
+        this.stack = [{ names: globals, aliases: new Map() }];
+    }
+    /** Return true if `name` is in scope.  */
+    has(name) {
+        for (const scope of this.stack) {
+            if (scope.names.has(name)) {
+                return true;
+            }
+        }
+        return false;
+    }
+    push(scope) {
+        this.stack.push({ names: scope, aliases: new Map() });
+        return this;
+    }
+    pop() {
+        return this.stack.pop()?.names;
+    }
+    // Add a name to the template scope.
+    add(name) {
+        this.stack[0].names.add(name);
+    }
+    /** Return the variable that `variable` aliases, or `variable` if it doesn't alias anything. */
+    alias(variable) {
+        const root = variable.segments[0];
+        if (!isString(root))
+            return undefined;
+        const alias = this.getAlias(root);
+        if (alias === undefined)
+            return undefined;
+        return new Variable([...alias, ...variable.segments.slice(1)], variable.location);
+    }
+    // TODO: `from` could be a path with multiple segments, like `include.x`.
+    setAlias(from, to) {
+        this.stack[this.stack.length - 1].aliases.set(from, to);
+    }
+    deleteAlias(name) {
+        this.stack[this.stack.length - 1].aliases.delete(name);
+    }
+    getAlias(name) {
+        for (const scope of this.stack) {
+            if (scope.aliases.has(name)) {
+                return scope.aliases.get(name);
+            }
+            // If a scope has defined `name`, then it masks aliases in parent scopes.
+            if (scope.names.has(name)) {
+                return undefined;
+            }
+        }
+        return undefined;
+    }
+}
+function* extractVariables(value) {
+    if (isValueToken(value)) {
+        yield* extractValueTokenVariables(value);
+    }
+    else if (value instanceof Value) {
+        yield* extractFilteredValueVariables(value);
+    }
+}
+function* extractFilteredValueVariables(value) {
+    for (const token of value.initial.postfix) {
+        if (isValueToken(token)) {
+            yield* extractValueTokenVariables(token);
+        }
+    }
+    for (const filter of value.filters) {
+        for (const arg of filter.args) {
+            if (isKeyValuePair(arg) && arg[1]) {
+                yield* extractValueTokenVariables(arg[1]);
+            }
+            else if (isValueToken(arg)) {
+                yield* extractValueTokenVariables(arg);
+            }
+        }
+    }
+}
+function* extractValueTokenVariables(token) {
+    if (isRangeToken(token)) {
+        yield* extractValueTokenVariables(token.lhs);
+        yield* extractValueTokenVariables(token.rhs);
+    }
+    else if (isPropertyAccessToken(token)) {
+        yield extractPropertyAccessVariable(token);
+    }
+}
+function extractPropertyAccessVariable(token) {
+    const segments = [];
+    // token is not guaranteed to have `file` set. We'll try to get it from a prop if not.
+    let file = token.file;
+    // Here we're flattening the first segment of a path if it is a nested path.
+    const root = token.props[0];
+    file = file || root.file;
+    if (isQuotedToken(root) || isNumberToken(root) || isWordToken(root)) {
+        segments.push(root.content);
+    }
+    else if (isPropertyAccessToken(root)) {
+        // Flatten paths that start with a nested path.
+        segments.push(...extractPropertyAccessVariable(root).segments);
+    }
+    for (const prop of token.props.slice(1)) {
+        file = file || prop.file;
+        if (isQuotedToken(prop) || isNumberToken(prop) || isWordToken(prop)) {
+            segments.push(prop.content);
+        }
+        else if (isPropertyAccessToken(prop)) {
+            segments.push(extractPropertyAccessVariable(prop));
+        }
+    }
+    const [row, col] = token.getPosition();
+    return new Variable(segments, {
+        row,
+        col,
+        file
+    });
+}
+// This is used to detect segments that can be represented with dot notation
+// when creating a string representation of VariableSegments.
+const RE_PROPERTY = /^[\u0080-\uFFFFa-zA-Z_][\u0080-\uFFFFa-zA-Z0-9_-]*$/;
+/**
+ * Return a string representation of segments using dot notation where possible.
+ * @param segments - The property names and array indices that make up a path to a variable.
+ * @param bracketedRoot - If false (the default), don't surround the root segment with square brackets.
+ */
+function segmentsString(segments, bracketedRoot = false) {
+    const buf = [];
+    const root = segments[0];
+    if (isString(root)) {
+        if (!bracketedRoot || root.match(RE_PROPERTY)) {
+            buf.push(`${root}`);
+        }
+        else {
+            buf.push(`['${root}']`);
+        }
+    }
+    for (const segment of segments.slice(1)) {
+        if (segment instanceof Variable) {
+            buf.push(`[${segmentsString(segment.segments)}]`);
+        }
+        else if (isString(segment)) {
+            if (segment.match(RE_PROPERTY)) {
+                buf.push(`.${segment}`);
+            }
+            else {
+                buf.push(`['${segment}']`);
+            }
+        }
+        else {
+            buf.push(`[${segment}]`);
+        }
+    }
+    return buf.join('');
+}
+
+(function (LookupType) {
+    LookupType["Partials"] = "partials";
+    LookupType["Layouts"] = "layouts";
+    LookupType["Root"] = "root";
+})(exports.Rv || (exports.Rv = {}));
+class Loader {
+    constructor(options) {
+        this.options = options;
+        if (options.relativeReference) {
+            const sep = options.fs.sep;
+            assert(sep, '`fs.sep` is required for relative reference');
+            const prefixes = ['.' + sep, '..' + sep, './', '../'];
+            this.shouldLoadRelative = (referencedFile) => prefixes.some(prefix => referencedFile.startsWith(prefix));
+        }
+        else {
+            this.shouldLoadRelative = (_referencedFile) => false;
+        }
+        const fs = options.fs;
+        this.contains = toLiquidAsync(fs.contains?.bind(fs) || (async () => true), fs.containsSync?.bind(fs) || (() => true));
+        this.exists = toLiquidAsync(fs.exists?.bind(fs) || (async () => false), fs.existsSync?.bind(fs));
+    }
+    *lookup(file, type, sync, currentFile) {
+        const dirs = this.options[type];
+        for (const filepath of this.candidates(file, dirs, currentFile)) {
+            let allowed = false;
+            for (const dir of dirs) {
+                if (yield this.contains(!!sync, dir, filepath)) {
+                    allowed = true;
+                    break;
+                }
+            }
+            if (!allowed)
+                continue;
+            if (yield this.exists(!!sync, filepath))
+                return filepath;
+        }
+        throw this.lookupError(file, dirs);
+    }
+    *candidates(file, dirs, currentFile) {
+        const { fs, extname } = this.options;
+        if (this.shouldLoadRelative(file) && currentFile) {
+            const referenced = fs.resolve(this.dirname(currentFile), file, extname);
+            yield referenced;
+        }
+        for (const dir of dirs) {
+            const referenced = fs.resolve(dir, file, extname);
+            yield referenced;
+        }
+        if (fs.fallback !== undefined) {
+            const filepath = fs.fallback(file);
+            if (filepath !== undefined)
+                yield filepath;
+        }
+    }
+    dirname(path) {
+        const fs = this.options.fs;
+        assert(fs.dirname, '`fs.dirname` is required for relative reference');
+        return fs.dirname(path);
+    }
+    lookupError(file, roots) {
+        const err = new Error('ENOENT');
+        err.message = `ENOENT: Failed to lookup "${file}" in "${roots}"`;
+        err.code = 'ENOENT';
+        return err;
+    }
+}
+
+class Parser {
+    constructor(liquid) {
+        this.liquid = liquid;
+        this.cache = this.liquid.options.cache;
+        this.fs = this.liquid.options.fs;
+        this.parseFile = this.cache ? this._parseFileCached : this._parseFile;
+        this.loader = new Loader(this.liquid.options);
+        this.parseLimit = new Limiter('parse length', liquid.options.parseLimit);
+        this.readFile = toLiquidAsync(this.fs.readFile?.bind(this.fs) || (async () => { throw new Error('readFile not implemented'); }), this.fs.readFileSync?.bind(this.fs));
+    }
+    parse(html, filepath) {
+        html = String(html);
+        this.parseLimit.use(html.length);
+        const tokenizer = new Tokenizer(html, this.liquid.options.operators, filepath);
+        const tokens = tokenizer.readTopLevelTokens(this.liquid.options);
+        return this.parseTokens(tokens);
+    }
+    parseTokens(tokens) {
+        let token;
+        const templates = [];
+        const errors = [];
+        while ((token = tokens.shift())) {
+            try {
+                templates.push(this.parseToken(token, tokens));
+            }
+            catch (err) {
+                if (this.liquid.options.catchAllErrors)
+                    errors.push(err);
+                else
+                    throw err;
+            }
+        }
+        if (errors.length)
+            throw new LiquidErrors(errors);
+        return templates;
+    }
+    parseToken(token, remainTokens) {
+        try {
+            if (isTagToken(token)) {
+                const TagClass = this.liquid.tags[token.name];
+                assert(TagClass, `tag "${token.name}" not found`);
+                return new TagClass(token, remainTokens, this.liquid, this);
+            }
+            if (isOutputToken(token)) {
+                return new Output(token, this.liquid);
+            }
+            return new HTML(token);
+        }
+        catch (e) {
+            if (LiquidError.is(e))
+                throw e;
+            throw new ParseError(e, token);
+        }
+    }
+    parseStream(tokens) {
+        return new ParseStream(tokens, (token, tokens) => this.parseToken(token, tokens));
+    }
+    *_parseFileCached(file, sync, type = exports.Rv.Root, currentFile) {
+        const cache = this.cache;
+        const key = this.loader.shouldLoadRelative(file) ? currentFile + ',' + file : type + ':' + file;
+        const tpls = yield cache.read(key);
+        if (tpls)
+            return tpls;
+        const task = this._parseFile(file, sync, type, currentFile);
+        // sync mode: exec the task and cache the result
+        // async mode: cache the task before exec
+        const taskOrTpl = sync ? yield task : toPromise(task);
+        cache.write(key, taskOrTpl);
+        // note: concurrent tasks will be reused, cache for failed task is removed until its end
+        try {
+            return yield taskOrTpl;
+        }
+        catch (err) {
+            cache.remove(key);
+            throw err;
+        }
+    }
+    *_parseFile(file, sync, type = exports.Rv.Root, currentFile) {
+        const filepath = yield this.loader.lookup(file, type, sync, currentFile);
+        return this.parse(yield this.readFile(!!sync, filepath), filepath);
+    }
+}
+
+(function (TokenKind) {
+    TokenKind[TokenKind["Number"] = 1] = "Number";
+    TokenKind[TokenKind["Literal"] = 2] = "Literal";
+    TokenKind[TokenKind["Tag"] = 4] = "Tag";
+    TokenKind[TokenKind["Output"] = 8] = "Output";
+    TokenKind[TokenKind["HTML"] = 16] = "HTML";
+    TokenKind[TokenKind["Filter"] = 32] = "Filter";
+    TokenKind[TokenKind["Hash"] = 64] = "Hash";
+    TokenKind[TokenKind["PropertyAccess"] = 128] = "PropertyAccess";
+    TokenKind[TokenKind["Word"] = 256] = "Word";
+    TokenKind[TokenKind["Range"] = 512] = "Range";
+    TokenKind[TokenKind["Quoted"] = 1024] = "Quoted";
+    TokenKind[TokenKind["Operator"] = 2048] = "Operator";
+    TokenKind[TokenKind["FilteredValue"] = 4096] = "FilteredValue";
+    TokenKind[TokenKind["Delimited"] = 12] = "Delimited";
+})(exports.Yp || (exports.Yp = {}));
+
+function isDelimitedToken(val) {
+    return !!(getKind(val) & exports.Yp.Delimited);
+}
+function isOperatorToken(val) {
+    return getKind(val) === exports.Yp.Operator;
+}
+function isHTMLToken(val) {
+    return getKind(val) === exports.Yp.HTML;
+}
+function isOutputToken(val) {
+    return getKind(val) === exports.Yp.Output;
+}
+function isTagToken(val) {
+    return getKind(val) === exports.Yp.Tag;
+}
+function isQuotedToken(val) {
+    return getKind(val) === exports.Yp.Quoted;
+}
+function isLiteralToken(val) {
+    return getKind(val) === exports.Yp.Literal;
+}
+function isNumberToken(val) {
+    return getKind(val) === exports.Yp.Number;
+}
+function isPropertyAccessToken(val) {
+    return getKind(val) === exports.Yp.PropertyAccess;
+}
+function isWordToken(val) {
+    return getKind(val) === exports.Yp.Word;
+}
+function isRangeToken(val) {
+    return getKind(val) === exports.Yp.Range;
+}
+function isValueToken(val) {
+    // valueTokenBitMask = TokenKind.Number | TokenKind.Literal | TokenKind.Quoted | TokenKind.PropertyAccess | TokenKind.Range
+    return (getKind(val) & 1667) > 0;
+}
+function getKind(val) {
+    return val ? val.kind : -1;
+}
+
+var typeGuards = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  isDelimitedToken: isDelimitedToken,
+  isOperatorToken: isOperatorToken,
+  isHTMLToken: isHTMLToken,
+  isOutputToken: isOutputToken,
+  isTagToken: isTagToken,
+  isQuotedToken: isQuotedToken,
+  isLiteralToken: isLiteralToken,
+  isNumberToken: isNumberToken,
+  isPropertyAccessToken: isPropertyAccessToken,
+  isWordToken: isWordToken,
+  isRangeToken: isRangeToken,
+  isValueToken: isValueToken
+});
+
+/******************************************************************************
+Copyright (c) Microsoft Corporation.
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+***************************************************************************** */
+
+var __assign = function() {
+    __assign = Object.assign || function __assign(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p)) t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
+
+function createScope(from) {
+    const scope = Object.create(null);
+    if (from)
+        Object.assign(scope, from);
+    return scope;
+}
+
+class Context {
+    constructor(env = {}, opts = defaultOptions, renderOptions = {}, { memoryLimit, renderLimit } = {}) {
+        /**
+         * insert a Context-level empty scope,
+         * for tags like `{% capture %}` `{% assign %}` to operate
+         */
+        this.scopes = [createScope()];
+        this.registers = {};
+        this.breakCalled = false;
+        this.continueCalled = false;
+        this.sync = !!renderOptions.sync;
+        this.opts = opts;
+        this.globals = renderOptions.globals ?? opts.globals;
+        this.environments = isObject(env) ? env : Object(env);
+        this.strictVariables = renderOptions.strictVariables ?? this.opts.strictVariables;
+        this.ownPropertyOnly = renderOptions.ownPropertyOnly ?? opts.ownPropertyOnly;
+        this.memoryLimit = memoryLimit ?? new Limiter('memory alloc', renderOptions.memoryLimit ?? opts.memoryLimit);
+        this.renderLimit = renderLimit ?? new Limiter('template render', getPerformance().now() + (renderOptions.renderLimit ?? opts.renderLimit));
+    }
+    getRegister(key, defaultValue = undefined) {
+        return (this.registers[key] = this.registers[key] || defaultValue);
+    }
+    setRegister(key, value) {
+        return (this.registers[key] = value);
+    }
+    saveRegister(...keys) {
+        return keys.map(key => [key, this.getRegister(key)]);
+    }
+    restoreRegister(keyValues) {
+        return keyValues.forEach(([key, value]) => this.setRegister(key, value));
+    }
+    getAll() {
+        return [this.globals, this.environments, ...this.scopes]
+            .reduce((ctx, val) => __assign(ctx, val), {});
+    }
+    /**
+     * @deprecated use `_get()` or `getSync()` instead
+     */
+    get(paths) {
+        return this.getSync(paths);
+    }
+    getSync(paths) {
+        return toValueSync(this._get(paths));
+    }
+    *_get(paths) {
+        const scope = this.findScope(paths[0]); // first prop should always be a string
+        return yield this._getFromScope(scope, paths);
+    }
+    /**
+     * @deprecated use `_get()` instead
+     */
+    getFromScope(scope, paths) {
+        return toValueSync(this._getFromScope(scope, paths));
+    }
+    *_getFromScope(scope, paths, strictVariables = this.strictVariables) {
+        if (isString(paths))
+            paths = paths.split('.');
+        for (let i = 0; i < paths.length; i++) {
+            scope = yield this.readProperty(scope, paths[i]);
+            if (strictVariables && isUndefined(scope)) {
+                throw new InternalUndefinedVariableError(paths.slice(0, i + 1).join('.'));
+            }
+        }
+        return scope;
+    }
+    push(ctx) {
+        return this.scopes.push(ctx);
+    }
+    pop() {
+        return this.scopes.pop();
+    }
+    bottom() {
+        return this.scopes[0];
+    }
+    spawn(scope = {}) {
+        return new Context(scope, this.opts, {
+            sync: this.sync,
+            globals: this.globals,
+            strictVariables: this.strictVariables,
+            ownPropertyOnly: this.ownPropertyOnly
+        }, {
+            renderLimit: this.renderLimit,
+            memoryLimit: this.memoryLimit
+        });
+    }
+    findScope(key) {
+        for (let i = this.scopes.length - 1; i >= 0; i--) {
+            const candidate = this.scopes[i];
+            if (key in candidate)
+                return candidate;
+        }
+        if (key in this.environments)
+            return this.environments;
+        return this.globals;
+    }
+    readProperty(obj, key) {
+        obj = toLiquid(obj);
+        key = toValue(key);
+        if (isNil(obj))
+            return obj;
+        if (isArray(obj) && key < 0)
+            return obj[obj.length + +key];
+        const value = readJSProperty(obj, key, this.ownPropertyOnly);
+        if (value === undefined && obj instanceof Drop)
+            return obj.liquidMethodMissing(key, this);
+        if (isFunction(value))
+            return value.call(obj);
+        if (key === 'size')
+            return readSize(obj);
+        else if (key === 'first')
+            return readFirst(obj);
+        else if (key === 'last')
+            return readLast(obj);
+        return value;
+    }
+}
+function readJSProperty(obj, key, ownPropertyOnly) {
+    if (ownPropertyOnly && !hasOwnProperty.call(obj, key) && !(obj instanceof Drop))
+        return undefined;
+    return obj[key];
+}
+function readFirst(obj) {
+    if (isArray(obj))
+        return obj[0];
+    return obj['first'];
+}
+function readLast(obj) {
+    if (isArray(obj))
+        return obj[obj.length - 1];
+    return obj['last'];
+}
+function readSize(obj) {
+    if (hasOwnProperty.call(obj, 'size') || obj['size'] !== undefined)
+        return obj['size'];
+    if (isArray(obj) || isString(obj))
+        return obj.length;
+    if (typeof obj === 'object')
+        return Object.keys(obj).length;
+}
+
+var BlockMode;
+(function (BlockMode) {
+    /* store rendered html into blocks */
+    BlockMode[BlockMode["OUTPUT"] = 0] = "OUTPUT";
+    /* output rendered html directly */
+    BlockMode[BlockMode["STORE"] = 1] = "STORE";
+})(BlockMode || (BlockMode = {}));
+
+const abs = argumentsToNumber(Math.abs);
+const at_least = argumentsToNumber(Math.max);
+const at_most = argumentsToNumber(Math.min);
+const ceil = argumentsToNumber(Math.ceil);
+const divided_by = argumentsToNumber((dividend, divisor, integerArithmetic = false) => integerArithmetic ? Math.floor(dividend / divisor) : dividend / divisor);
+const floor = argumentsToNumber(Math.floor);
+const minus = argumentsToNumber((v, arg) => v - arg);
+const plus = argumentsToNumber((lhs, rhs) => lhs + rhs);
+const modulo = argumentsToNumber((v, arg) => v % arg);
+const times = argumentsToNumber((v, arg) => v * arg);
+function round(v, arg = 0) {
+    v = toNumber(v);
+    arg = toNumber(arg);
+    const amp = Math.pow(10, arg);
+    const scaled = v * amp;
+    // Round half away from zero
+    return Math.sign(v) * Math.round(Math.abs(scaled)) / amp;
+}
+
+var mathFilters = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  abs: abs,
+  at_least: at_least,
+  at_most: at_most,
+  ceil: ceil,
+  divided_by: divided_by,
+  floor: floor,
+  minus: minus,
+  plus: plus,
+  modulo: modulo,
+  times: times,
+  round: round
+});
+
+const url_decode = (x) => decodeURIComponent(stringify(x)).replace(/\+/g, ' ');
+const url_encode = (x) => encodeURIComponent(stringify(x)).replace(/%20/g, '+');
+const cgi_escape = (x) => encodeURIComponent(stringify(x))
+    .replace(/%20/g, '+')
+    .replace(/[!'()*]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+const uri_escape = (x) => encodeURI(stringify(x))
+    .replace(/%5B/g, '[')
+    .replace(/%5D/g, ']');
+const rSlugifyDefault = /[^\p{M}\p{L}\p{Nd}]+/ug;
+const rSlugifyReplacers = {
+    'raw': /\s+/g,
+    'default': rSlugifyDefault,
+    'pretty': /[^\p{M}\p{L}\p{Nd}._~!$&'()+,;=@]+/ug,
+    'ascii': /[^A-Za-z0-9]+/g,
+    'latin': rSlugifyDefault,
+    'none': null
+};
+function slugify(str, mode = 'default', cased = false) {
+    str = stringify(str);
+    const replacer = rSlugifyReplacers[mode];
+    if (replacer) {
+        if (mode === 'latin')
+            str = removeAccents(str);
+        str = str.replace(replacer, '-').replace(/^-|-$/g, '');
+    }
+    return cased ? str : str.toLowerCase();
+}
+function removeAccents(str) {
+    return str.replace(/[àáâãäå]/g, 'a')
+        .replace(/[æ]/g, 'ae')
+        .replace(/[ç]/g, 'c')
+        .replace(/[èéêë]/g, 'e')
+        .replace(/[ìíîï]/g, 'i')
+        .replace(/[ð]/g, 'd')
+        .replace(/[ñ]/g, 'n')
+        .replace(/[òóôõöø]/g, 'o')
+        .replace(/[ùúûü]/g, 'u')
+        .replace(/[ýÿ]/g, 'y')
+        .replace(/[ß]/g, 'ss')
+        .replace(/[œ]/g, 'oe')
+        .replace(/[þ]/g, 'th')
+        .replace(/[ẞ]/g, 'SS')
+        .replace(/[Œ]/g, 'OE')
+        .replace(/[Þ]/g, 'TH');
+}
+
+var urlFilters = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  url_decode: url_decode,
+  url_encode: url_encode,
+  cgi_escape: cgi_escape,
+  uri_escape: uri_escape,
+  slugify: slugify
+});
+
+const join = argumentsToValue(function (v, arg) {
+    const array = toArray(v);
+    const sep = isNil(arg) ? ' ' : stringify(arg);
+    const complexity = array.length * (1 + sep.length);
+    this.context.memoryLimit.use(complexity);
+    return array.join(sep);
+});
+const last$1 = argumentsToValue((v) => isArrayLike(v) ? last(v) : '');
+const first = argumentsToValue((v) => isArrayLike(v) ? v[0] : '');
+const reverse = argumentsToValue(function (v) {
+    const array = toArray(v);
+    this.context.memoryLimit.use(array.length);
+    return [...array].reverse();
+});
+function* sortBy(arr, property, comparator) {
+    const values = [];
+    const array = toArray(arr);
+    this.context.memoryLimit.use(array.length);
+    for (const item of array) {
+        values.push([
+            item,
+            property ? yield this.context._getFromScope(item, stringify(property).split('.'), false) : item
+        ]);
+    }
+    return values.sort((lhs, rhs) => comparator(lhs[1], rhs[1])).map(tuple => tuple[0]);
+}
+function* sort(arr, property) {
+    return yield* sortBy.call(this, arr, property, orderedCompare);
+}
+function* sort_natural(arr, property) {
+    return yield* sortBy.call(this, arr, property, caseInsensitiveCompare);
+}
+const size = (v) => (v && v.length) || 0;
+function* map(arr, property) {
+    const results = [];
+    const array = toArray(arr);
+    this.context.memoryLimit.use(array.length);
+    for (const item of array) {
+        results.push(yield this.context._getFromScope(item, stringify(property), false));
+    }
+    return results;
+}
+function* sum(arr, property) {
+    let sum = 0;
+    const array = toArray(arr);
+    for (const item of array) {
+        const data = Number(property ? yield this.context._getFromScope(item, stringify(property), false) : item);
+        sum += Number.isNaN(data) ? 0 : data;
+    }
+    return sum;
+}
+function compact(arr) {
+    const array = toArray(arr);
+    this.context.memoryLimit.use(array.length);
+    return array.filter(x => !isNil(toValue(x)));
+}
+function concat(v, arg = []) {
+    const lhs = toArray(v);
+    const rhs = toArray(arg);
+    this.context.memoryLimit.use(lhs.length + rhs.length);
+    return lhs.concat(rhs);
+}
+function push(v, arg) {
+    return concat.call(this, v, [arg]);
+}
+function unshift(v, arg) {
+    const array = toArray(v);
+    this.context.memoryLimit.use(array.length);
+    const clone = [...array];
+    clone.unshift(arg);
+    return clone;
+}
+function pop(v) {
+    const clone = [...toArray(v)];
+    clone.pop();
+    return clone;
+}
+function shift(v) {
+    const array = toArray(v);
+    this.context.memoryLimit.use(array.length);
+    const clone = [...array];
+    clone.shift();
+    return clone;
+}
+function slice(v, begin, length = 1) {
+    v = toValue(v);
+    if (isNil(v))
+        return [];
+    if (!isArray(v))
+        v = stringify(v);
+    begin = begin < 0 ? v.length + begin : begin;
+    this.context.memoryLimit.use(length);
+    return v.slice(begin, begin + length);
+}
+function expectedMatcher(expected) {
+    if (this.context.opts.jekyllWhere) {
+        return (v) => EmptyDrop.is(expected) ? equals(v, expected) : (isArray(v) ? arrayIncludes(v, expected) : equals(v, expected));
+    }
+    else if (expected === undefined) {
+        return (v) => isTruthy(v, this.context);
+    }
+    else {
+        return (v) => equals(v, expected);
+    }
+}
+function* filter(include, arr, property, expected) {
+    const values = [];
+    arr = toArray(arr);
+    this.context.memoryLimit.use(arr.length);
+    const token = new Tokenizer(stringify(property)).readScopeValue();
+    for (const item of arr) {
+        values.push(yield evalToken(token, this.context.spawn(item)));
+    }
+    const matcher = expectedMatcher.call(this, expected);
+    return arr.filter((_, i) => matcher(values[i]) === include);
+}
+function* filter_exp(include, arr, itemName, exp) {
+    const filtered = [];
+    const keyTemplate = new Value(stringify(exp), this.liquid);
+    const array = toArray(arr);
+    this.context.memoryLimit.use(array.length);
+    for (const item of array) {
+        this.context.push({ [itemName]: item });
+        const value = yield keyTemplate.value(this.context);
+        this.context.pop();
+        if (value === include)
+            filtered.push(item);
+    }
+    return filtered;
+}
+function* where(arr, property, expected) {
+    return yield* filter.call(this, true, arr, property, expected);
+}
+function* reject(arr, property, expected) {
+    return yield* filter.call(this, false, arr, property, expected);
+}
+function* where_exp(arr, itemName, exp) {
+    return yield* filter_exp.call(this, true, arr, itemName, exp);
+}
+function* reject_exp(arr, itemName, exp) {
+    return yield* filter_exp.call(this, false, arr, itemName, exp);
+}
+function* group_by(arr, property) {
+    const map = new Map();
+    arr = toEnumerable(arr);
+    const token = new Tokenizer(stringify(property)).readScopeValue();
+    this.context.memoryLimit.use(arr.length);
+    for (const item of arr) {
+        const key = yield evalToken(token, this.context.spawn(item));
+        if (!map.has(key))
+            map.set(key, []);
+        map.get(key).push(item);
+    }
+    return [...map.entries()].map(([name, items]) => ({ name, items }));
+}
+function* group_by_exp(arr, itemName, exp) {
+    const map = new Map();
+    const keyTemplate = new Value(stringify(exp), this.liquid);
+    arr = toEnumerable(arr);
+    this.context.memoryLimit.use(arr.length);
+    for (const item of arr) {
+        this.context.push({ [itemName]: item });
+        const key = yield keyTemplate.value(this.context);
+        this.context.pop();
+        if (!map.has(key))
+            map.set(key, []);
+        map.get(key).push(item);
+    }
+    return [...map.entries()].map(([name, items]) => ({ name, items }));
+}
+function* search(arr, property, expected) {
+    const token = new Tokenizer(stringify(property)).readScopeValue();
+    const array = toArray(arr);
+    const matcher = expectedMatcher.call(this, expected);
+    for (let index = 0; index < array.length; index++) {
+        const value = yield evalToken(token, this.context.spawn(array[index]));
+        if (matcher(value))
+            return [index, array[index]];
+    }
+}
+function* search_exp(arr, itemName, exp) {
+    const predicate = new Value(stringify(exp), this.liquid);
+    const array = toArray(arr);
+    for (let index = 0; index < array.length; index++) {
+        this.context.push({ [itemName]: array[index] });
+        const value = yield predicate.value(this.context);
+        this.context.pop();
+        if (value)
+            return [index, array[index]];
+    }
+}
+function* has(arr, property, expected) {
+    const result = yield* search.call(this, arr, property, expected);
+    return !!result;
+}
+function* has_exp(arr, itemName, exp) {
+    const result = yield* search_exp.call(this, arr, itemName, exp);
+    return !!result;
+}
+function* find_index(arr, property, expected) {
+    const result = yield* search.call(this, arr, property, expected);
+    return result ? result[0] : undefined;
+}
+function* find_index_exp(arr, itemName, exp) {
+    const result = yield* search_exp.call(this, arr, itemName, exp);
+    return result ? result[0] : undefined;
+}
+function* find(arr, property, expected) {
+    const result = yield* search.call(this, arr, property, expected);
+    return result ? result[1] : undefined;
+}
+function* find_exp(arr, itemName, exp) {
+    const result = yield* search_exp.call(this, arr, itemName, exp);
+    return result ? result[1] : undefined;
+}
+function uniq(arr) {
+    arr = toArray(arr);
+    this.context.memoryLimit.use(arr.length);
+    return [...new Set(arr)];
+}
+function sample(v, count = 1) {
+    v = toValue(v);
+    if (isNil(v))
+        return [];
+    if (!isArray(v))
+        v = stringify(v);
+    this.context.memoryLimit.use(count);
+    const shuffled = [...v].sort(() => Math.random() - 0.5);
+    if (count === 1)
+        return shuffled[0];
+    return shuffled.slice(0, count);
+}
+
+var arrayFilters = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  join: join,
+  last: last$1,
+  first: first,
+  reverse: reverse,
+  sort: sort,
+  sort_natural: sort_natural,
+  size: size,
+  map: map,
+  sum: sum,
+  compact: compact,
+  concat: concat,
+  push: push,
+  unshift: unshift,
+  pop: pop,
+  shift: shift,
+  slice: slice,
+  where: where,
+  reject: reject,
+  where_exp: where_exp,
+  reject_exp: reject_exp,
+  group_by: group_by,
+  group_by_exp: group_by_exp,
+  has: has,
+  has_exp: has_exp,
+  find_index: find_index,
+  find_index_exp: find_index_exp,
+  find: find,
+  find_exp: find_exp,
+  uniq: uniq,
+  sample: sample
+});
+
+function date(v, format, timezoneOffset) {
+    const size = (v?.length ?? 0) + (timezoneOffset?.length ?? 0);
+    this.context.memoryLimit.use(size);
+    const date = parseDate(v, this.context.opts, timezoneOffset);
+    if (!date)
+        return v;
+    format = toValue(format);
+    format = isNil(format) ? this.context.opts.dateFormat : stringify(format);
+    this.context.memoryLimit.use(format.length);
+    return strftime(date, format, this.context.memoryLimit);
+}
+function date_to_xmlschema(v) {
+    return date.call(this, v, '%Y-%m-%dT%H:%M:%S%:z');
+}
+function date_to_rfc822(v) {
+    return date.call(this, v, '%a, %d %b %Y %H:%M:%S %z');
+}
+function date_to_string(v, type, style) {
+    return stringify_date.call(this, v, '%b', type, style);
+}
+function date_to_long_string(v, type, style) {
+    return stringify_date.call(this, v, '%B', type, style);
+}
+function stringify_date(v, month_type, type, style) {
+    const date = parseDate(v, this.context.opts);
+    if (!date)
+        return v;
+    const ml = this.context.memoryLimit;
+    if (type === 'ordinal') {
+        const d = date.getDate();
+        return style === 'US'
+            ? strftime(date, `${month_type} ${d}%q, %Y`, ml)
+            : strftime(date, `${d}%q ${month_type} %Y`, ml);
+    }
+    return strftime(date, `%d ${month_type} %Y`, ml);
+}
+function parseDate(v, opts, timezoneOffset) {
+    let date;
+    const defaultTimezoneOffset = timezoneOffset ?? opts.timezoneOffset;
+    const locale = opts.locale;
+    v = toValue(v);
+    if (isNil(v)) {
+        return undefined;
+    }
+    else if (v === 'now' || v === 'today') {
+        date = new LiquidDate(Date.now(), locale, defaultTimezoneOffset);
+    }
+    else if (isNumber(v)) {
+        date = new LiquidDate(v * 1000, locale, defaultTimezoneOffset);
+    }
+    else if (isString(v)) {
+        if (/^\d+$/.test(v)) {
+            date = new LiquidDate(+v * 1000, locale, defaultTimezoneOffset);
+        }
+        else if (opts.preserveTimezones && timezoneOffset === undefined) {
+            date = LiquidDate.createDateFixedToTimezone(v, locale);
+        }
+        else {
+            date = new LiquidDate(v, locale, defaultTimezoneOffset);
+        }
+    }
+    else {
+        date = new LiquidDate(v, locale, defaultTimezoneOffset);
+    }
+    return date.valid() ? date : undefined;
+}
+
+var dateFilters = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  date: date,
+  date_to_xmlschema: date_to_xmlschema,
+  date_to_rfc822: date_to_rfc822,
+  date_to_string: date_to_string,
+  date_to_long_string: date_to_long_string
+});
+
+/**
+ * String related filters
+ *
+ * * prefer stringify() to String() since `undefined`, `null` should eval ''
+ */
+const rCJKWord = /[\u4E00-\u9FFF\uF900-\uFAFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF]/gu;
+// Word boundary followed by word characters (for detecting words)
+const rNonCJKWord = /[^\u4E00-\u9FFF\uF900-\uFAFF\u3400-\u4DBF\u3040-\u309F\u30A0-\u30FF\uAC00-\uD7AF\s]+/gu;
+function append(v, arg) {
+    assert(arguments.length === 2, 'append expect 2 arguments');
+    const lhs = stringify(v);
+    const rhs = stringify(arg);
+    this.context.memoryLimit.use(lhs.length + rhs.length);
+    return lhs + rhs;
+}
+function prepend(v, arg) {
+    assert(arguments.length === 2, 'prepend expect 2 arguments');
+    const lhs = stringify(v);
+    const rhs = stringify(arg);
+    this.context.memoryLimit.use(lhs.length + rhs.length);
+    return rhs + lhs;
+}
+function lstrip(v, chars) {
+    const str = stringify(v);
+    this.context.memoryLimit.use(str.length);
+    if (chars) {
+        chars = stringify(chars);
+        this.context.memoryLimit.use(chars.length);
+        for (let i = 0, set = new Set(chars); i < str.length; i++) {
+            if (!set.has(str[i]))
+                return str.slice(i);
+        }
+        return '';
+    }
+    return str.trimStart();
+}
+function downcase(v) {
+    const str = stringify(v);
+    this.context.memoryLimit.use(str.length);
+    return str.toLowerCase();
+}
+function upcase(v) {
+    const str = stringify(v);
+    this.context.memoryLimit.use(str.length);
+    return stringify(str).toUpperCase();
+}
+function remove(v, arg) {
+    const str = stringify(v);
+    arg = stringify(arg);
+    this.context.memoryLimit.use(str.length + arg.length);
+    return str.split(arg).join('');
+}
+function remove_first(v, l) {
+    const str = stringify(v);
+    l = stringify(l);
+    this.context.memoryLimit.use(str.length + l.length);
+    return str.replace(l, '');
+}
+function remove_last(v, l) {
+    const str = stringify(v);
+    const pattern = stringify(l);
+    this.context.memoryLimit.use(str.length + pattern.length);
+    const index = str.lastIndexOf(pattern);
+    if (index === -1)
+        return str;
+    return str.substring(0, index) + str.substring(index + pattern.length);
+}
+function rstrip(str, chars) {
+    str = stringify(str);
+    this.context.memoryLimit.use(str.length);
+    if (chars) {
+        chars = stringify(chars);
+        this.context.memoryLimit.use(chars.length);
+        for (let i = str.length - 1, set = new Set(chars); i >= 0; i--) {
+            if (!set.has(str[i]))
+                return str.slice(0, i + 1);
+        }
+        return '';
+    }
+    return str.trimEnd();
+}
+function split(v, arg) {
+    const str = stringify(v);
+    this.context.memoryLimit.use(str.length);
+    const arr = str.split(stringify(arg));
+    // align to ruby split, which is the behavior of shopify/liquid
+    // see: https://ruby-doc.org/core-2.4.0/String.html#method-i-split
+    while (arr.length && arr[arr.length - 1] === '')
+        arr.pop();
+    return arr;
+}
+function strip(v, chars) {
+    const str = stringify(v);
+    this.context.memoryLimit.use(str.length);
+    if (chars) {
+        const set = new Set(stringify(chars));
+        this.context.memoryLimit.use(set.size);
+        let i = 0;
+        let j = str.length - 1;
+        while (set.has(str[i]))
+            i++;
+        while (j >= i && set.has(str[j]))
+            j--;
+        return str.slice(i, j + 1);
+    }
+    return str.trim();
+}
+function strip_newlines(v) {
+    const str = stringify(v);
+    this.context.memoryLimit.use(str.length);
+    return str.replace(/\r?\n/gm, '');
+}
+function capitalize(str) {
+    str = stringify(str);
+    this.context.memoryLimit.use(str.length);
+    return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+}
+function replace(v, pattern, replacement) {
+    const str = stringify(v);
+    pattern = stringify(pattern);
+    replacement = stringify(replacement);
+    const parts = str.split(pattern);
+    const outputSize = str.length + (parts.length - 1) * (replacement.length - pattern.length);
+    this.context.memoryLimit.use(outputSize);
+    return parts.join(replacement);
+}
+function replace_first(v, arg1, arg2) {
+    const str = stringify(v);
+    arg1 = stringify(arg1);
+    arg2 = stringify(arg2);
+    this.context.memoryLimit.use(str.length + arg1.length + arg2.length);
+    return str.replace(arg1, () => arg2);
+}
+function replace_last(v, arg1, arg2) {
+    const str = stringify(v);
+    const pattern = stringify(arg1);
+    const replacement = stringify(arg2);
+    this.context.memoryLimit.use(str.length + pattern.length + replacement.length);
+    const index = str.lastIndexOf(pattern);
+    if (index === -1)
+        return str;
+    return str.substring(0, index) + replacement + str.substring(index + pattern.length);
+}
+function truncate(v, l = 50, o = '...') {
+    const str = stringify(v);
+    o = stringify(o);
+    this.context.memoryLimit.use(str.length + o.length);
+    if (str.length <= l)
+        return v;
+    return str.substring(0, l - o.length) + o;
+}
+function truncatewords(v, words = 15, o = '...') {
+    const str = stringify(v);
+    o = stringify(o);
+    this.context.memoryLimit.use(str.length + o.length);
+    const arr = str.split(/\s+/);
+    if (words <= 0)
+        words = 1;
+    let ret = arr.slice(0, words).join(' ');
+    if (arr.length >= words)
+        ret += o;
+    return ret;
+}
+function normalize_whitespace(v) {
+    const str = stringify(v);
+    this.context.memoryLimit.use(str.length);
+    return str.replace(/\s+/g, ' ');
+}
+function number_of_words(input, mode) {
+    const str = stringify(input);
+    this.context.memoryLimit.use(str.length);
+    input = str.trim();
+    if (!input)
+        return 0;
+    switch (mode) {
+        case 'cjk':
+            // Count CJK characters and words
+            return (input.match(rCJKWord) || []).length + (input.match(rNonCJKWord) || []).length;
+        case 'auto':
+            // Count CJK characters, if none, count words
+            return rCJKWord.test(input)
+                ? input.match(rCJKWord).length + (input.match(rNonCJKWord) || []).length
+                : input.split(/\s+/).length;
+        default:
+            // Count words only
+            return input.split(/\s+/).length;
+    }
+}
+function array_to_sentence_string(array, connector = 'and') {
+    connector = stringify(connector);
+    this.context.memoryLimit.use(array.length + connector.length);
+    switch (array.length) {
+        case 0:
+            return '';
+        case 1:
+            return array[0];
+        case 2:
+            return `${array[0]} ${connector} ${array[1]}`;
+        default:
+            return `${array.slice(0, -1).join(', ')}, ${connector} ${array[array.length - 1]}`;
+    }
+}
+
+var stringFilters = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  append: append,
+  prepend: prepend,
+  lstrip: lstrip,
+  downcase: downcase,
+  upcase: upcase,
+  remove: remove,
+  remove_first: remove_first,
+  remove_last: remove_last,
+  rstrip: rstrip,
+  split: split,
+  strip: strip,
+  strip_newlines: strip_newlines,
+  capitalize: capitalize,
+  replace: replace,
+  replace_first: replace_first,
+  replace_last: replace_last,
+  truncate: truncate,
+  truncatewords: truncatewords,
+  normalize_whitespace: normalize_whitespace,
+  number_of_words: number_of_words,
+  array_to_sentence_string: array_to_sentence_string
+});
+
+function base64Encode(str) {
+    return Buffer.from(str, 'utf8').toString('base64');
+}
+function base64Decode(str) {
+    return Buffer.from(str, 'base64').toString('utf8');
+}
+
+/**
+ * Base64 related filters
+ *
+ * Implements base64_encode and base64_decode filters for Shopify compatibility
+ */
+function base64_encode(value) {
+    if (typeof Buffer !== 'undefined' && Buffer.isBuffer(value)) {
+        this.context.memoryLimit.use(value.byteLength);
+        return value.toString('base64');
+    }
+    const str = stringify(value);
+    this.context.memoryLimit.use(str.length);
+    return base64Encode(str);
+}
+function base64_decode(value) {
+    const str = stringify(value);
+    this.context.memoryLimit.use(str.length);
+    return base64Decode(str);
+}
+
+var base64Filters = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  base64_encode: base64_encode,
+  base64_decode: base64_decode
+});
+
+function sha256(str) {
+    return crypto.createHash('sha256').update(str, 'utf8').digest('hex');
+}
+function hmacSha256(str, key) {
+    return crypto.createHmac('sha256', key).update(str, 'utf8').digest('hex');
+}
+
+/**
+ * Crypto related filters
+ *
+ * Implements sha256 and hmac_sha256 filters for Shopify compatibility
+ */
+function sha256$1(value) {
+    const str = stringify(value);
+    this.context.memoryLimit.use(str.length);
+    return sha256(str);
+}
+function hmac_sha256(value, key) {
+    const str = stringify(value);
+    const keyStr = stringify(key);
+    this.context.memoryLimit.use(str.length + keyStr.length);
+    return hmacSha256(str, keyStr);
+}
+
+var cryptoFilters = /*#__PURE__*/Object.freeze({
+  __proto__: null,
+  sha256: sha256$1,
+  hmac_sha256: hmac_sha256
+});
+
+const filters = {
+    ...htmlFilters,
+    ...mathFilters,
+    ...urlFilters,
+    ...arrayFilters,
+    ...dateFilters,
+    ...stringFilters,
+    ...base64Filters,
+    ...cryptoFilters,
+    ...misc
+};
+
+class AssignTag extends Tag {
+    constructor(token, remainTokens, liquid) {
+        super(token, remainTokens, liquid);
+        this.identifier = this.tokenizer.readIdentifier();
+        this.key = this.identifier.content;
+        this.tokenizer.assert(this.key, 'expected variable name');
+        this.tokenizer.skipBlank();
+        this.tokenizer.assert(this.tokenizer.peek() === '=', 'expected "="');
+        this.tokenizer.advance();
+        this.value = new Value(this.tokenizer.readFilteredValue(), this.liquid);
+    }
+    *render(ctx) {
+        ctx.bottom()[this.key] = yield this.value.value(ctx, this.liquid.options.lenientIf);
+    }
+    *arguments() {
+        yield this.value;
+    }
+    *localScope() {
+        yield this.identifier;
+    }
+}
+
+const MODIFIERS = ['offset', 'limit', 'reversed'];
+class ForTag extends Tag {
+    constructor(token, remainTokens, liquid, parser) {
+        super(token, remainTokens, liquid);
+        const variable = this.tokenizer.readIdentifier();
+        const inStr = this.tokenizer.readIdentifier();
+        const collection = this.tokenizer.readValue();
+        if (!variable.size() || inStr.content !== 'in' || !collection) {
+            throw new Error(`illegal tag: ${token.getText()}`);
+        }
+        this.variable = variable.content;
+        this.collection = collection;
+        this.hash = new Hash(this.tokenizer, liquid.options.keyValueSeparator);
+        this.templates = [];
+        this.elseTemplates = [];
+        let p;
+        const stream = parser.parseStream(remainTokens)
+            .on('start', () => (p = this.templates))
+            .on('tag:else', tag => { assertEmpty(tag.args); p = this.elseTemplates; })
+            .on('tag:endfor', tag => { assertEmpty(tag.args); stream.stop(); })
+            .on('template', (tpl) => p.push(tpl))
+            .on('end', () => { throw new Error(`tag ${token.getText()} not closed`); });
+        stream.start();
+    }
+    *render(ctx, emitter) {
+        const r = this.liquid.renderer;
+        let collection = toEnumerable(yield evalToken(this.collection, ctx));
+        if (!collection.length) {
+            yield r.renderTemplates(this.elseTemplates, ctx, emitter);
+            return;
+        }
+        const continueKey = 'continue-' + this.variable + '-' + this.collection.getText();
+        ctx.push(createScope({ continue: ctx.getRegister(continueKey, {}) }));
+        const hash = yield this.hash.render(ctx);
+        ctx.pop();
+        const modifiers = this.liquid.options.orderedFilterParameters
+            ? Object.keys(hash).filter(x => MODIFIERS.includes(x))
+            : MODIFIERS.filter(x => hash[x] !== undefined);
+        collection = modifiers.reduce((collection, modifier) => {
+            if (modifier === 'offset')
+                return offset(collection, hash['offset']);
+            if (modifier === 'limit')
+                return limit(collection, hash['limit']);
+            return reversed(collection);
+        }, collection);
+        ctx.setRegister(continueKey, (hash['offset'] || 0) + collection.length);
+        const scope = createScope({ forloop: new ForloopDrop(collection.length, this.collection.getText(), this.variable) });
+        ctx.push(scope);
+        for (const item of collection) {
+            scope[this.variable] = item;
+            ctx.continueCalled = ctx.breakCalled = false;
+            yield r.renderTemplates(this.templates, ctx, emitter);
+            if (ctx.breakCalled)
+                break;
+            scope.forloop.next();
+        }
+        ctx.continueCalled = ctx.breakCalled = false;
+        ctx.pop();
+    }
+    *children() {
+        const templates = this.templates.slice();
+        if (this.elseTemplates) {
+            templates.push(...this.elseTemplates);
+        }
+        return templates;
+    }
+    *arguments() {
+        yield this.collection;
+        for (const v of Object.values(this.hash.hash)) {
+            if (isValueToken(v)) {
+                yield v;
+            }
+        }
+    }
+    blockScope() {
+        return [this.variable, 'forloop'];
+    }
+}
+function reversed(arr) {
+    return [...arr].reverse();
+}
+function offset(arr, count) {
+    return arr.slice(count);
+}
+function limit(arr, count) {
+    return arr.slice(0, count);
+}
+
+class CaptureTag extends Tag {
+    constructor(tagToken, remainTokens, liquid, parser) {
+        super(tagToken, remainTokens, liquid);
+        this.templates = [];
+        this.identifier = this.readVariable();
+        this.variable = this.identifier.content;
+        while (remainTokens.length) {
+            const token = remainTokens.shift();
+            if (isTagToken(token) && token.name === 'endcapture')
+                return;
+            this.templates.push(parser.parseToken(token, remainTokens));
+        }
+        throw new Error(`tag ${tagToken.getText()} not closed`);
+    }
+    readVariable() {
+        let ident = this.tokenizer.readIdentifier();
+        if (ident.content)
+            return ident;
+        ident = this.tokenizer.readQuoted();
+        if (ident)
+            return ident;
+        throw this.tokenizer.error('invalid capture name');
+    }
+    *render(ctx) {
+        const r = this.liquid.renderer;
+        const html = yield r.renderTemplates(this.templates, ctx);
+        ctx.bottom()[this.variable] = html;
+    }
+    *children() {
+        return this.templates;
+    }
+    *localScope() {
+        yield this.identifier;
+    }
+}
+
+class CaseTag extends Tag {
+    constructor(tagToken, remainTokens, liquid, parser) {
+        super(tagToken, remainTokens, liquid);
+        this.branches = [];
+        this.elseTemplates = [];
+        this.value = new Value(this.tokenizer.readFilteredValue(), this.liquid);
+        this.elseTemplates = [];
+        let p = [];
+        let elseCount = 0;
+        const stream = parser.parseStream(remainTokens)
+            .on('tag:when', (token) => {
+            if (elseCount > 0) {
+                return;
+            }
+            p = [];
+            const values = [];
+            while (!token.tokenizer.end()) {
+                values.push(token.tokenizer.readValueOrThrow());
+                token.tokenizer.skipBlank();
+                if (token.tokenizer.peek() === ',') {
+                    token.tokenizer.readTo(',');
+                }
+                else {
+                    token.tokenizer.readTo('or');
+                }
+            }
+            this.branches.push({
+                values,
+                templates: p
+            });
+        })
+            .on('tag:else', () => {
+            elseCount++;
+            p = this.elseTemplates;
+        })
+            .on('tag:endcase', () => stream.stop())
+            .on('template', (tpl) => {
+            if (p !== this.elseTemplates || elseCount === 1) {
+                p.push(tpl);
+            }
+        })
+            .on('end', () => {
+            throw new Error(`tag ${tagToken.getText()} not closed`);
+        });
+        stream.start();
+    }
+    *render(ctx, emitter) {
+        const r = this.liquid.renderer;
+        const target = toValue(yield this.value.value(ctx, ctx.opts.lenientIf));
+        let branchHit = false;
+        for (const branch of this.branches) {
+            for (const valueToken of branch.values) {
+                const value = yield evalToken(valueToken, ctx, ctx.opts.lenientIf);
+                if (equals(target, value)) {
+                    yield r.renderTemplates(branch.templates, ctx, emitter);
+                    branchHit = true;
+                    break;
+                }
+            }
+        }
+        if (!branchHit) {
+            yield r.renderTemplates(this.elseTemplates, ctx, emitter);
+        }
+    }
+    *arguments() {
+        yield this.value;
+        yield* this.branches.flatMap(b => b.values);
+    }
+    *children() {
+        const templates = this.branches.flatMap(b => b.templates);
+        if (this.elseTemplates) {
+            templates.push(...this.elseTemplates);
+        }
+        return templates;
+    }
+}
+
+class CommentTag extends Tag {
+    constructor(tagToken, remainTokens, liquid) {
+        super(tagToken, remainTokens, liquid);
+        while (remainTokens.length) {
+            const token = remainTokens.shift();
+            if (isTagToken(token) && token.name === 'endcomment')
+                return;
+        }
+        throw new Error(`tag ${tagToken.getText()} not closed`);
+    }
+    render() { }
+}
+
+class RenderTag extends Tag {
+    constructor(token, remainTokens, liquid, parser) {
+        super(token, remainTokens, liquid);
+        const tokenizer = this.tokenizer;
+        this.file = parseFilePath(tokenizer, this.liquid, parser);
+        this.currentFile = token.file;
+        while (!tokenizer.end()) {
+            tokenizer.skipBlank();
+            const begin = tokenizer.p;
+            const keyword = tokenizer.readIdentifier();
+            if (keyword.content === 'with' || keyword.content === 'for') {
+                tokenizer.skipBlank();
+                // can be normal key/value pair, like "with: true"
+                if (tokenizer.peek() !== ':') {
+                    const value = tokenizer.readValue();
+                    // can be normal key, like "with,"
+                    if (value) {
+                        const beforeAs = tokenizer.p;
+                        const asStr = tokenizer.readIdentifier();
+                        let alias;
+                        if (asStr.content === 'as')
+                            alias = tokenizer.readIdentifier();
+                        else
+                            tokenizer.p = beforeAs;
+                        this[keyword.content] = { value, alias: alias && alias.content };
+                        tokenizer.skipBlank();
+                        if (tokenizer.peek() === ',')
+                            tokenizer.advance();
+                        continue; // matched!
+                    }
+                }
+            }
+            /**
+             * restore cursor if with/for not matched
+             */
+            tokenizer.p = begin;
+            break;
+        }
+        this.hash = new Hash(tokenizer, liquid.options.keyValueSeparator);
+    }
+    *render(ctx, emitter) {
+        const { liquid, hash } = this;
+        const filepath = (yield renderFilePath(this['file'], ctx, liquid));
+        assert(filepath, () => `illegal file path "${filepath}"`);
+        const childCtx = ctx.spawn();
+        const scope = childCtx.bottom();
+        __assign(scope, yield hash.render(ctx));
+        if (this['with']) {
+            const { value, alias } = this['with'];
+            scope[alias || filepath] = yield evalToken(value, ctx);
+        }
+        if (this['for']) {
+            const { value, alias } = this['for'];
+            const collection = toEnumerable(yield evalToken(value, ctx));
+            scope['forloop'] = new ForloopDrop(collection.length, value.getText(), alias);
+            for (const item of collection) {
+                scope[alias] = item;
+                const templates = (yield liquid._parsePartialFile(filepath, childCtx.sync, this['currentFile']));
+                yield liquid.renderer.renderTemplates(templates, childCtx, emitter);
+                scope['forloop'].next();
+            }
+        }
+        else {
+            const templates = (yield liquid._parsePartialFile(filepath, childCtx.sync, this['currentFile']));
+            yield liquid.renderer.renderTemplates(templates, childCtx, emitter);
+        }
+    }
+    *children(partials, sync) {
+        if (partials && isString(this['file'])) {
+            return (yield this.liquid._parsePartialFile(this['file'], sync, this['currentFile']));
+        }
+        return [];
+    }
+    partialScope() {
+        if (isString(this['file'])) {
+            const names = Object.keys(this.hash.hash);
+            if (this['with']) {
+                const { value, alias } = this['with'];
+                if (isString(alias)) {
+                    names.push([alias, value]);
+                }
+                else if (isString(this.file)) {
+                    names.push([this.file, value]);
+                }
+            }
+            if (this['for']) {
+                const { value, alias } = this['for'];
+                if (isString(alias)) {
+                    names.push([alias, value]);
+                }
+                else if (isString(this.file)) {
+                    names.push([this.file, value]);
+                }
+            }
+            return { name: this['file'], isolated: true, scope: names };
+        }
+    }
+    *arguments() {
+        for (const v of Object.values(this.hash.hash)) {
+            if (isValueToken(v)) {
+                yield v;
+            }
+        }
+        if (this['with']) {
+            const { value } = this['with'];
+            if (isValueToken(value)) {
+                yield value;
+            }
+        }
+        if (this['for']) {
+            const { value } = this['for'];
+            if (isValueToken(value)) {
+                yield value;
+            }
+        }
+    }
+}
+/**
+ * @return null for "none",
+ * @return Template[] for quoted with tags and/or filters
+ * @return Token for expression (not quoted)
+ * @throws TypeError if cannot read next token
+ */
+function parseFilePath(tokenizer, liquid, parser) {
+    if (liquid.options.dynamicPartials) {
+        const file = tokenizer.readValue();
+        tokenizer.assert(file, 'illegal file path');
+        if (file.getText() === 'none')
+            return;
+        if (isQuotedToken(file)) {
+            // for filenames like "files/{{file}}", eval as liquid template
+            const templates = parser.parse(evalQuotedToken(file));
+            return optimize(templates);
+        }
+        return file;
+    }
+    const tokens = [...tokenizer.readFileNameTemplate(liquid.options)];
+    const templates = optimize(parser.parseTokens(tokens));
+    return templates === 'none' ? undefined : templates;
+}
+function optimize(templates) {
+    // for filenames like "files/file.liquid", extract the string directly
+    if (templates.length === 1 && isHTMLToken(templates[0].token))
+        return templates[0].token.getContent();
+    return templates;
+}
+function* renderFilePath(file, ctx, liquid) {
+    if (typeof file === 'string')
+        return file;
+    if (Array.isArray(file))
+        return liquid.renderer.renderTemplates(file, ctx);
+    return yield evalToken(file, ctx);
+}
+
+class IncludeTag extends Tag {
+    constructor(token, remainTokens, liquid, parser) {
+        super(token, remainTokens, liquid);
+        const { tokenizer } = token;
+        this['file'] = parseFilePath(tokenizer, this.liquid, parser);
+        this['currentFile'] = token.file;
+        const begin = tokenizer.p;
+        const withStr = tokenizer.readIdentifier();
+        if (withStr.content === 'with') {
+            tokenizer.skipBlank();
+            if (tokenizer.peek() !== ':') {
+                this.withVar = tokenizer.readValue();
+            }
+            else
+                tokenizer.p = begin;
+        }
+        else
+            tokenizer.p = begin;
+        this.hash = new Hash(tokenizer, liquid.options.jekyllInclude || liquid.options.keyValueSeparator);
+    }
+    *render(ctx, emitter) {
+        const { liquid, hash, withVar } = this;
+        const { renderer } = liquid;
+        const filepath = (yield renderFilePath(this['file'], ctx, liquid));
+        assert(filepath, () => `illegal file path "${filepath}"`);
+        const saved = ctx.saveRegister('blocks', 'blockMode');
+        ctx.setRegister('blocks', {});
+        ctx.setRegister('blockMode', BlockMode.OUTPUT);
+        const scope = createScope((yield hash.render(ctx)));
+        if (withVar)
+            scope[filepath] = yield evalToken(withVar, ctx);
+        const templates = (yield liquid._parsePartialFile(filepath, ctx.sync, this['currentFile']));
+        ctx.push(ctx.opts.jekyllInclude ? createScope({ include: scope }) : scope);
+        yield renderer.renderTemplates(templates, ctx, emitter);
+        ctx.pop();
+        ctx.restoreRegister(saved);
+    }
+    *children(partials, sync) {
+        if (partials && isString(this['file'])) {
+            return (yield this.liquid._parsePartialFile(this['file'], sync, this['currentFile']));
+        }
+        return [];
+    }
+    partialScope() {
+        if (isString(this['file'])) {
+            let names;
+            if (this.liquid.options.jekyllInclude) {
+                names = ['include'];
+            }
+            else {
+                names = Object.keys(this.hash.hash);
+                if (this.withVar) {
+                    names.push([this['file'], this.withVar]);
+                }
+            }
+            return { name: this['file'], isolated: false, scope: names };
+        }
+    }
+    *arguments() {
+        yield* Object.values(this.hash.hash).filter(isValueToken);
+        if (isValueToken(this['file'])) {
+            yield this['file'];
+        }
+        if (isValueToken(this.withVar)) {
+            yield this.withVar;
+        }
+    }
+}
+
+class DecrementTag extends Tag {
+    constructor(token, remainTokens, liquid) {
+        super(token, remainTokens, liquid);
+        this.identifier = this.tokenizer.readIdentifier();
+        this.variable = this.identifier.content;
+    }
+    render(context, emitter) {
+        const scope = context.environments;
+        if (!isNumber(scope[this.variable])) {
+            scope[this.variable] = 0;
+        }
+        emitter.write(stringify(--scope[this.variable]));
+    }
+    *localScope() {
+        yield this.identifier;
+    }
+}
+
+class CycleTag extends Tag {
+    constructor(token, remainTokens, liquid) {
+        super(token, remainTokens, liquid);
+        this.candidates = [];
+        const group = this.tokenizer.readValue();
+        this.tokenizer.skipBlank();
+        if (group) {
+            if (this.tokenizer.peek() === ':') {
+                this.group = group;
+                this.tokenizer.advance();
+            }
+            else
+                this.candidates.push(group);
+        }
+        while (!this.tokenizer.end()) {
+            const value = this.tokenizer.readValue();
+            if (value)
+                this.candidates.push(value);
+            this.tokenizer.readTo(',');
+        }
+        this.tokenizer.assert(this.candidates.length, () => `empty candidates: "${token.getText()}"`);
+    }
+    *render(ctx, emitter) {
+        const group = (yield evalToken(this.group, ctx));
+        const fingerprint = `cycle:${group}:` + this.candidates.join(',');
+        const groups = ctx.getRegister('cycle', {});
+        let idx = groups[fingerprint];
+        if (idx === undefined) {
+            idx = groups[fingerprint] = 0;
+        }
+        const candidate = this.candidates[idx];
+        idx = (idx + 1) % this.candidates.length;
+        groups[fingerprint] = idx;
+        return yield evalToken(candidate, ctx);
+    }
+    *arguments() {
+        yield* this.candidates;
+        if (this.group) {
+            yield this.group;
+        }
+    }
+}
+
+class IfTag extends Tag {
+    constructor(tagToken, remainTokens, liquid, parser) {
+        super(tagToken, remainTokens, liquid);
+        this.branches = [];
+        let p = [];
+        parser.parseStream(remainTokens)
+            .on('start', () => this.branches.push({
+            value: new Value(tagToken.tokenizer.readFilteredValue(), this.liquid),
+            templates: (p = [])
+        }))
+            .on('tag:elsif', (token) => {
+            assert(!this.elseTemplates, 'unexpected elsif after else');
+            this.branches.push({
+                value: new Value(token.tokenizer.readFilteredValue(), this.liquid),
+                templates: (p = [])
+            });
+        })
+            .on('tag:else', tag => {
+            assertEmpty(tag.args);
+            assert(!this.elseTemplates, 'duplicated else');
+            p = this.elseTemplates = [];
+        })
+            .on('tag:endif', function (tag) { assertEmpty(tag.args); this.stop(); })
+            .on('template', (tpl) => p.push(tpl))
+            .on('end', () => { throw new Error(`tag ${tagToken.getText()} not closed`); })
+            .start();
+    }
+    *render(ctx, emitter) {
+        const r = this.liquid.renderer;
+        for (const { value, templates } of this.branches) {
+            const v = yield value.value(ctx, ctx.opts.lenientIf);
+            if (isTruthy(v, ctx)) {
+                yield r.renderTemplates(templates, ctx, emitter);
+                return;
+            }
+        }
+        yield r.renderTemplates(this.elseTemplates || [], ctx, emitter);
+    }
+    *children() {
+        const templates = this.branches.flatMap(b => b.templates);
+        if (this.elseTemplates) {
+            templates.push(...this.elseTemplates);
+        }
+        return templates;
+    }
+    arguments() {
+        return this.branches.map(b => b.value);
+    }
+}
+
+class IncrementTag extends Tag {
+    constructor(token, remainTokens, liquid) {
+        super(token, remainTokens, liquid);
+        this.identifier = this.tokenizer.readIdentifier();
+        this.variable = this.identifier.content;
+    }
+    render(context, emitter) {
+        const scope = context.environments;
+        if (!isNumber(scope[this.variable])) {
+            scope[this.variable] = 0;
+        }
+        const val = scope[this.variable];
+        scope[this.variable]++;
+        emitter.write(stringify(val));
+    }
+    *localScope() {
+        yield this.identifier;
+    }
+}
+
+class LayoutTag extends Tag {
+    constructor(token, remainTokens, liquid, parser) {
+        super(token, remainTokens, liquid);
+        this.file = parseFilePath(this.tokenizer, this.liquid, parser);
+        this['currentFile'] = token.file;
+        this.args = new Hash(this.tokenizer, liquid.options.keyValueSeparator);
+        this.templates = parser.parseTokens(remainTokens);
+    }
+    *render(ctx, emitter) {
+        const { liquid, args, file } = this;
+        const { renderer } = liquid;
+        if (file === undefined) {
+            ctx.setRegister('blockMode', BlockMode.OUTPUT);
+            yield renderer.renderTemplates(this.templates, ctx, emitter);
+            return;
+        }
+        const filepath = (yield renderFilePath(this.file, ctx, liquid));
+        assert(filepath, () => `illegal file path "${filepath}"`);
+        const templates = (yield liquid._parseLayoutFile(filepath, ctx.sync, this['currentFile']));
+        // render remaining contents and store rendered results
+        ctx.setRegister('blockMode', BlockMode.STORE);
+        const html = yield renderer.renderTemplates(this.templates, ctx);
+        const blocks = ctx.getRegister('blocks', {});
+        // set whole content to anonymous block if anonymous doesn't specified
+        if (blocks[''] === undefined)
+            blocks[''] = (parent, emitter) => emitter.write(html);
+        ctx.setRegister('blockMode', BlockMode.OUTPUT);
+        // render the layout file use stored blocks
+        ctx.push(createScope((yield args.render(ctx))));
+        yield renderer.renderTemplates(templates, ctx, emitter);
+        ctx.pop();
+    }
+    *children(partials) {
+        const templates = this.templates.slice();
+        if (partials && isString(this.file)) {
+            templates.push(...(yield this.liquid._parsePartialFile(this.file, true, this['currentFile'])));
+        }
+        return templates;
+    }
+    *arguments() {
+        for (const v of Object.values(this.args.hash)) {
+            if (isValueToken(v)) {
+                yield v;
+            }
+        }
+        if (isValueToken(this.file)) {
+            yield this.file;
+        }
+    }
+    partialScope() {
+        if (isString(this.file)) {
+            return { name: this.file, isolated: false, scope: Object.keys(this.args.hash) };
+        }
+    }
+}
+
+class BlockTag extends Tag {
+    constructor(token, remainTokens, liquid, parser) {
+        super(token, remainTokens, liquid);
+        this.templates = [];
+        const match = /\w+/.exec(token.args);
+        this.block = match ? match[0] : '';
+        while (remainTokens.length) {
+            const token = remainTokens.shift();
+            if (isTagToken(token) && token.name === 'endblock')
+                return;
+            const template = parser.parseToken(token, remainTokens);
+            this.templates.push(template);
+        }
+        throw new Error(`tag ${token.getText()} not closed`);
+    }
+    *render(ctx, emitter) {
+        const blockRender = this.getBlockRender(ctx);
+        if (ctx.getRegister('blockMode') === BlockMode.STORE) {
+            ctx.getRegister('blocks', {})[this.block] = blockRender;
+        }
+        else {
+            yield blockRender(new BlockDrop(), emitter);
+        }
+    }
+    getBlockRender(ctx) {
+        const self = this;
+        const { liquid, templates } = this;
+        const renderChild = ctx.getRegister('blocks', {})[this.block];
+        const renderCurrent = function* (superBlock, emitter) {
+            const stack = ctx.getRegister('blockStack', []);
+            if (stack.includes(self))
+                throw new Error('block tag cannot be nested');
+            stack.push(self);
+            ctx.push(createScope({ block: superBlock }));
+            yield liquid.renderer.renderTemplates(templates, ctx, emitter);
+            ctx.pop();
+            stack.pop();
+        };
+        return renderChild
+            ? (superBlock, emitter) => renderChild(new BlockDrop((emitter) => renderCurrent(superBlock, emitter)), emitter)
+            : renderCurrent;
+    }
+    *children() {
+        return this.templates;
+    }
+    blockScope() {
+        return ['block'];
+    }
+}
+
+class RawTag extends Tag {
+    constructor(tagToken, remainTokens, liquid) {
+        super(tagToken, remainTokens, liquid);
+        this.tokens = [];
+        while (remainTokens.length) {
+            const token = remainTokens.shift();
+            if (isTagToken(token) && token.name === 'endraw')
+                return;
+            this.tokens.push(token);
+        }
+        throw new Error(`tag ${tagToken.getText()} not closed`);
+    }
+    render() {
+        return this.tokens.map((token) => token.getText()).join('');
+    }
+}
+
+class TablerowloopDrop extends ForloopDrop {
+    constructor(length, cols, collection, variable) {
+        super(length, collection, variable);
+        this.length = length;
+        this.cols = cols;
+    }
+    row() {
+        return Math.floor(this.i / this.cols) + 1;
+    }
+    col0() {
+        return (this.i % this.cols);
+    }
+    col() {
+        return this.col0() + 1;
+    }
+    col_first() {
+        return this.col0() === 0;
+    }
+    col_last() {
+        return this.col() === this.cols;
+    }
+}
+
+class TablerowTag extends Tag {
+    constructor(tagToken, remainTokens, liquid, parser) {
+        super(tagToken, remainTokens, liquid);
+        const variable = this.tokenizer.readIdentifier();
+        this.tokenizer.skipBlank();
+        const predicate = this.tokenizer.readIdentifier();
+        const collectionToken = this.tokenizer.readValue();
+        if (predicate.content !== 'in' || !collectionToken) {
+            throw new Error(`illegal tag: ${tagToken.getText()}`);
+        }
+        this.variable = variable.content;
+        this.collection = collectionToken;
+        this.args = new Hash(this.tokenizer, liquid.options.keyValueSeparator);
+        this.templates = [];
+        let p;
+        const stream = parser.parseStream(remainTokens)
+            .on('start', () => (p = this.templates))
+            .on('tag:endtablerow', () => stream.stop())
+            .on('template', (tpl) => p.push(tpl))
+            .on('end', () => {
+            throw new Error(`tag ${tagToken.getText()} not closed`);
+        });
+        stream.start();
+    }
+    *render(ctx, emitter) {
+        let collection = toEnumerable(yield evalToken(this.collection, ctx));
+        const args = (yield this.args.render(ctx));
+        const offset = args.offset || 0;
+        const limit = (args.limit === undefined) ? collection.length : args.limit;
+        collection = collection.slice(offset, offset + limit);
+        const cols = args.cols || collection.length;
+        const r = this.liquid.renderer;
+        const tablerowloop = new TablerowloopDrop(collection.length, cols, this.collection.getText(), this.variable);
+        const scope = createScope({ tablerowloop });
+        ctx.push(scope);
+        for (let idx = 0; idx < collection.length; idx++, tablerowloop.next()) {
+            scope[this.variable] = collection[idx];
+            if (tablerowloop.col0() === 0) {
+                if (tablerowloop.row() !== 1)
+                    emitter.write('</tr>');
+                emitter.write(`<tr class="row${tablerowloop.row()}">`);
+            }
+            emitter.write(`<td class="col${tablerowloop.col()}">`);
+            yield r.renderTemplates(this.templates, ctx, emitter);
+            emitter.write('</td>');
+        }
+        if (collection.length)
+            emitter.write('</tr>');
+        ctx.pop();
+    }
+    *children() {
+        return this.templates;
+    }
+    *arguments() {
+        yield this.collection;
+        for (const v of Object.values(this.args.hash)) {
+            if (isValueToken(v)) {
+                yield v;
+            }
+        }
+    }
+    blockScope() {
+        return [this.variable, 'tablerowloop'];
+    }
+}
+
+class UnlessTag extends Tag {
+    constructor(tagToken, remainTokens, liquid, parser) {
+        super(tagToken, remainTokens, liquid);
+        this.branches = [];
+        this.elseTemplates = [];
+        let p = [];
+        let elseCount = 0;
+        parser.parseStream(remainTokens)
+            .on('start', () => this.branches.push({
+            value: new Value(tagToken.tokenizer.readFilteredValue(), this.liquid),
+            test: isFalsy,
+            templates: (p = [])
+        }))
+            .on('tag:elsif', (token) => {
+            if (elseCount > 0) {
+                p = [];
+                return;
+            }
+            this.branches.push({
+                value: new Value(token.tokenizer.readFilteredValue(), this.liquid),
+                test: isTruthy,
+                templates: (p = [])
+            });
+        })
+            .on('tag:else', () => {
+            elseCount++;
+            p = this.elseTemplates;
+        })
+            .on('tag:endunless', function () { this.stop(); })
+            .on('template', (tpl) => {
+            if (p !== this.elseTemplates || elseCount === 1) {
+                p.push(tpl);
+            }
+        })
+            .on('end', () => { throw new Error(`tag ${tagToken.getText()} not closed`); })
+            .start();
+    }
+    *render(ctx, emitter) {
+        const r = this.liquid.renderer;
+        for (const { value, test, templates } of this.branches) {
+            const v = yield value.value(ctx, ctx.opts.lenientIf);
+            if (test(v, ctx)) {
+                yield r.renderTemplates(templates, ctx, emitter);
+                return;
+            }
+        }
+        yield r.renderTemplates(this.elseTemplates, ctx, emitter);
+    }
+    *children() {
+        const children = this.branches.flatMap(b => b.templates);
+        if (this.elseTemplates) {
+            children.push(...this.elseTemplates);
+        }
+        return children;
+    }
+    arguments() {
+        return this.branches.map(b => b.value);
+    }
+}
+
+class BreakTag extends Tag {
+    render(ctx, _emitter) {
+        ctx.breakCalled = true;
+    }
+}
+
+class ContinueTag extends Tag {
+    render(ctx, _emitter) {
+        ctx.continueCalled = true;
+    }
+}
+
+class EchoTag extends Tag {
+    constructor(token, remainTokens, liquid) {
+        super(token, remainTokens, liquid);
+        this.tokenizer.skipBlank();
+        if (!this.tokenizer.end()) {
+            this.value = new Value(this.tokenizer.readFilteredValue(), this.liquid);
+        }
+    }
+    *render(ctx, emitter) {
+        if (!this.value)
+            return;
+        const val = yield this.value.value(ctx, false);
+        emitter.write(val);
+    }
+    *arguments() {
+        if (this.value) {
+            yield this.value;
+        }
+    }
+}
+
+class LiquidTag extends Tag {
+    constructor(token, remainTokens, liquid, parser) {
+        super(token, remainTokens, liquid);
+        const tokens = this.tokenizer.readLiquidTagTokens(this.liquid.options);
+        this.templates = parser.parseTokens(tokens);
+    }
+    *render(ctx, emitter) {
+        yield this.liquid.renderer.renderTemplates(this.templates, ctx, emitter);
+    }
+    *children() {
+        return this.templates;
+    }
+}
+
+class InlineCommentTag extends Tag {
+    constructor(tagToken, remainTokens, liquid) {
+        super(tagToken, remainTokens, liquid);
+        if (tagToken.args.search(/\n\s*[^#\s]/g) !== -1) {
+            throw new Error('every line of an inline comment must start with a \'#\' character');
+        }
+    }
+    render() { }
+}
+
+const tags = {
+    assign: AssignTag,
+    'for': ForTag,
+    capture: CaptureTag,
+    'case': CaseTag,
+    comment: CommentTag,
+    include: IncludeTag,
+    render: RenderTag,
+    decrement: DecrementTag,
+    increment: IncrementTag,
+    cycle: CycleTag,
+    'if': IfTag,
+    layout: LayoutTag,
+    block: BlockTag,
+    raw: RawTag,
+    tablerow: TablerowTag,
+    unless: UnlessTag,
+    'break': BreakTag,
+    'continue': ContinueTag,
+    echo: EchoTag,
+    liquid: LiquidTag,
+    '#': InlineCommentTag
+};
+
+class Liquid {
+    constructor(opts = {}) {
+        this.renderer = new Render();
+        this.filters = Object.create(null);
+        this.tags = Object.create(null);
+        this.options = normalize(opts);
+        // eslint-disable-next-line deprecation/deprecation
+        this.parser = new Parser(this);
+        forOwn(tags, (conf, name) => this.registerTag(name, conf));
+        forOwn(filters, (handler, name) => this.registerFilter(name, handler));
+    }
+    parse(html, filepath) {
+        const parser = new Parser(this);
+        return parser.parse(html, filepath);
+    }
+    _render(tpl, scope, renderOptions) {
+        const ctx = scope instanceof Context ? scope : new Context(scope, this.options, renderOptions);
+        return this.renderer.renderTemplates(tpl, ctx);
+    }
+    async render(tpl, scope, renderOptions) {
+        return toPromise(this._render(tpl, scope, { ...renderOptions, sync: false }));
+    }
+    renderSync(tpl, scope, renderOptions) {
+        return toValueSync(this._render(tpl, scope, { ...renderOptions, sync: true }));
+    }
+    renderToNodeStream(tpl, scope, renderOptions = {}) {
+        const ctx = new Context(scope, this.options, renderOptions);
+        return this.renderer.renderTemplatesToNodeStream(tpl, ctx);
+    }
+    _parseAndRender(html, scope, renderOptions) {
+        const tpl = this.parse(html);
+        return this._render(tpl, scope, renderOptions);
+    }
+    async parseAndRender(html, scope, renderOptions) {
+        return toPromise(this._parseAndRender(html, scope, { ...renderOptions, sync: false }));
+    }
+    parseAndRenderSync(html, scope, renderOptions) {
+        return toValueSync(this._parseAndRender(html, scope, { ...renderOptions, sync: true }));
+    }
+    _parsePartialFile(file, sync, currentFile) {
+        return new Parser(this).parseFile(file, sync, exports.Rv.Partials, currentFile);
+    }
+    _parseLayoutFile(file, sync, currentFile) {
+        return new Parser(this).parseFile(file, sync, exports.Rv.Layouts, currentFile);
+    }
+    _parseFile(file, sync, lookupType, currentFile) {
+        return new Parser(this).parseFile(file, sync, lookupType, currentFile);
+    }
+    async parseFile(file, lookupType) {
+        return toPromise(new Parser(this).parseFile(file, false, lookupType));
+    }
+    parseFileSync(file, lookupType) {
+        return toValueSync(new Parser(this).parseFile(file, true, lookupType));
+    }
+    *_renderFile(file, ctx, renderFileOptions) {
+        const templates = (yield this._parseFile(file, renderFileOptions.sync, renderFileOptions.lookupType));
+        return yield this._render(templates, ctx, renderFileOptions);
+    }
+    async renderFile(file, ctx, renderFileOptions) {
+        return toPromise(this._renderFile(file, ctx, { ...renderFileOptions, sync: false }));
+    }
+    renderFileSync(file, ctx, renderFileOptions) {
+        return toValueSync(this._renderFile(file, ctx, { ...renderFileOptions, sync: true }));
+    }
+    async renderFileToNodeStream(file, scope, renderOptions) {
+        const templates = await this.parseFile(file);
+        return this.renderToNodeStream(templates, scope, renderOptions);
+    }
+    _evalValue(str, scope) {
+        const value = new Value(str, this);
+        const ctx = scope instanceof Context ? scope : new Context(scope, this.options);
+        return value.value(ctx);
+    }
+    async evalValue(str, scope) {
+        return toPromise(this._evalValue(str, scope));
+    }
+    evalValueSync(str, scope) {
+        return toValueSync(this._evalValue(str, scope));
+    }
+    registerFilter(name, filter) {
+        this.filters[name] = filter;
+    }
+    registerTag(name, tag) {
+        this.tags[name] = isFunction(tag) ? tag : createTagClass(tag);
+    }
+    plugin(plugin) {
+        return plugin.call(this, Liquid);
+    }
+    express() {
+        const self = this; // eslint-disable-line
+        let firstCall = true;
+        return function (filePath, ctx, callback) {
+            if (firstCall) {
+                firstCall = false;
+                const dirs = normalizeDirectoryList(this.root);
+                self.options.root.unshift(...dirs);
+                self.options.layouts.unshift(...dirs);
+                self.options.partials.unshift(...dirs);
+            }
+            self.renderFile(filePath, ctx).then(html => callback(null, html), callback);
+        };
+    }
+    async analyze(template, options = {}) {
+        return analyze(template, options);
+    }
+    analyzeSync(template, options = {}) {
+        return analyzeSync(template, options);
+    }
+    async parseAndAnalyze(html, filename, options = {}) {
+        return analyze(this.parse(html, filename), options);
+    }
+    parseAndAnalyzeSync(html, filename, options = {}) {
+        return analyzeSync(this.parse(html, filename), options);
+    }
+    /** Return an array of all variables without their properties. */
+    async variables(template, options = {}) {
+        const analysis = await analyze(isString(template) ? this.parse(template) : template, options);
+        return Object.keys(analysis.variables);
+    }
+    /** Return an array of all variables without their properties. */
+    variablesSync(template, options = {}) {
+        const analysis = analyzeSync(isString(template) ? this.parse(template) : template, options);
+        return Object.keys(analysis.variables);
+    }
+    /** Return an array of all variables including their properties/paths. */
+    async fullVariables(template, options = {}) {
+        const analysis = await analyze(isString(template) ? this.parse(template) : template, options);
+        return Array.from(new Set(Object.values(analysis.variables).flatMap((a) => a.map((v) => String(v)))));
+    }
+    /** Return an array of all variables including their properties/paths. */
+    fullVariablesSync(template, options = {}) {
+        const analysis = analyzeSync(isString(template) ? this.parse(template) : template, options);
+        return Array.from(new Set(Object.values(analysis.variables).flatMap((a) => a.map((v) => String(v)))));
+    }
+    /** Return an array of all variables, each as an array of properties/segments. */
+    async variableSegments(template, options = {}) {
+        const analysis = await analyze(isString(template) ? this.parse(template) : template, options);
+        return Array.from(strictUniq(Object.values(analysis.variables).flatMap((a) => a.map((v) => v.toArray()))));
+    }
+    /** Return an array of all variables, each as an array of properties/segments. */
+    variableSegmentsSync(template, options = {}) {
+        const analysis = analyzeSync(isString(template) ? this.parse(template) : template, options);
+        return Array.from(strictUniq(Object.values(analysis.variables).flatMap((a) => a.map((v) => v.toArray()))));
+    }
+    /** Return an array of all expected context variables without their properties. */
+    async globalVariables(template, options = {}) {
+        const analysis = await analyze(isString(template) ? this.parse(template) : template, options);
+        return Object.keys(analysis.globals);
+    }
+    /** Return an array of all expected context variables without their properties. */
+    globalVariablesSync(template, options = {}) {
+        const analysis = analyzeSync(isString(template) ? this.parse(template) : template, options);
+        return Object.keys(analysis.globals);
+    }
+    /** Return an array of all expected context variables including their properties/paths. */
+    async globalFullVariables(template, options = {}) {
+        const analysis = await analyze(isString(template) ? this.parse(template) : template, options);
+        return Array.from(new Set(Object.values(analysis.globals).flatMap((a) => a.map((v) => String(v)))));
+    }
+    /** Return an array of all expected context variables including their properties/paths. */
+    globalFullVariablesSync(template, options = {}) {
+        const analysis = analyzeSync(isString(template) ? this.parse(template) : template, options);
+        return Array.from(new Set(Object.values(analysis.globals).flatMap((a) => a.map((v) => String(v)))));
+    }
+    /** Return an array of all expected context variables, each as an array of properties/segments. */
+    async globalVariableSegments(template, options = {}) {
+        const analysis = await analyze(isString(template) ? this.parse(template) : template, options);
+        return Array.from(strictUniq(Object.values(analysis.globals).flatMap((a) => a.map((v) => v.toArray()))));
+    }
+    /** Return an array of all expected context variables, each as an array of properties/segments. */
+    globalVariableSegmentsSync(template, options = {}) {
+        const analysis = analyzeSync(isString(template) ? this.parse(template) : template, options);
+        return Array.from(strictUniq(Object.values(analysis.globals).flatMap((a) => a.map((v) => v.toArray()))));
+    }
+}
+
+/* istanbul ignore file */
+const version = '10.27.0';
+
+__webpack_unused_export__ = AssertionError;
+__webpack_unused_export__ = AssignTag;
+__webpack_unused_export__ = BlockTag;
+__webpack_unused_export__ = BreakTag;
+__webpack_unused_export__ = CaptureTag;
+__webpack_unused_export__ = CaseTag;
+__webpack_unused_export__ = CommentTag;
+__webpack_unused_export__ = Context;
+__webpack_unused_export__ = ContinueTag;
+__webpack_unused_export__ = CycleTag;
+__webpack_unused_export__ = DecrementTag;
+__webpack_unused_export__ = Drop;
+__webpack_unused_export__ = EchoTag;
+__webpack_unused_export__ = Expression;
+__webpack_unused_export__ = Filter;
+__webpack_unused_export__ = ForTag;
+__webpack_unused_export__ = Hash;
+__webpack_unused_export__ = IfTag;
+__webpack_unused_export__ = IncludeTag;
+__webpack_unused_export__ = IncrementTag;
+__webpack_unused_export__ = InlineCommentTag;
+__webpack_unused_export__ = LayoutTag;
+exports.HX = Liquid;
+__webpack_unused_export__ = LiquidError;
+__webpack_unused_export__ = LiquidTag;
+__webpack_unused_export__ = Output;
+__webpack_unused_export__ = ParseError;
+__webpack_unused_export__ = ParseStream;
+__webpack_unused_export__ = Parser;
+__webpack_unused_export__ = RawTag;
+__webpack_unused_export__ = RenderError;
+__webpack_unused_export__ = RenderTag;
+__webpack_unused_export__ = TablerowTag;
+__webpack_unused_export__ = Tag;
+__webpack_unused_export__ = TagToken;
+__webpack_unused_export__ = Token;
+__webpack_unused_export__ = TokenizationError;
+__webpack_unused_export__ = Tokenizer;
+__webpack_unused_export__ = typeGuards;
+__webpack_unused_export__ = UndefinedVariableError;
+__webpack_unused_export__ = UnlessTag;
+__webpack_unused_export__ = Value;
+__webpack_unused_export__ = Variable;
+__webpack_unused_export__ = analyze;
+__webpack_unused_export__ = analyzeSync;
+__webpack_unused_export__ = assert;
+__webpack_unused_export__ = createTrie;
+__webpack_unused_export__ = defaultOperators;
+__webpack_unused_export__ = defaultOptions;
+__webpack_unused_export__ = evalQuotedToken;
+__webpack_unused_export__ = evalToken;
+__webpack_unused_export__ = filters;
+__webpack_unused_export__ = isFalsy;
+__webpack_unused_export__ = isTruthy;
+__webpack_unused_export__ = tags;
+__webpack_unused_export__ = toPromise;
+__webpack_unused_export__ = toValue;
+__webpack_unused_export__ = toValueSync;
+__webpack_unused_export__ = version;
+
+
+/***/ }),
+
+/***/ 982:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("crypto");
+
+/***/ }),
+
+/***/ 896:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("fs");
+
+/***/ }),
+
+/***/ 928:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("path");
+
+/***/ }),
+
+/***/ 203:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("stream");
+
+/***/ })
+
+/******/ });
+/************************************************************************/
+/******/ // The module cache
+/******/ var __webpack_module_cache__ = {};
+/******/ 
+/******/ // The require function
+/******/ function __nccwpck_require__(moduleId) {
+/******/ 	// Check if module is in cache
+/******/ 	var cachedModule = __webpack_module_cache__[moduleId];
+/******/ 	if (cachedModule !== undefined) {
+/******/ 		return cachedModule.exports;
+/******/ 	}
+/******/ 	// Create a new module (and put it into the cache)
+/******/ 	var module = __webpack_module_cache__[moduleId] = {
+/******/ 		// no module.id needed
+/******/ 		// no module.loaded needed
+/******/ 		exports: {}
+/******/ 	};
+/******/ 
+/******/ 	// Execute the module function
+/******/ 	var threw = true;
+/******/ 	try {
+/******/ 		__webpack_modules__[moduleId](module, module.exports, __nccwpck_require__);
+/******/ 		threw = false;
+/******/ 	} finally {
+/******/ 		if(threw) delete __webpack_module_cache__[moduleId];
+/******/ 	}
+/******/ 
+/******/ 	// Return the exports of the module
+/******/ 	return module.exports;
+/******/ }
+/******/ 
+/************************************************************************/
+/******/ /* webpack/runtime/compat */
+/******/ 
+/******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
+/******/ 
+/************************************************************************/
+var __webpack_exports__ = {};
+
+;// CONCATENATED MODULE: external "node:fs/promises"
+const promises_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs/promises");
+;// CONCATENATED MODULE: external "node:os"
+const external_node_os_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:os");
+;// CONCATENATED MODULE: external "node:path"
+const external_node_path_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
+;// CONCATENATED MODULE: ./src/logging.ts
+let configuredLevel = "info";
+const order = { error: 0, warn: 1, info: 2, debug: 3 };
+const secrets = new Set();
+function setLogLevel(level) {
+    if (level === "debug" || level === "info" || level === "warn" || level === "error") {
+        configuredLevel = level;
+    }
+}
+function registerSecret(value) {
+    if (value && value.length >= 4)
+        secrets.add(value);
+}
+function redact(s) {
+    let out = s;
+    for (const v of secrets) {
+        out = out.split(v).join("[REDACTED]");
+    }
+    return out;
+}
+function emit(level, fields) {
+    if (order[level] > order[configuredLevel])
+        return;
+    const payload = { at: new Date().toISOString(), level, ...fields };
+    const line = redact(JSON.stringify(payload));
+    if (level === "error")
+        console.error(line);
+    else if (level === "warn")
+        console.warn(line);
+    else
+        console.log(line);
+}
+const log = {
+    debug: (f) => emit("debug", f),
+    info: (f) => emit("info", f),
+    warn: (f) => emit("warn", f),
+    error: (f) => emit("error", f),
+};
+
+;// CONCATENATED MODULE: external "node:child_process"
+const external_node_child_process_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:child_process");
+;// CONCATENATED MODULE: ./src/safety.ts
+
+
+const SAFE_RE = /[^A-Za-z0-9._-]/g;
+function sanitize(s) {
+    const sanitized = s.replace(SAFE_RE, "_");
+    if (sanitized === "" || sanitized === "." || sanitized === ".." || sanitized.includes("/")) {
+        throw new Error(`unsafe_workspace_key: ${JSON.stringify(s)}`);
+    }
+    return sanitized;
+}
+async function realpathOrSelf(p) {
+    try {
+        return await (0,promises_namespaceObject.realpath)(p);
+    }
+    catch {
+        return (0,external_node_path_namespaceObject.resolve)(p);
+    }
+}
+async function assertContained(child, root) {
+    const rChild = await realpathOrSelf(child);
+    const rRoot = await realpathOrSelf(root);
+    const rootWithSep = rRoot.endsWith(external_node_path_namespaceObject.sep) ? rRoot : rRoot + external_node_path_namespaceObject.sep;
+    if (rChild !== rRoot && !rChild.startsWith(rootWithSep)) {
+        throw new Error(`unsafe_workspace_path: ${child} not under ${root}`);
+    }
+}
+
+;// CONCATENATED MODULE: ./src/workspace.ts
+
+
+
+
+
+async function exists(p) {
+    try {
+        await (0,promises_namespaceObject.stat)(p);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+async function run(cmd, args, cwd) {
+    return new Promise((resolve, reject) => {
+        const p = (0,external_node_child_process_namespaceObject.spawn)(cmd, args, { cwd, stdio: ["ignore", "pipe", "pipe"] });
+        const out = [];
+        const err = [];
+        p.stdout.setEncoding("utf8");
+        p.stderr.setEncoding("utf8");
+        p.stdout.on("data", (c) => out.push(c));
+        p.stderr.on("data", (c) => err.push(c));
+        p.on("error", reject);
+        p.on("exit", (code) => {
+            if (code === 0)
+                resolve();
+            else {
+                const oTail = out.join("").trim().slice(-500);
+                const eTail = err.join("").trim().slice(-500);
+                reject(new Error(`${cmd} ${args.join(" ")} exited ${code}: ${eTail || oTail}`));
+            }
+        });
+    });
+}
+async function prepareWorkspace(input) {
+    // Key the workspace by both repo and issue so a shared runner using a common
+    // workspaceRoot never reuses (and pushes to) the wrong repository when two
+    // repos happen to share an issue identifier such as `#12`.
+    const issueKey = sanitize(input.issueIdentifier);
+    const repoKey = sanitize(input.repoSlug);
+    const key = `${repoKey}__${issueKey}`;
+    const workspacePath = (0,external_node_path_namespaceObject.join)(input.workspaceRoot, key);
+    await (0,promises_namespaceObject.mkdir)(input.workspaceRoot, { recursive: true });
+    await assertContained(workspacePath, input.workspaceRoot);
+    let createdNow = false;
+    const wsExists = await exists(workspacePath);
+    if (!wsExists) {
+        log.info({ module: "workspace", event: "clone", message: `${input.repoSlug} → ${workspacePath}` });
+        await run("gh", ["repo", "clone", input.repoSlug, workspacePath]);
+        createdNow = true;
+    }
+    else {
+        const gitDir = (0,external_node_path_namespaceObject.join)(workspacePath, ".git");
+        if (!(await exists(gitDir))) {
+            throw new Error(`workspace_not_a_repo: ${workspacePath} exists but has no .git`);
+        }
+    }
+    await assertContained(await realpathOrSelf(workspacePath), input.workspaceRoot);
+    const branch = `agent/${issueKey}`;
+    log.info({ module: "workspace", event: "branch_reset", message: branch });
+    await run("git", ["-C", workspacePath, "fetch", "origin", "--prune"]);
+    await run("git", ["-C", workspacePath, "checkout", input.repoRef]);
+    await run("git", ["-C", workspacePath, "pull", "--ff-only"]);
+    await run("git", ["-C", workspacePath, "checkout", "-B", branch]);
+    return { workspacePath, branch, createdNow };
+}
+
+;// CONCATENATED MODULE: ./src/config.ts
+
+
+
+const DEFAULTS = {
+    endpoint: "https://api.github.com/graphql",
+    active_states: ["Todo", "In Progress"],
+    terminal_states: ["Done", "Cancelled", "Canceled", "Duplicate", "Closed"],
+    max_turns: 20,
+    codex_command: "codex app-server",
+    approval_policy: "never",
+    sandbox: "danger-full-access",
+    turn_timeout_ms: 3_600_000,
+};
+const SANDBOX_OPTIONS = new Set(["read-only", "workspace-write", "danger-full-access"]);
+function asStrArr(v, fallback) {
+    if (Array.isArray(v))
+        return v.filter((x) => typeof x === "string");
+    return fallback;
+}
+function asInt(v, fallback) {
+    if (typeof v === "number" && Number.isFinite(v))
+        return v | 0;
+    return fallback;
+}
+function asStr(v, fallback) {
+    return typeof v === "string" ? v : fallback;
+}
+function asBool(v, fallback) {
+    return typeof v === "boolean" ? v : fallback;
+}
+function isRecord(v) {
+    return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+async function loadConfig(workspacePath) {
+    const cfgPath = (0,external_node_path_namespaceObject.join)(workspacePath, ".banzai", "config.json");
+    let raw = null;
+    try {
+        raw = await (0,promises_namespaceObject.readFile)(cfgPath, "utf8");
+    }
+    catch (e) {
+        // A missing config file is fine: the built-in defaults plus action inputs
+        // (tracker_project_id / tracker_endpoint) are sufficient to run. Only a
+        // genuine read error (permissions, etc.) is fatal.
+        if (e.code !== "ENOENT") {
+            throw new Error(`config_unreadable: ${cfgPath}: ${e.message}`);
+        }
+        log.info({
+            module: "config",
+            event: "config_missing",
+            message: `${cfgPath} not found; using defaults`,
+        });
+    }
+    let parsed = {};
+    if (raw !== null) {
+        try {
+            parsed = JSON.parse(raw);
+        }
+        catch (e) {
+            throw new Error(`config_invalid_json: ${e.message}`);
+        }
+    }
+    const root = isRecord(parsed) ? parsed : {};
+    const trackerRaw = isRecord(root.tracker) ? root.tracker : {};
+    const agentRaw = isRecord(root.agent) ? root.agent : {};
+    const codexRaw = isRecord(agentRaw.codex) ? agentRaw.codex : {};
+    const toolsRaw = isRecord(agentRaw.tools) ? agentRaw.tools : {};
+    const cfg = {
+        tracker: {
+            kind: "github_projects_v2",
+            project_id: asStr(trackerRaw.project_id, ""),
+            endpoint: asStr(trackerRaw.endpoint, DEFAULTS.endpoint),
+            active_states: asStrArr(trackerRaw.active_states, DEFAULTS.active_states),
+            terminal_states: asStrArr(trackerRaw.terminal_states, DEFAULTS.terminal_states),
+        },
+        agent: {
+            max_turns: Math.max(1, asInt(agentRaw.max_turns, DEFAULTS.max_turns)),
+            codex: {
+                command: asStr(codexRaw.command, DEFAULTS.codex_command),
+                approval_policy: asStr(codexRaw.approval_policy, DEFAULTS.approval_policy),
+                sandbox: (() => {
+                    const raw = asStr(codexRaw.sandbox, DEFAULTS.sandbox);
+                    return (SANDBOX_OPTIONS.has(raw) ? raw : DEFAULTS.sandbox);
+                })(),
+                turn_timeout_ms: asInt(codexRaw.turn_timeout_ms, DEFAULTS.turn_timeout_ms),
+            },
+            tools: {
+                github_graphql: asBool(toolsRaw.github_graphql, true),
+                set_issue_status: asBool(toolsRaw.set_issue_status, true),
+            },
+        },
+    };
+    if (asStr(trackerRaw.kind, "github_projects_v2") !== "github_projects_v2") {
+        throw new Error(`config_invalid: unsupported tracker.kind ${trackerRaw.kind}`);
+    }
+    return cfg;
+}
+
+;// CONCATENATED MODULE: ./src/issue.ts
+
+const QUERY = /* GraphQL */ `
+  query ($issueId: ID!, $projectId: ID!, $after: String) {
+    issue: node(id: $issueId) {
+      ... on Issue {
+        id
+        number
+        title
+        body
+        url
+        createdAt
+        updatedAt
+        labels(first: 20) { nodes { name } }
+      }
+    }
+    project: node(id: $projectId) {
+      ... on ProjectV2 {
+        field(name: "Status") {
+          ... on ProjectV2SingleSelectField {
+            id
+            options { id name }
+          }
+        }
+        items(first: 100, after: $after) {
+          pageInfo { hasNextPage endCursor }
+          nodes {
+            id
+            content {
+              ... on Issue { id }
+              ... on PullRequest { id }
+            }
+            fieldValues(first: 20) {
+              nodes {
+                __typename
+                ... on ProjectV2ItemFieldSingleSelectValue {
+                  name
+                  field { ... on ProjectV2FieldCommon { name } }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+/**
+ * Low-level mutation: sets a project item's Status single-select to a known option.
+ * Throws on transport or GraphQL errors. No snapshot bookkeeping; the caller
+ * should re-fetch if it needs the updated state.
+ */
+async function setProjectItemStatus(input) {
+    const mutation = /* GraphQL */ `
+    mutation ($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+      updateProjectV2ItemFieldValue(input: {
+        projectId: $projectId
+        itemId: $itemId
+        fieldId: $fieldId
+        value: { singleSelectOptionId: $optionId }
+      }) { projectV2Item { id } }
+    }
+  `;
+    const resp = await fetch(input.endpoint, {
+        method: "POST",
+        headers: {
+            "User-Agent": "banzai-harness",
+            Authorization: `Bearer ${input.token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+            query: mutation,
+            variables: {
+                projectId: input.projectId,
+                itemId: input.itemId,
+                fieldId: input.fieldId,
+                optionId: input.optionId,
+            },
+        }),
+    });
+    if (!resp.ok)
+        throw new Error(`status_update_failed: HTTP ${resp.status}`);
+    const json = (await resp.json());
+    if (json.errors && json.errors.length > 0) {
+        throw new Error(`status_update_failed: ${json.errors.map((e) => e.message).join("; ")}`);
+    }
+}
+async function fetchPage(input, after) {
+    const { endpoint, token, issueId, projectId } = input;
+    const resp = await fetch(endpoint, {
+        method: "POST",
+        headers: {
+            "User-Agent": "banzai-harness",
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ query: QUERY, variables: { issueId, projectId, after } }),
+    });
+    if (!resp.ok) {
+        throw new Error(`issue_fetch_failed: HTTP ${resp.status}`);
+    }
+    const json = (await resp.json());
+    if (json.errors && json.errors.length > 0) {
+        throw new Error(`issue_fetch_failed: ${json.errors.map((e) => e.message).join("; ")}`);
+    }
+    if (!json.data?.issue)
+        throw new Error(`issue_fetch_failed: issue not found`);
+    if (!json.data?.project)
+        throw new Error(`issue_fetch_failed: project not found`);
+    return { ...json.data.project, issue: json.data.issue };
+}
+async function fetchIssueSnapshot(input) {
+    // Walk every page of the project board: the dispatched issue may sit beyond
+    // the first 100 items, so we keep paginating until we find it (or run out).
+    let after = null;
+    let raw = null;
+    let field = null;
+    let matchingItem;
+    do {
+        const page = await fetchPage(input, after);
+        raw = page.issue;
+        field = page.field;
+        if (!field) {
+            throw new Error(`issue_fetch_failed: project has no Status field`);
+        }
+        matchingItem = page.items.nodes.find((it) => it.content?.id === raw.id);
+        after = page.items.pageInfo.hasNextPage ? page.items.pageInfo.endCursor : null;
+    } while (!matchingItem && after);
+    if (!raw || !field)
+        throw new Error(`issue_fetch_failed: project not found`);
+    if (!matchingItem) {
+        throw new Error(`issue_fetch_failed: issue ${raw.id} is not in project ${input.projectId}`);
+    }
+    let state = "";
+    for (const fv of matchingItem.fieldValues.nodes) {
+        if (fv.__typename === "ProjectV2ItemFieldSingleSelectValue" &&
+            fv.field?.name === "Status" &&
+            typeof fv.name === "string") {
+            state = fv.name;
+        }
+    }
+    const issue = {
+        id: raw.id,
+        identifier: `#${raw.number}`,
+        title: raw.title,
+        description: raw.body ?? null,
+        state,
+        url: raw.url ?? null,
+        labels: (raw.labels?.nodes ?? []).map((l) => l.name.toLowerCase()),
+        created_at: raw.createdAt ?? null,
+        updated_at: raw.updatedAt ?? null,
+    };
+    const projectStatus = {
+        projectItemId: matchingItem.id,
+        statusFieldId: field.id,
+        statusOptions: field.options,
+    };
+    log.info({
+        module: "issue",
+        event: "fetched",
+        issue_id: issue.id,
+        issue_identifier: issue.identifier,
+        message: `state=${state} options=${projectStatus.statusOptions.map((o) => o.name).join(",")}`,
+    });
+    return { issue, projectStatus };
+}
+
+;// CONCATENATED MODULE: ./src/codex/app_server.ts
+
+
+/**
+ * Bidirectional JSON-RPC client over a child process's stdio. Handles:
+ *   - outgoing client requests with id-based correlation
+ *   - incoming server notifications (delegated to a handler)
+ *   - incoming server requests (item/tool/call) routed to tool handlers
+ */
+class CodexAppServerClient {
+    proc;
+    nextId = 1;
+    pending = new Map();
+    toolHandlers = new Map();
+    notificationHandler = () => { };
+    buf = "";
+    exited = false;
+    exitCode = null;
+    exitPromise;
+    constructor(command) {
+        log.info({ module: "codex", event: "spawn", message: command });
+        const [cmd, ...args] = parseShellWords(command);
+        if (!cmd)
+            throw new Error(`codex_startup_failed: empty command`);
+        this.proc = (0,external_node_child_process_namespaceObject.spawn)(cmd, args, { stdio: ["pipe", "pipe", "pipe"] });
+        this.exitPromise = new Promise((resolveExit) => {
+            this.proc.on("exit", (code, signal) => {
+                this.exited = true;
+                this.exitCode = code;
+                log.info({ module: "codex", event: "exited", message: `code=${code} signal=${signal}` });
+                for (const p of this.pending.values()) {
+                    p.reject(new Error(`codex process exited (code=${code})`));
+                }
+                this.pending.clear();
+                resolveExit({ code, signal });
+            });
+        });
+        this.proc.stdout.setEncoding("utf8");
+        this.proc.stdout.on("data", (chunk) => this.onStdout(chunk));
+        this.proc.stderr.setEncoding("utf8");
+        this.proc.stderr.on("data", (chunk) => {
+            const trimmed = chunk.trim();
+            if (trimmed)
+                log.warn({ module: "codex", event: "stderr", message: trimmed.slice(0, 1000) });
+        });
+    }
+    onNotification(handler) {
+        this.notificationHandler = handler;
+    }
+    registerTool(name, handler) {
+        this.toolHandlers.set(name, handler);
+    }
+    onStdout(chunk) {
+        this.buf += chunk;
+        let idx;
+        while ((idx = this.buf.indexOf("\n")) !== -1) {
+            const line = this.buf.slice(0, idx).trim();
+            this.buf = this.buf.slice(idx + 1);
+            if (line === "")
+                continue;
+            let msg;
+            try {
+                msg = JSON.parse(line);
+            }
+            catch (e) {
+                log.warn({ module: "codex", event: "bad_json", message: line.slice(0, 200) });
+                continue;
+            }
+            this.dispatch(msg);
+        }
+    }
+    dispatch(msg) {
+        if ("id" in msg && (("result" in msg) || ("error" in msg))) {
+            // Response to one of our client requests
+            const resp = msg;
+            const pending = this.pending.get(resp.id);
+            if (!pending) {
+                log.warn({ module: "codex", event: "orphan_response", message: `id=${resp.id}` });
+                return;
+            }
+            this.pending.delete(resp.id);
+            if (resp.error) {
+                pending.reject(new Error(`${resp.error.code}: ${resp.error.message}`));
+            }
+            else {
+                pending.resolve(resp.result);
+            }
+            return;
+        }
+        if ("id" in msg && "method" in msg) {
+            // Server-to-client request
+            this.handleServerRequest(msg);
+            return;
+        }
+        if ("method" in msg) {
+            // Server notification
+            const note = msg;
+            this.notificationHandler(note.method, note.params);
+            return;
+        }
+        log.warn({ module: "codex", event: "unknown_message", message: JSON.stringify(msg).slice(0, 200) });
+    }
+    async handleServerRequest(req) {
+        if (req.method === "item/tool/call") {
+            const params = req.params;
+            const handler = this.toolHandlers.get(params.tool);
+            if (!handler) {
+                log.warn({ module: "codex", event: "unsupported_tool_call", message: params.tool });
+                this.sendResponse(req.id, {
+                    success: false,
+                    contentItems: [{ type: "inputText", text: `Tool '${params.tool}' is not registered.` }],
+                });
+                return;
+            }
+            try {
+                const result = await handler(params);
+                this.sendResponse(req.id, result);
+            }
+            catch (e) {
+                log.error({
+                    module: "codex",
+                    event: "tool_handler_threw",
+                    message: String(e.message ?? e),
+                });
+                this.sendResponse(req.id, {
+                    success: false,
+                    contentItems: [{ type: "inputText", text: `Tool '${params.tool}' threw: ${e.message}` }],
+                });
+            }
+            return;
+        }
+        // Any other server request type — auto-deny / no-op for now.
+        log.info({ module: "codex", event: "unhandled_server_request", message: req.method });
+        this.sendError(req.id, -32601, `Method '${req.method}' not handled by client.`);
+    }
+    sendResponse(id, result) {
+        this.write({ jsonrpc: "2.0", id, result });
+    }
+    sendError(id, code, message) {
+        this.write({ jsonrpc: "2.0", id, error: { code, message } });
+    }
+    request(method, params) {
+        if (this.exited) {
+            return Promise.reject(new Error("codex process has exited"));
+        }
+        const id = this.nextId++;
+        return new Promise((resolve, reject) => {
+            this.pending.set(id, { resolve: resolve, reject });
+            this.write({ jsonrpc: "2.0", id, method, params: params ?? {} });
+        });
+    }
+    write(msg) {
+        if (this.exited)
+            return;
+        this.proc.stdin.write(JSON.stringify(msg) + "\n");
+    }
+    shutdown() {
+        if (!this.exited) {
+            try {
+                this.proc.stdin.end();
+            }
+            catch {
+                // ignore
+            }
+        }
+        return this.exitPromise;
+    }
+    isExited() {
+        return this.exited;
+    }
+    getExitCode() {
+        return this.exitCode;
+    }
+}
+function parseShellWords(s) {
+    // Minimal shell-style split: handles spaces and single/double quotes.
+    const out = [];
+    let cur = "";
+    let quote = null;
+    for (let i = 0; i < s.length; i++) {
+        const c = s[i];
+        if (quote) {
+            if (c === quote)
+                quote = null;
+            else
+                cur += c;
+        }
+        else if (c === '"' || c === "'") {
+            quote = c;
+        }
+        else if (c === " " || c === "\t") {
+            if (cur !== "") {
+                out.push(cur);
+                cur = "";
+            }
+        }
+        else {
+            cur += c;
+        }
+    }
+    if (cur !== "")
+        out.push(cur);
+    return out;
+}
+
+// EXTERNAL MODULE: ./node_modules/liquidjs/dist/liquid.node.js
+var liquid_node = __nccwpck_require__(694);
+;// CONCATENATED MODULE: ./src/prompt.ts
+
+
+
+const engine = new liquid_node/* Liquid */.HX({ strictVariables: true, strictFilters: true });
+/**
+ * Render the prompt template at `promptPath`. The path is required and resolved
+ * against the workspace when relative; there is no built-in fallback template,
+ * so a missing or unreadable prompt is a hard error.
+ */
+async function renderPrompt(workspacePath, promptPath, ctx) {
+    const resolved = (0,external_node_path_namespaceObject.isAbsolute)(promptPath) ? promptPath : (0,external_node_path_namespaceObject.join)(workspacePath, promptPath);
+    let template;
+    try {
+        template = await (0,promises_namespaceObject.readFile)(resolved, "utf8");
+    }
+    catch (e) {
+        throw new Error(`prompt_missing: ${resolved}: ${e.message}`);
+    }
+    try {
+        return await engine.parseAndRender(template, ctx);
+    }
+    catch (e) {
+        throw new Error(`prompt_render_failed: ${e.message}`);
+    }
+}
+function renderContinuation(turn, maxTurns) {
+    return `Continue working on the issue. You are on turn ${turn} of ${maxTurns}. When the work is complete, call \`set_issue_status\` to move the issue out of "Todo" / "In Progress".`;
+}
+
+;// CONCATENATED MODULE: ./src/tools/set_issue_status.ts
+
+const SPEC = {
+    name: "set_issue_status",
+    description: "Move the current issue's status (a single-select field named 'Status' on the configured GitHub Projects v2 board) to a new value. Use this when the work is complete or when handing off to a human. Always call this before exiting if the issue is still in an active state, otherwise the orchestrator will redispatch.",
+    inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["status_name"],
+        properties: {
+            status_name: {
+                type: "string",
+                description: "The target status option name on the project board (e.g. 'Human Review', 'Done'). Must match an existing option of the 'Status' single-select field exactly (case-insensitive match is attempted).",
+            },
+        },
+    },
+};
+function makeSetIssueStatusTool(ctx) {
+    const handler = async (params) => {
+        const args = (params.arguments ?? {});
+        if (typeof args.status_name !== "string" || args.status_name.trim() === "") {
+            return fail(`status_name must be a non-empty string`);
+        }
+        const wanted = args.status_name.trim();
+        const snap = ctx.snapshot();
+        const opt = snap.projectStatus.statusOptions.find((o) => o.name === wanted || o.name.toLowerCase() === wanted.toLowerCase());
+        if (!opt) {
+            const known = snap.projectStatus.statusOptions.map((o) => o.name).join(", ");
+            return fail(`status '${wanted}' not found among options: ${known}`);
+        }
+        const mutation = /* GraphQL */ `
+      mutation ($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+        updateProjectV2ItemFieldValue(input: {
+          projectId: $projectId
+          itemId: $itemId
+          fieldId: $fieldId
+          value: { singleSelectOptionId: $optionId }
+        }) { projectV2Item { id } }
+      }
+    `;
+        const resp = await fetch(ctx.endpoint, {
+            method: "POST",
+            headers: {
+                "User-Agent": "banzai-harness",
+                Authorization: `Bearer ${ctx.token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                query: mutation,
+                variables: {
+                    projectId: ctx.projectId,
+                    itemId: snap.projectStatus.projectItemId,
+                    fieldId: snap.projectStatus.statusFieldId,
+                    optionId: opt.id,
+                },
+            }),
+        });
+        if (!resp.ok) {
+            return fail(`HTTP ${resp.status} from GraphQL endpoint`);
+        }
+        const json = (await resp.json());
+        if (json.errors && json.errors.length > 0) {
+            return fail(`GraphQL errors: ${json.errors.map((e) => e.message).join("; ")}`);
+        }
+        log.info({
+            module: "tool",
+            event: "set_issue_status_ok",
+            issue_id: snap.issue.id,
+            issue_identifier: snap.issue.identifier,
+            message: `${snap.issue.state} → ${opt.name}`,
+        });
+        // Refresh local snapshot so subsequent turn-decisions see the new state.
+        await ctx.refreshAfter();
+        return ok(`Set issue ${snap.issue.identifier} status from '${snap.issue.state}' to '${opt.name}'.`);
+    };
+    return { spec: SPEC, handler };
+}
+function ok(text) {
+    return { success: true, contentItems: [{ type: "inputText", text }] };
+}
+function fail(text) {
+    return { success: false, contentItems: [{ type: "inputText", text }] };
+}
+
+;// CONCATENATED MODULE: ./src/tools/github_graphql.ts
+
+const github_graphql_SPEC = {
+    name: "github_graphql",
+    description: "Execute a single GraphQL operation against the configured GitHub GraphQL endpoint. Use only when set_issue_status cannot express what you need (e.g. complex queries). Provide a single-operation document; multi-operation documents are rejected.",
+    inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["query"],
+        properties: {
+            query: { type: "string", description: "A single GraphQL operation." },
+            variables: { type: "object", description: "Optional variables object." },
+        },
+    },
+};
+const OP_RE = /\b(query|mutation|subscription)\b/gi;
+function makeGithubGraphqlTool(ctx) {
+    const handler = async (params) => {
+        const args = (params.arguments ?? {});
+        if (typeof args.query !== "string" || args.query.trim() === "") {
+            return github_graphql_fail("query must be a non-empty string");
+        }
+        const opCount = (args.query.match(OP_RE) ?? []).length;
+        if (opCount > 1) {
+            return github_graphql_fail("multi-operation documents are not allowed; submit one operation per call");
+        }
+        let variables;
+        if (args.variables !== undefined) {
+            if (typeof args.variables !== "object" || args.variables === null || Array.isArray(args.variables)) {
+                return github_graphql_fail("variables must be an object if present");
+            }
+            variables = args.variables;
+        }
+        const resp = await fetch(ctx.endpoint, {
+            method: "POST",
+            headers: {
+                "User-Agent": "banzai-harness",
+                Authorization: `Bearer ${ctx.token}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ query: args.query, variables }),
+        });
+        let body;
+        try {
+            body = await resp.json();
+        }
+        catch {
+            return github_graphql_fail(`non-JSON response from GraphQL endpoint (HTTP ${resp.status})`);
+        }
+        if (!resp.ok) {
+            return github_graphql_fail(`HTTP ${resp.status}: ${JSON.stringify(body).slice(0, 1000)}`);
+        }
+        const j = body;
+        if (j.errors && j.errors.length > 0) {
+            log.info({ module: "tool", event: "github_graphql_errors", message: j.errors.map((e) => e.message).join("; ") });
+            return {
+                success: false,
+                contentItems: [{ type: "inputText", text: JSON.stringify(j).slice(0, 4000) }],
+            };
+        }
+        return github_graphql_ok(JSON.stringify(j).slice(0, 8000));
+    };
+    return { spec: github_graphql_SPEC, handler };
+}
+function github_graphql_ok(text) {
+    return { success: true, contentItems: [{ type: "inputText", text }] };
+}
+function github_graphql_fail(text) {
+    return { success: false, contentItems: [{ type: "inputText", text }] };
+}
+
+;// CONCATENATED MODULE: ./src/codex/turn_loop.ts
+
+
+
+
+
+
+async function runTurns(input) {
+    const { workspacePath, promptPath, cfg, token, attempt } = input;
+    let snapshot = input.initialSnapshot;
+    let turnCount = 0;
+    const refreshAfter = async () => {
+        snapshot = await fetchIssueSnapshot({
+            endpoint: cfg.tracker.endpoint,
+            token,
+            issueId: snapshot.issue.id,
+            projectId: cfg.tracker.project_id,
+        });
+    };
+    const toolCtxBase = {
+        endpoint: cfg.tracker.endpoint,
+        token,
+        projectId: cfg.tracker.project_id,
+    };
+    const setStatus = makeSetIssueStatusTool({
+        ...toolCtxBase,
+        snapshot: () => snapshot,
+        refreshAfter,
+    });
+    const ghGraphql = makeGithubGraphqlTool({ endpoint: toolCtxBase.endpoint, token: toolCtxBase.token });
+    const dynamicTools = [];
+    const handlers = [];
+    if (cfg.agent.tools.set_issue_status) {
+        dynamicTools.push(setStatus.spec);
+        handlers.push([setStatus.spec.name, setStatus.handler]);
+    }
+    if (cfg.agent.tools.github_graphql) {
+        dynamicTools.push(ghGraphql.spec);
+        handlers.push([ghGraphql.spec.name, ghGraphql.handler]);
+    }
+    const client = new CodexAppServerClient(cfg.agent.codex.command);
+    for (const [name, h] of handlers)
+        client.registerTool(name, h);
+    // Track turn completion via notifications. We resolve a per-turn deferred
+    // when we see `turn/completed` for the matching turnId.
+    let activeTurnId = null;
+    let resolveActiveTurn = null;
+    let rejectActiveTurn = null;
+    client.onNotification((method, params) => {
+        if (method === "turn/completed") {
+            const p = params;
+            if (p.turn.id === activeTurnId && resolveActiveTurn) {
+                const r = resolveActiveTurn;
+                resolveActiveTurn = null;
+                rejectActiveTurn = null;
+                activeTurnId = null;
+                r(p);
+            }
+            return;
+        }
+        if (method === "thread/closed") {
+            log.warn({ module: "codex", event: method, message: shortJson(params) });
+            if (rejectActiveTurn)
+                rejectActiveTurn(new Error(`thread closed during turn`));
+            return;
+        }
+        // item/completed carries the high-signal work: agent messages, commands
+        // run, tool calls. Log a compact one-line summary at info; everything else
+        // (per-word deltas, item/started, reasoning, status churn) is debug.
+        if (method === "item/completed") {
+            const summary = summarizeItem(params);
+            if (summary)
+                log.info({ module: "codex", event: "item", message: summary });
+            else
+                log.debug({ module: "codex", event: method, message: shortJson(params) });
+            return;
+        }
+        if (MILESTONE_METHODS.has(method)) {
+            log.info({ module: "codex", event: method, message: shortJson(params) });
+            return;
+        }
+        log.debug({ module: "codex", event: method, message: shortJson(params) });
+    });
+    try {
+        await client.request("initialize", {
+            clientInfo: { name: "banzai-harness", version: "0.1.0" },
+            capabilities: { experimentalApi: true },
+        });
+        log.info({ module: "codex", event: "initialized" });
+        const threadRes = (await client.request("thread/start", {
+            cwd: workspacePath,
+            sandbox: cfg.agent.codex.sandbox,
+            approvalPolicy: cfg.agent.codex.approval_policy ?? "never",
+            dynamicTools,
+        }));
+        const threadId = threadRes.thread.id;
+        log.info({ module: "codex", event: "thread_started", message: threadId });
+        for (let turn = 1; turn <= cfg.agent.max_turns; turn++) {
+            turnCount = turn;
+            const promptText = turn === 1
+                ? await renderPrompt(workspacePath, promptPath, { issue: snapshot.issue, attempt, turn })
+                : renderContinuation(turn, cfg.agent.max_turns);
+            log.info({ module: "codex", event: "turn_starting", message: `turn=${turn}/${cfg.agent.max_turns}` });
+            const turnPromise = new Promise((resolve, reject) => {
+                resolveActiveTurn = resolve;
+                rejectActiveTurn = reject;
+            });
+            const startRes = (await client.request("turn/start", {
+                threadId,
+                input: [{ type: "text", text: promptText }],
+            }));
+            activeTurnId = startRes.turn.id;
+            const timeoutMs = cfg.agent.codex.turn_timeout_ms;
+            const completed = await Promise.race([
+                turnPromise,
+                new Promise((_, reject) => setTimeout(() => reject(new Error(`turn_timeout: ${timeoutMs}ms`)), timeoutMs)),
+            ]);
+            log.info({
+                module: "codex",
+                event: "turn_completed",
+                issue_id: snapshot.issue.id,
+                issue_identifier: snapshot.issue.identifier,
+                message: `turn=${turn} id=${completed.turn.id} status=${completed.turn.status}`,
+            });
+            if (completed.turn.status === "failed" || completed.turn.status === "interrupted") {
+                const reason = completed.turn.status === "failed"
+                    ? `turn_failed:${completed.turn.error?.message ?? "unknown"}`
+                    : "turn_cancelled";
+                log.error({ module: "codex", event: "turn_nonsuccess", message: reason });
+                await client.shutdown();
+                return {
+                    outcome: "failure",
+                    reason,
+                    tracker_state_at_exit: snapshot.issue.state,
+                    turn_count: turnCount,
+                };
+            }
+            // Refresh state — the agent may have called set_issue_status which updates
+            // `snapshot` via refreshAfter, but tools the agent invokes outside our
+            // helper (e.g. raw gh CLI) won't. Always re-fetch to be safe.
+            await refreshAfter();
+            const stateLower = snapshot.issue.state.toLowerCase();
+            const activeLower = cfg.tracker.active_states.map((s) => s.toLowerCase());
+            if (!activeLower.includes(stateLower)) {
+                log.info({
+                    module: "codex",
+                    event: "exit_state_inactive",
+                    message: `state=${snapshot.issue.state}`,
+                });
+                await client.shutdown();
+                return {
+                    outcome: "success",
+                    reason: null,
+                    tracker_state_at_exit: snapshot.issue.state,
+                    turn_count: turnCount,
+                };
+            }
+        }
+        log.warn({
+            module: "codex",
+            event: "exit_max_turns",
+            message: `max_turns=${cfg.agent.max_turns} reached with state=${snapshot.issue.state}`,
+        });
+        await client.shutdown();
+        return {
+            outcome: "success",
+            reason: "max_turns_reached_with_active_state",
+            tracker_state_at_exit: snapshot.issue.state,
+            turn_count: turnCount,
+        };
+    }
+    catch (e) {
+        const msg = e.message ?? String(e);
+        log.error({ module: "codex", event: "turn_loop_error", message: msg });
+        await client.shutdown();
+        return {
+            outcome: "failure",
+            reason: msg.startsWith("turn_timeout") ? "turn_timeout" : msg,
+            tracker_state_at_exit: snapshot.issue.state,
+            turn_count: turnCount,
+        };
+    }
+}
+function shortJson(p) {
+    try {
+        const s = JSON.stringify(p);
+        return s.length > 500 ? s.slice(0, 500) + "…" : s;
+    }
+    catch {
+        return "<unserializable>";
+    }
+}
+/** Notification methods worth surfacing at info level (low volume, high signal). */
+const MILESTONE_METHODS = new Set([
+    "thread/started",
+    "turn/started",
+    "thread/tokenUsage/updated",
+    "account/rateLimits/updated",
+    "thread/error",
+]);
+function truncate(s, n) {
+    const oneLine = s.replace(/\s+/g, " ").trim();
+    return oneLine.length > n ? oneLine.slice(0, n) + "…" : oneLine;
+}
+/**
+ * Compact one-line summary of an `item/completed` notification, or null to
+ * fall through to debug. Surfaces the high-signal items (commands, agent
+ * messages, tool calls) without dumping the full payload; skips low-signal
+ * items like reasoning blocks.
+ */
+function summarizeItem(params) {
+    const item = params?.item;
+    if (!item || typeof item !== "object")
+        return null;
+    const type = item.type;
+    switch (type) {
+        case "commandExecution": {
+            const cmd = truncate(String(item.command ?? ""), 160);
+            const exit = item.exitCode;
+            return `cmd: ${cmd}${exit === null || exit === undefined ? "" : ` (exit ${exit})`}`;
+        }
+        case "agentMessage": {
+            const phase = item.phase ? `[${item.phase}] ` : "";
+            return `msg: ${phase}${truncate(String(item.text ?? ""), 280)}`;
+        }
+        case "dynamicToolCall": {
+            const args = truncate(JSON.stringify(item.arguments ?? {}), 120);
+            return `tool: ${item.tool}(${args}) success=${item.success}`;
+        }
+        case "fileChange":
+            return `file_change: ${truncate(JSON.stringify(item.changes ?? item), 200)}`;
+        case "reasoning":
+            // Reasoning summaries are usually empty and high-frequency → debug.
+            return null;
+        default:
+            return null;
+    }
+}
+
+;// CONCATENATED MODULE: ./src/harness.ts
+
+
+
+
+
+
+
+
+function expand(p) {
+    return p.replace(/^\$HOME/, (0,external_node_os_namespaceObject.homedir)()).replace(/^~/, (0,external_node_os_namespaceObject.homedir)());
+}
+function repoSlugFromEnv() {
+    const slug = process.env.GITHUB_REPOSITORY ?? "";
+    if (!slug.includes("/"))
+        throw new Error(`unknown_repo: GITHUB_REPOSITORY=${slug}`);
+    return slug;
+}
+async function writeOutcome(outcome) {
+    const tmp = process.env.RUNNER_TEMP ?? "/tmp";
+    const path = (0,external_node_path_namespaceObject.join)(tmp, "harness-outcome.json");
+    try {
+        await (0,promises_namespaceObject.writeFile)(path, JSON.stringify(outcome, null, 2));
+        log.info({ module: "harness", event: "outcome_written", message: path });
+    }
+    catch (e) {
+        log.warn({ module: "harness", event: "outcome_write_failed", message: String(e.message) });
+    }
+}
+async function main() {
+    const inputs = JSON.parse(process.env.HARNESS_INPUTS_JSON ?? "{}");
+    setLogLevel(inputs.log_level || "info");
+    const token = process.env.GH_TOKEN;
+    if (!token) {
+        log.error({ module: "harness", event: "missing_credentials", message: "GH_TOKEN unset" });
+        await writeOutcome({ outcome: "failure", reason: "missing_credentials" });
+        return 1;
+    }
+    registerSecret(token);
+    registerSecret(process.env.OPENAI_API_KEY);
+    log.info({
+        module: "harness",
+        event: "start",
+        issue_id: inputs.issue_id,
+        issue_identifier: inputs.issue_identifier,
+        message: `attempt=${inputs.attempt} nonce=${inputs.dispatch_nonce} config_sha=${inputs.config_sha}`,
+    });
+    const repoSlug = inputs.repo_url || repoSlugFromEnv();
+    const workspaceRoot = expand(inputs.workspace_root || "$HOME/banzai-workspaces");
+    try {
+        const prep = await prepareWorkspace({
+            workspaceRoot,
+            issueIdentifier: inputs.issue_identifier,
+            repoSlug,
+            repoRef: inputs.repo_ref || "main",
+        });
+        log.info({
+            module: "harness",
+            event: "workspace_ready",
+            message: `${prep.workspacePath} (createdNow=${prep.createdNow}) branch=${prep.branch}`,
+        });
+        const cfg = await loadConfig(prep.workspacePath);
+        // Allow env-supplied project id to override the file when present.
+        if (inputs.tracker_project_id)
+            cfg.tracker.project_id = inputs.tracker_project_id;
+        if (inputs.tracker_endpoint)
+            cfg.tracker.endpoint = inputs.tracker_endpoint;
+        if (!cfg.tracker.project_id) {
+            throw new Error("config_missing_project_id: set tracker_project_id input or tracker.project_id in .banzai/config.json");
+        }
+        if (!inputs.prompt_path) {
+            throw new Error("missing_prompt_path: the prompt_path input is required");
+        }
+        let snapshot = await fetchIssueSnapshot({
+            endpoint: cfg.tracker.endpoint,
+            token,
+            issueId: inputs.issue_id,
+            projectId: cfg.tracker.project_id,
+        });
+        // Move the issue from Todo to In Progress so the project board reflects
+        // "the runner is actively working on me". The agent later transitions to
+        // a non-active state (typically Human Review) when done.
+        if (snapshot.issue.state.toLowerCase() === "todo") {
+            const inProgress = snapshot.projectStatus.statusOptions.find((o) => o.name.toLowerCase() === "in progress");
+            if (inProgress) {
+                try {
+                    await setProjectItemStatus({
+                        endpoint: cfg.tracker.endpoint,
+                        token,
+                        projectId: cfg.tracker.project_id,
+                        itemId: snapshot.projectStatus.projectItemId,
+                        fieldId: snapshot.projectStatus.statusFieldId,
+                        optionId: inProgress.id,
+                    });
+                    log.info({
+                        module: "harness",
+                        event: "state_transition",
+                        issue_id: snapshot.issue.id,
+                        issue_identifier: snapshot.issue.identifier,
+                        message: "Todo → In Progress",
+                    });
+                    snapshot = await fetchIssueSnapshot({
+                        endpoint: cfg.tracker.endpoint,
+                        token,
+                        issueId: inputs.issue_id,
+                        projectId: cfg.tracker.project_id,
+                    });
+                }
+                catch (e) {
+                    log.warn({
+                        module: "harness",
+                        event: "state_transition_failed",
+                        message: String(e.message),
+                    });
+                }
+            }
+        }
+        const result = await runTurns({
+            workspacePath: prep.workspacePath,
+            promptPath: inputs.prompt_path,
+            cfg,
+            token,
+            attempt: parseInt(inputs.attempt, 10) || 0,
+            initialSnapshot: snapshot,
+        });
+        await writeOutcome({
+            outcome: result.outcome,
+            reason: result.reason,
+            tracker_state_at_exit: result.tracker_state_at_exit,
+            turn_count: result.turn_count,
+            ended_at_ms: Date.now(),
+        });
+        log.info({
+            module: "harness",
+            event: "exit",
+            issue_id: inputs.issue_id,
+            issue_identifier: inputs.issue_identifier,
+            message: `${result.outcome} reason=${result.reason} state=${result.tracker_state_at_exit} turns=${result.turn_count}`,
+        });
+        return result.outcome === "success" ? 0 : 1;
+    }
+    catch (e) {
+        const msg = e.message ?? String(e);
+        log.error({ module: "harness", event: "fatal", message: msg });
+        await writeOutcome({
+            outcome: "failure",
+            reason: msg,
+            ended_at_ms: Date.now(),
+        });
+        return 1;
+    }
+}
+main().then((code) => process.exit(code));
+

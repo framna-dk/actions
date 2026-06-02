@@ -14,6 +14,7 @@ interface Inputs {
   tracker_kind: string;
   tracker_endpoint: string;
   tracker_project_id: string;
+  prompt_path: string;
   config_sha: string;
   dispatch_nonce: string;
   workspace_root: string;
@@ -84,6 +85,14 @@ async function main(): Promise<number> {
     // Allow env-supplied project id to override the file when present.
     if (inputs.tracker_project_id) cfg.tracker.project_id = inputs.tracker_project_id;
     if (inputs.tracker_endpoint) cfg.tracker.endpoint = inputs.tracker_endpoint;
+    if (!cfg.tracker.project_id) {
+      throw new Error(
+        "config_missing_project_id: set tracker_project_id input or tracker.project_id in .banzai/config.json",
+      );
+    }
+    if (!inputs.prompt_path) {
+      throw new Error("missing_prompt_path: the prompt_path input is required");
+    }
 
     let snapshot = await fetchIssueSnapshot({
       endpoint: cfg.tracker.endpoint,
@@ -134,6 +143,7 @@ async function main(): Promise<number> {
 
     const result = await runTurns({
       workspacePath: prep.workspacePath,
+      promptPath: inputs.prompt_path,
       cfg,
       token,
       attempt: parseInt(inputs.attempt, 10) || 0,

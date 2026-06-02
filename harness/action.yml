@@ -21,6 +21,9 @@ inputs:
   tracker_project_id:
     description: "Project v2 node ID (e.g. PVT_kw...)."
     required: true
+  prompt_path:
+    description: "Path to the Liquid prompt template (relative to the workspace repo, or absolute). Required; there is no built-in default prompt."
+    required: true
   dispatch_nonce:
     description: "Unique per-dispatch nonce (log correlation only)."
     required: true

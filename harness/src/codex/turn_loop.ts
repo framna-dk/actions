@@ -8,6 +8,7 @@ import type { HarnessConfig } from "../config.js";
 
 export interface RunInput {
   workspacePath: string;
+  promptPath: string;
   cfg: HarnessConfig;
   token: string;
   attempt: number;
@@ -42,7 +43,7 @@ interface TurnCompletedNotification {
 }
 
 export async function runTurns(input: RunInput): Promise<RunOutcome> {
-  const { workspacePath, cfg, token, attempt } = input;
+  const { workspacePath, promptPath, cfg, token, attempt } = input;
   let snapshot = input.initialSnapshot;
   let turnCount = 0;
 
@@ -141,7 +142,7 @@ export async function runTurns(input: RunInput): Promise<RunOutcome> {
       turnCount = turn;
       const promptText =
         turn === 1
-          ? await renderPrompt(workspacePath, { issue: snapshot.issue, attempt, turn })
+          ? await renderPrompt(workspacePath, promptPath, { issue: snapshot.issue, attempt, turn })
           : renderContinuation(turn, cfg.agent.max_turns);
 
       log.info({ module: "codex", event: "turn_starting", message: `turn=${turn}/${cfg.agent.max_turns}` });

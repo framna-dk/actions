@@ -11,6 +11,7 @@ The action has the following inputs:
 | attempt            | Dispatch attempt counter from the orchestrator (`0` for the first run).      | `true`   | None                             |
 | tracker_kind       | Tracker type; always `github_projects_v2` for now.                          | `true`   | None                             |
 | tracker_project_id | Projects v2 node ID (e.g. `PVT_kw...`).                                      | `true`   | None                             |
+| prompt_path        | Path to the Liquid prompt template (relative to the workspace repo, or absolute). There is no built-in default prompt. | `true`   | None                             |
 | dispatch_nonce     | Unique per-dispatch nonce; embed in the run name for run↔claim correlation. | `true`   | None                             |
 | tracker_endpoint   | GraphQL endpoint.                                                           | `false`  | `https://api.github.com/graphql` |
 | workspace_root     | Directory under which per-issue workspaces are created.                      | `false`  | `$HOME/banzai-workspaces`        |
@@ -39,6 +40,7 @@ The agent authenticates with the `GH_TOKEN` environment variable (a GitHub App i
     attempt: ${{ inputs.attempt }}
     tracker_kind: ${{ inputs.tracker_kind }}
     tracker_project_id: ${{ inputs.tracker_project_id }}
+    prompt_path: .banzai/prompt.md
     dispatch_nonce: ${{ inputs.dispatch_nonce }}
   env:
     GH_TOKEN: ${{ steps.app-token.outputs.token }}

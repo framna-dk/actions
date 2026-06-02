@@ -31,7 +31,7 @@ interface FetchInput {
 }
 
 const QUERY = /* GraphQL */ `
-  query ($issueId: ID!, $projectId: ID!) {
+  query ($issueId: ID!, $projectId: ID!, $after: String) {
     issue: node(id: $issueId) {
       ... on Issue {
         id
@@ -52,7 +52,8 @@ const QUERY = /* GraphQL */ `
             options { id name }
           }
         }
-        items(first: 100) {
+        items(first: 100, after: $after) {
+          pageInfo { hasNextPage endCursor }
           nodes {
             id
             content {
@@ -100,7 +101,10 @@ interface RawProjectItem {
 
 interface RawProject {
   field: { id: string; options: Array<{ id: string; name: string }> } | null;
-  items: { nodes: RawProjectItem[] };
+  items: {
+    pageInfo: { hasNextPage: boolean; endCursor: string | null };
+    nodes: RawProjectItem[];
+  };
 }
 
 interface SetStatusInput {
@@ -152,7 +156,7 @@ export async function setProjectItemStatus(input: SetStatusInput): Promise<void>
   }
 }
 
-export async function fetchIssueSnapshot(input: FetchInput): Promise<IssueSnapshot> {
+async function fetchPage(input: FetchInput, after: string | null): Promise<RawProject & { issue: RawIssue }> {
   const { endpoint, token, issueId, projectId } = input;
   const resp = await fetch(endpoint, {
     method: "POST",
@@ -161,7 +165,7 @@ export async function fetchIssueSnapshot(input: FetchInput): Promise<IssueSnapsh
       Authorization: `Bearer ${token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ query: QUERY, variables: { issueId, projectId } }),
+    body: JSON.stringify({ query: QUERY, variables: { issueId, projectId, after } }),
   });
   if (!resp.ok) {
     throw new Error(`issue_fetch_failed: HTTP ${resp.status}`);
@@ -175,16 +179,30 @@ export async function fetchIssueSnapshot(input: FetchInput): Promise<IssueSnapsh
   }
   if (!json.data?.issue) throw new Error(`issue_fetch_failed: issue not found`);
   if (!json.data?.project) throw new Error(`issue_fetch_failed: project not found`);
+  return { ...json.data.project, issue: json.data.issue };
+}
 
-  const raw = json.data.issue;
-  const project = json.data.project;
-  if (!project.field) {
-    throw new Error(`issue_fetch_failed: project has no Status field`);
-  }
+export async function fetchIssueSnapshot(input: FetchInput): Promise<IssueSnapshot> {
+  // Walk every page of the project board: the dispatched issue may sit beyond
+  // the first 100 items, so we keep paginating until we find it (or run out).
+  let after: string | null = null;
+  let raw: RawIssue | null = null;
+  let field: RawProject["field"] = null;
+  let matchingItem: RawProjectItem | undefined;
+  do {
+    const page = await fetchPage(input, after);
+    raw = page.issue;
+    field = page.field;
+    if (!field) {
+      throw new Error(`issue_fetch_failed: project has no Status field`);
+    }
+    matchingItem = page.items.nodes.find((it) => it.content?.id === raw!.id);
+    after = page.items.pageInfo.hasNextPage ? page.items.pageInfo.endCursor : null;
+  } while (!matchingItem && after);
 
-  const matchingItem = project.items.nodes.find((it) => it.content?.id === raw.id);
+  if (!raw || !field) throw new Error(`issue_fetch_failed: project not found`);
   if (!matchingItem) {
-    throw new Error(`issue_fetch_failed: issue ${raw.id} is not in project ${projectId}`);
+    throw new Error(`issue_fetch_failed: issue ${raw.id} is not in project ${input.projectId}`);
   }
 
   let state = "";
@@ -212,8 +230,8 @@ export async function fetchIssueSnapshot(input: FetchInput): Promise<IssueSnapsh
 
   const projectStatus: ProjectStatusInfo = {
     projectItemId: matchingItem.id,
-    statusFieldId: project.field.id,
-    statusOptions: project.field.options,
+    statusFieldId: field.id,
+    statusOptions: field.options,
   };
 
   log.info({

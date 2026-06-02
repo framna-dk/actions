@@ -1,18 +1,7 @@
 import { readFile } from "node:fs/promises";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 import { Liquid } from "liquidjs";
 import type { NormalizedIssue } from "./issue.js";
-
-const DEFAULT_TEMPLATE = `You are working on issue {{ issue.identifier }}: {{ issue.title }}.
-
-{% if issue.description %}{{ issue.description }}{% endif %}
-
-When the work is complete, call the \`set_issue_status\` tool with this issue's id and a non-active status name (typically "Human Review") to hand off back to a human. Do NOT leave the status in "Todo" or "In Progress" — the orchestrator will redispatch this run otherwise.
-
-If you make code changes, push them to the \`agent/{{ issue.identifier }}\` branch and open a PR against \`main\` using \`gh pr create\`.
-
-{% if attempt %}This is attempt {{ attempt }}. Review previous work before continuing.{% endif %}
-`;
 
 export interface RenderContext {
   issue: NormalizedIssue;
@@ -22,13 +11,22 @@ export interface RenderContext {
 
 const engine = new Liquid({ strictVariables: true, strictFilters: true });
 
-export async function renderPrompt(workspacePath: string, ctx: RenderContext): Promise<string> {
+/**
+ * Render the prompt template at `promptPath`. The path is required and resolved
+ * against the workspace when relative; there is no built-in fallback template,
+ * so a missing or unreadable prompt is a hard error.
+ */
+export async function renderPrompt(
+  workspacePath: string,
+  promptPath: string,
+  ctx: RenderContext,
+): Promise<string> {
+  const resolved = isAbsolute(promptPath) ? promptPath : join(workspacePath, promptPath);
   let template: string;
-  const promptPath = join(workspacePath, ".banzai", "prompt.md");
   try {
-    template = await readFile(promptPath, "utf8");
-  } catch {
-    template = DEFAULT_TEMPLATE;
+    template = await readFile(resolved, "utf8");
+  } catch (e) {
+    throw new Error(`prompt_missing: ${resolved}: ${(e as Error).message}`);
   }
   try {
     return await engine.parseAndRender(template, ctx);

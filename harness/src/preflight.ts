@@ -7,6 +7,7 @@ interface Inputs {
   attempt?: string;
   tracker_kind?: string;
   tracker_project_id?: string;
+  prompt_path?: string;
   log_level?: string;
 }
 
@@ -16,6 +17,7 @@ const REQUIRED_INPUTS: Array<keyof Inputs> = [
   "attempt",
   "tracker_kind",
   "tracker_project_id",
+  "prompt_path",
 ];
 
 const REQUIRED_BINS = ["node", "codex", "gh", "git", "jq", "bash"];
