@@ -19,6 +19,8 @@ export interface HarnessConfig {
     };
     tools: {
       set_issue_status: boolean;
+      open_pull_request: boolean;
+      comment: boolean;
     };
   };
 }
@@ -110,6 +112,8 @@ export async function loadConfig(workspacePath: string): Promise<HarnessConfig> 
       },
       tools: {
         set_issue_status: asBool(toolsRaw.set_issue_status, true),
+        open_pull_request: asBool(toolsRaw.open_pull_request, true),
+        comment: asBool(toolsRaw.comment, true),
       },
     },
   };

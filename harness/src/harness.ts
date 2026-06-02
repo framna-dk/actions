@@ -5,8 +5,11 @@ import { log, registerSecret, setLogLevel } from "./logging.js";
 import { prepareWorkspace, createWorkBranch } from "./workspace.js";
 import { loadConfig } from "./config.js";
 import { createTracker } from "./tracker/index.js";
-import { createAgentRuntime, type AgentRunResult } from "./agent/index.js";
+import { createForge } from "./forge/index.js";
+import { createAgentRuntime, type AgentRunResult, type ToolDefinition } from "./agent/index.js";
 import { makeSetIssueStatusTool } from "./tools/set_issue_status.js";
+import { makeOpenPullRequestTool } from "./tools/open_pull_request.js";
+import { makeCommentTool } from "./tools/comment.js";
 import { renderPrompt, renderContinuation } from "./prompt.js";
 
 interface Inputs {
@@ -113,12 +116,13 @@ async function main(): Promise<number> {
       issueNumber,
       repoSlug,
     });
+    const baseBranch = inputs.base_branch || "main";
 
     const prep = await prepareWorkspace({
       workspaceRoot,
       workspaceKey: inputs.issue_number,
       repoSlug,
-      baseBranch: inputs.base_branch || "main",
+      baseBranch,
     });
     log.info({
       module: "harness",
@@ -173,17 +177,26 @@ async function main(): Promise<number> {
     const activeLower = cfg.tracker.active_states.map((s) => s.toLowerCase());
     let stoppedInactive = false;
 
-    const tools = cfg.agent.tools.set_issue_status
-      ? [
-          makeSetIssueStatusTool({
-            tracker,
-            snapshot: () => snapshot,
-            refreshAfter: async () => {
-              snapshot = await tracker.fetchSnapshot();
-            },
-          }),
-        ]
-      : [];
+    const forge = createForge("github", { token, repoSlug, workspacePath: prep.workspacePath });
+
+    const tools: ToolDefinition[] = [];
+    if (cfg.agent.tools.set_issue_status) {
+      tools.push(
+        makeSetIssueStatusTool({
+          tracker,
+          snapshot: () => snapshot,
+          refreshAfter: async () => {
+            snapshot = await tracker.fetchSnapshot();
+          },
+        }),
+      );
+    }
+    if (cfg.agent.tools.open_pull_request) {
+      tools.push(makeOpenPullRequestTool({ forge, branch, base: baseBranch }));
+    }
+    if (cfg.agent.tools.comment) {
+      tools.push(makeCommentTool({ forge, issueNumber }));
+    }
 
     const runResult = await runtime.run({
       workspacePath: prep.workspacePath,

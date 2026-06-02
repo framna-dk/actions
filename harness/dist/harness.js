@@ -5440,6 +5440,8 @@ async function loadConfig(workspacePath) {
             },
             tools: {
                 set_issue_status: asBool(toolsRaw.set_issue_status, true),
+                open_pull_request: asBool(toolsRaw.open_pull_request, true),
+                comment: asBool(toolsRaw.comment, true),
             },
         },
     };
@@ -5449,18 +5451,18 @@ async function loadConfig(workspacePath) {
     return cfg;
 }
 
-;// CONCATENATED MODULE: ./src/gh.ts
+;// CONCATENATED MODULE: ./src/exec.ts
 
 /**
- * Run a `gh` CLI command, capturing stdout/stderr. The GitHub token is passed
- * via the GH_TOKEN env var (gh's standard auth channel); prompts are disabled so
- * a misconfigured runner fails fast instead of hanging.
+ * Spawn a command and capture stdout/stderr. Rejects on non-zero exit with a
+ * trimmed tail of the output for context.
  */
-async function gh(args, token) {
+async function exec_run(cmd, args, opts = {}) {
     return new Promise((resolve, reject) => {
-        const p = (0,external_node_child_process_namespaceObject.spawn)("gh", args, {
+        const p = (0,external_node_child_process_namespaceObject.spawn)(cmd, args, {
+            cwd: opts.cwd,
             stdio: ["ignore", "pipe", "pipe"],
-            env: { ...process.env, GH_TOKEN: token, GH_PROMPT_DISABLED: "1" },
+            env: opts.env ?? process.env,
         });
         const out = [];
         const err = [];
@@ -5477,12 +5479,24 @@ async function gh(args, token) {
             }
             else {
                 const tail = (stderr.trim() || stdout.trim()).slice(-500);
-                reject(new Error(`gh ${args.join(" ")} exited ${code}: ${tail}`));
+                reject(new Error(`${cmd} ${args.join(" ")} exited ${code}: ${tail}`));
             }
         });
     });
 }
-/** Run a `gh` command with `--format json` and parse the result. */
+
+;// CONCATENATED MODULE: ./src/gh.ts
+
+/**
+ * Run a `gh` CLI command. The GitHub token is passed via GH_TOKEN (gh's standard
+ * auth channel); prompts are disabled so a misconfigured runner fails fast.
+ */
+async function gh(args, token) {
+    return exec_run("gh", args, {
+        env: { ...process.env, GH_TOKEN: token, GH_PROMPT_DISABLED: "1" },
+    });
+}
+/** Run a `gh` command with `--format json` (or `--json`) and parse the result. */
 async function ghJson(args, token) {
     const { stdout } = await gh(args, token);
     try {
@@ -5639,6 +5653,95 @@ function createTracker(kind, opts) {
             return new GitHubProjectsTracker(opts);
         default:
             throw new Error(`unsupported_tracker_kind: ${kind}`);
+    }
+}
+
+;// CONCATENATED MODULE: ./src/forge/github.ts
+
+
+
+/**
+ * GitHub code host, driven through `git` (push) and the `gh` CLI (pull requests,
+ * issue comments). The agent's working branch is harness-owned and reset from
+ * the base branch each run, so the push is a force-push.
+ */
+class GitHubForge {
+    opts;
+    constructor(opts) {
+        this.opts = opts;
+    }
+    async openOrUpdatePullRequest(input) {
+        const { token, repoSlug, workspacePath } = this.opts;
+        // The agent branch is reset from base each run; force-push to replace any
+        // prior attempt's commits on the remote.
+        await exec_run("git", ["-C", workspacePath, "push", "--force", "origin", input.branch], {
+            env: { ...process.env, GH_TOKEN: token },
+        });
+        const existing = await ghJson(["pr", "list", "--repo", repoSlug, "--head", input.branch, "--state", "open", "--json", "number,url"], token);
+        if (existing.length > 0) {
+            const pr = existing[0];
+            await gh(["pr", "edit", String(pr.number), "--repo", repoSlug, "--title", input.title, "--body", input.body], token);
+            log.info({ module: "forge", event: "pr_updated", message: pr.url });
+            return { url: pr.url, number: pr.number, created: false };
+        }
+        const { stdout } = await gh([
+            "pr",
+            "create",
+            "--repo",
+            repoSlug,
+            "--head",
+            input.branch,
+            "--base",
+            input.base,
+            "--title",
+            input.title,
+            "--body",
+            input.body,
+        ], token);
+        const url = stdout.trim().split("\n").filter(Boolean).pop() ?? "";
+        const number = parseNumberFromUrl(url);
+        log.info({ module: "forge", event: "pr_created", message: url });
+        return { url, number, created: true };
+    }
+    async commentOnIssue(issueNumber, body) {
+        await gh(["issue", "comment", String(issueNumber), "--repo", this.opts.repoSlug, "--body", body], this.opts.token);
+        log.info({ module: "forge", event: "issue_comment", message: `#${issueNumber}` });
+    }
+}
+function parseNumberFromUrl(url) {
+    const m = url.match(/\/pull\/(\d+)\b/);
+    return m ? parseInt(m[1], 10) : null;
+}
+
+;// CONCATENATED MODULE: ./src/forge/types.ts
+/**
+ * Forge abstraction: the code host (repo, branches, pull requests, issue
+ * comments) — as opposed to the Tracker, which is the work board (status).
+ * Implementations hide the transport (e.g. the `gh` CLI). Add a new forge by
+ * implementing this interface and wiring it into `createForge`.
+ */
+class ForgeError extends Error {
+    code;
+    constructor(code, message) {
+        super(`${code}: ${message}`);
+        this.code = code;
+    }
+}
+
+;// CONCATENATED MODULE: ./src/forge/index.ts
+
+
+/**
+ * Construct the forge (code host) for the given kind. Today only GitHub is
+ * supported; a new forge is added by implementing `Forge` and adding a case
+ * here.
+ */
+function createForge(kind, opts) {
+    switch (kind) {
+        case "github":
+            return new GitHubForge(opts);
+        default:
+            throw new Error(`unsupported_forge_kind: ${kind}`);
     }
 }
 
@@ -6093,6 +6196,91 @@ function fail(text) {
     return { success: false, contentItems: [{ type: "inputText", text }] };
 }
 
+;// CONCATENATED MODULE: ./src/tools/open_pull_request.ts
+
+const open_pull_request_SPEC = {
+    name: "open_pull_request",
+    description: "Push the current work and open a pull request for it (or update the existing PR if one is already open for this branch). Call this once your changes are committed. The branch and base are managed by the harness — you only provide the title and body. Returns the PR URL.",
+    inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["title", "body"],
+        properties: {
+            title: { type: "string", description: "Concise PR title." },
+            body: { type: "string", description: "PR description (Markdown). Summarize what changed and why." },
+        },
+    },
+};
+function makeOpenPullRequestTool(ctx) {
+    const handler = async (params) => {
+        const args = (params.arguments ?? {});
+        if (typeof args.title !== "string" || args.title.trim() === "") {
+            return open_pull_request_fail("title must be a non-empty string");
+        }
+        if (typeof args.body !== "string") {
+            return open_pull_request_fail("body must be a string");
+        }
+        try {
+            const pr = await ctx.forge.openOrUpdatePullRequest({
+                branch: ctx.branch,
+                base: ctx.base,
+                title: args.title.trim(),
+                body: args.body,
+            });
+            log.info({ module: "tool", event: "open_pull_request_ok", message: `${pr.created ? "created" : "updated"} ${pr.url}` });
+            return open_pull_request_ok(`${pr.created ? "Opened" : "Updated"} pull request: ${pr.url}`);
+        }
+        catch (e) {
+            return open_pull_request_fail(`open_pull_request_failed: ${e.message}`);
+        }
+    };
+    return { spec: open_pull_request_SPEC, handler };
+}
+function open_pull_request_ok(text) {
+    return { success: true, contentItems: [{ type: "inputText", text }] };
+}
+function open_pull_request_fail(text) {
+    return { success: false, contentItems: [{ type: "inputText", text }] };
+}
+
+;// CONCATENATED MODULE: ./src/tools/comment.ts
+
+const comment_SPEC = {
+    name: "comment",
+    description: "Post a comment on the issue you're working on. Use this to record progress, surface a question or blocker, or note a decision for the human reviewer. The target issue is managed by the harness — you only provide the comment body.",
+    inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["body"],
+        properties: {
+            body: { type: "string", description: "Comment text (Markdown)." },
+        },
+    },
+};
+function makeCommentTool(ctx) {
+    const handler = async (params) => {
+        const args = (params.arguments ?? {});
+        if (typeof args.body !== "string" || args.body.trim() === "") {
+            return comment_fail("body must be a non-empty string");
+        }
+        try {
+            await ctx.forge.commentOnIssue(ctx.issueNumber, args.body);
+            log.info({ module: "tool", event: "comment_ok", message: `#${ctx.issueNumber}` });
+            return comment_ok(`Posted comment on issue #${ctx.issueNumber}.`);
+        }
+        catch (e) {
+            return comment_fail(`comment_failed: ${e.message}`);
+        }
+    };
+    return { spec: comment_SPEC, handler };
+}
+function comment_ok(text) {
+    return { success: true, contentItems: [{ type: "inputText", text }] };
+}
+function comment_fail(text) {
+    return { success: false, contentItems: [{ type: "inputText", text }] };
+}
+
 // EXTERNAL MODULE: ./node_modules/liquidjs/dist/liquid.node.js
 var liquid_node = __nccwpck_require__(694);
 ;// CONCATENATED MODULE: ./src/prompt.ts
@@ -6126,6 +6314,9 @@ function renderContinuation(turn, maxTurns) {
 }
 
 ;// CONCATENATED MODULE: ./src/harness.ts
+
+
+
 
 
 
@@ -6214,11 +6405,12 @@ async function main() {
             issueNumber,
             repoSlug,
         });
+        const baseBranch = inputs.base_branch || "main";
         const prep = await prepareWorkspace({
             workspaceRoot,
             workspaceKey: inputs.issue_number,
             repoSlug,
-            baseBranch: inputs.base_branch || "main",
+            baseBranch,
         });
         log.info({
             module: "harness",
@@ -6268,17 +6460,23 @@ async function main() {
         const attempt = parseInt(inputs.attempt, 10) || 0;
         const activeLower = cfg.tracker.active_states.map((s) => s.toLowerCase());
         let stoppedInactive = false;
-        const tools = cfg.agent.tools.set_issue_status
-            ? [
-                makeSetIssueStatusTool({
-                    tracker,
-                    snapshot: () => snapshot,
-                    refreshAfter: async () => {
-                        snapshot = await tracker.fetchSnapshot();
-                    },
-                }),
-            ]
-            : [];
+        const forge = createForge("github", { token, repoSlug, workspacePath: prep.workspacePath });
+        const tools = [];
+        if (cfg.agent.tools.set_issue_status) {
+            tools.push(makeSetIssueStatusTool({
+                tracker,
+                snapshot: () => snapshot,
+                refreshAfter: async () => {
+                    snapshot = await tracker.fetchSnapshot();
+                },
+            }));
+        }
+        if (cfg.agent.tools.open_pull_request) {
+            tools.push(makeOpenPullRequestTool({ forge, branch, base: baseBranch }));
+        }
+        if (cfg.agent.tools.comment) {
+            tools.push(makeCommentTool({ forge, issueNumber }));
+        }
         const runResult = await runtime.run({
             workspacePath: prep.workspacePath,
             settings: {
