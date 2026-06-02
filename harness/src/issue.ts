@@ -10,6 +10,9 @@ export interface NormalizedIssue {
   description: string | null;
   state: string;
   url: string | null;
+  // `gh project item-list` doesn't expose labels, so these come from a separate
+  // `gh issue view` lookup (best-effort; [] if it fails).
+  labels: string[];
 }
 
 export interface ProjectStatusInfo {
@@ -144,6 +147,19 @@ export async function fetchIssueSnapshot(ref: TrackerRef): Promise<IssueSnapshot
     );
   }
 
+  // Labels live on the issue, not the project item — fetch them separately.
+  // Best-effort: a failure here shouldn't sink the whole run.
+  let labels: string[] = [];
+  try {
+    const view = await ghJson<{ labels?: Array<{ name: string }> }>(
+      ["issue", "view", String(ref.issueNumber), "--repo", ref.repoSlug, "--json", "labels"],
+      ref.token,
+    );
+    labels = (view.labels ?? []).map((l) => l.name.toLowerCase());
+  } catch (e) {
+    log.warn({ module: "issue", event: "labels_fetch_failed", message: String((e as Error).message) });
+  }
+
   const state = typeof item.status === "string" ? item.status : "";
   const issue: NormalizedIssue = {
     id: `${ref.repoSlug}#${ref.issueNumber}`,
@@ -152,6 +168,7 @@ export async function fetchIssueSnapshot(ref: TrackerRef): Promise<IssueSnapshot
     description: item.content?.body ?? null,
     state,
     url: item.content?.url ?? null,
+    labels,
   };
 
   const projectStatus: ProjectStatusInfo = {

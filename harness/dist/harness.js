@@ -5552,6 +5552,16 @@ async function fetchIssueSnapshot(ref) {
     if (!item) {
         throw new Error(`issue_fetch_failed: issue ${ref.repoSlug}#${ref.issueNumber} is not in project ${ref.owner}/${ref.projectNumber}`);
     }
+    // Labels live on the issue, not the project item — fetch them separately.
+    // Best-effort: a failure here shouldn't sink the whole run.
+    let labels = [];
+    try {
+        const view = await ghJson(["issue", "view", String(ref.issueNumber), "--repo", ref.repoSlug, "--json", "labels"], ref.token);
+        labels = (view.labels ?? []).map((l) => l.name.toLowerCase());
+    }
+    catch (e) {
+        log.warn({ module: "issue", event: "labels_fetch_failed", message: String(e.message) });
+    }
     const state = typeof item.status === "string" ? item.status : "";
     const issue = {
         id: `${ref.repoSlug}#${ref.issueNumber}`,
@@ -5560,6 +5570,7 @@ async function fetchIssueSnapshot(ref) {
         description: item.content?.body ?? null,
         state,
         url: item.content?.url ?? null,
+        labels,
     };
     const projectStatus = {
         projectItemId: item.id,
