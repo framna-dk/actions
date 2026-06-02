@@ -1,9 +1,9 @@
-import recursive from "recursive-readdir"
+import listFiles from "./list-files"
 import fs from "fs"
 import path from "path"
 
 export default async function (dir: string): Promise<string[]> {
-  const files: string[] = await recursive(dir)
+  const files: string[] = await listFiles(dir)
   return files.filter(file => {
     if (path.basename(file) === "icon.json") {
       const parentDir = path.dirname(file)
