@@ -6,17 +6,19 @@ The action has the following inputs:
 
 | Name               | Description                                                                 | Required | Default                          |
 | ------------------ | --------------------------------------------------------------------------- | -------- | -------------------------------- |
-| issue_id           | GitHub issue node ID (e.g. `I_kwDOSk69...`).                                 | `true`   | None                             |
+| issue_number       | Issue number within its repo (e.g. `12`).                                    | `true`   | None                             |
 | attempt            | Dispatch attempt counter from the orchestrator (`0` for the first run).      | `true`   | None                             |
 | tracker_kind       | Tracker type; always `github_projects_v2` for now.                          | `true`   | None                             |
-| tracker_project_id | Projects v2 node ID (e.g. `PVT_kw...`).                                      | `true`   | None                             |
+| project_owner      | Projects v2 owner login (org or user), e.g. `framna-dk`.                     | `true`   | None                             |
+| project_number     | Projects v2 board number, e.g. `23`.                                         | `true`   | None                             |
+| project_node_id    | Projects v2 node ID (e.g. `PVT_kw...`); used for `gh project item-edit`.     | `true`   | None                             |
 | prompt_path        | Path to the Liquid prompt template (relative to the workspace repo, or absolute). There is no built-in default prompt. | `true`   | None                             |
 | workspace_root     | Directory under which per-issue workspaces are created.                      | `false`  | `$HOME/banzai-workspaces`        |
-| repo_url           | Override the git URL for the workspace clone (defaults to the current repo). | `false`  | `""`                             |
+| repo_url           | The issue's `owner/repo` (defaults to the current repo). Used to clone and to match the board item. | `false`  | `""`                             |
 | base_branch        | Branch the workspace resets from on each run; the agent's working branch is cut from it. | `false`  | `main`                           |
 | log_level          | `info` \| `warn` \| `error`.                                                 | `false`  | `info`                           |
 
-The agent authenticates with the `GH_TOKEN` environment variable (a GitHub App installation token with org-level Projects v2 access). Self-hosted runner prerequisites: `codex`, `gh`, `node`, `git`, `jq`, and an authenticated Codex CLI.
+The action talks to GitHub Projects entirely through the `gh` CLI (`gh project field-list`/`item-list`/`item-edit`), authenticating with the `GH_TOKEN` environment variable (a GitHub App installation token with org-level Projects v2 access; the token needs the `project` scope). Self-hosted runner prerequisites: `codex`, `gh`, `node`, `git`, `jq`, and an authenticated Codex CLI.
 
 ### Usage
 
@@ -32,11 +34,14 @@ The agent authenticates with the `GH_TOKEN` environment variable (a GitHub App i
 - name: Run harness
   uses: framna-dk/actions/harness@main
   with:
-    issue_id: ${{ inputs.issue_id }}
+    issue_number: ${{ inputs.issue_number }}
     attempt: ${{ inputs.attempt }}
     tracker_kind: ${{ inputs.tracker_kind }}
-    tracker_project_id: ${{ inputs.tracker_project_id }}
+    project_owner: ${{ inputs.project_owner }}
+    project_number: ${{ inputs.project_number }}
+    project_node_id: ${{ inputs.project_node_id }}
     prompt_path: .banzai/prompt.md
+    repo_url: ${{ inputs.repo_url }}
   env:
     GH_TOKEN: ${{ steps.app-token.outputs.token }}
 ```

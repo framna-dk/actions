@@ -8,10 +8,12 @@ import { fetchIssueSnapshot, setProjectItemStatus } from "./issue.js";
 import { runTurns } from "./codex/turn_loop.js";
 
 interface Inputs {
-  issue_id: string;
+  issue_number: string;
   attempt: string;
   tracker_kind: string;
-  tracker_project_id: string;
+  project_owner: string;
+  project_number: string;
+  project_node_id: string;
   prompt_path: string;
   workspace_root: string;
   repo_url: string;
@@ -53,20 +55,44 @@ async function main(): Promise<number> {
   registerSecret(token);
   registerSecret(process.env.OPENAI_API_KEY);
 
+  const repoSlug = inputs.repo_url || repoSlugFromEnv();
+  const issueNumber = parseInt(inputs.issue_number, 10);
+  const projectNumber = parseInt(inputs.project_number, 10);
+
   log.info({
     module: "harness",
     event: "start",
-    issue_id: inputs.issue_id,
-    message: `attempt=${inputs.attempt}`,
+    issue_identifier: `#${inputs.issue_number}`,
+    message: `repo=${repoSlug} project=${inputs.project_owner}/${inputs.project_number} attempt=${inputs.attempt}`,
   });
 
-  const repoSlug = inputs.repo_url || repoSlugFromEnv();
   const workspaceRoot = expand(inputs.workspace_root || "$HOME/banzai-workspaces");
 
   try {
+    if (!inputs.project_owner || !Number.isFinite(projectNumber)) {
+      throw new Error("missing_project: project_owner and project_number inputs are required");
+    }
+    if (!inputs.project_node_id) {
+      throw new Error("missing_project_node_id: the project_node_id input is required");
+    }
+    if (!Number.isFinite(issueNumber)) {
+      throw new Error("missing_issue_number: the issue_number input is required");
+    }
+    if (!inputs.prompt_path) {
+      throw new Error("missing_prompt_path: the prompt_path input is required");
+    }
+
+    const trackerRef = {
+      token,
+      owner: inputs.project_owner,
+      projectNumber,
+      issueNumber,
+      repoSlug,
+    };
+
     const prep = await prepareWorkspace({
       workspaceRoot,
-      workspaceKey: inputs.issue_id,
+      workspaceKey: inputs.issue_number,
       repoSlug,
       baseBranch: inputs.base_branch || "main",
     });
@@ -77,23 +103,8 @@ async function main(): Promise<number> {
     });
 
     const cfg = await loadConfig(prep.workspacePath);
-    // Allow env-supplied project id to override the file when present.
-    if (inputs.tracker_project_id) cfg.tracker.project_id = inputs.tracker_project_id;
-    if (!cfg.tracker.project_id) {
-      throw new Error(
-        "config_missing_project_id: set tracker_project_id input or tracker.project_id in .banzai/config.json",
-      );
-    }
-    if (!inputs.prompt_path) {
-      throw new Error("missing_prompt_path: the prompt_path input is required");
-    }
 
-    let snapshot = await fetchIssueSnapshot({
-      endpoint: cfg.tracker.endpoint,
-      token,
-      issueId: inputs.issue_id,
-      projectId: cfg.tracker.project_id,
-    });
+    let snapshot = await fetchIssueSnapshot(trackerRef);
 
     // Cut the agent's working branch now that we know the issue identifier.
     const branch = await createWorkBranch(prep.workspacePath, snapshot.issue.identifier);
@@ -115,9 +126,8 @@ async function main(): Promise<number> {
       if (inProgress) {
         try {
           await setProjectItemStatus({
-            endpoint: cfg.tracker.endpoint,
             token,
-            projectId: cfg.tracker.project_id,
+            projectNodeId: inputs.project_node_id,
             itemId: snapshot.projectStatus.projectItemId,
             fieldId: snapshot.projectStatus.statusFieldId,
             optionId: inProgress.id,
@@ -129,12 +139,7 @@ async function main(): Promise<number> {
             issue_identifier: snapshot.issue.identifier,
             message: "Todo → In Progress",
           });
-          snapshot = await fetchIssueSnapshot({
-            endpoint: cfg.tracker.endpoint,
-            token,
-            issueId: inputs.issue_id,
-            projectId: cfg.tracker.project_id,
-          });
+          snapshot = await fetchIssueSnapshot(trackerRef);
         } catch (e) {
           log.warn({
             module: "harness",
@@ -150,6 +155,13 @@ async function main(): Promise<number> {
       promptPath: inputs.prompt_path,
       cfg,
       token,
+      tracker: {
+        owner: inputs.project_owner,
+        projectNumber,
+        projectNodeId: inputs.project_node_id,
+        issueNumber,
+        repoSlug,
+      },
       attempt: parseInt(inputs.attempt, 10) || 0,
       initialSnapshot: snapshot,
     });
@@ -165,7 +177,7 @@ async function main(): Promise<number> {
     log.info({
       module: "harness",
       event: "exit",
-      issue_id: inputs.issue_id,
+      issue_id: snapshot.issue.id,
       issue_identifier: snapshot.issue.identifier,
       message: `${result.outcome} reason=${result.reason} state=${result.tracker_state_at_exit} turns=${result.turn_count}`,
     });

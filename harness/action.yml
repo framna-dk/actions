@@ -2,8 +2,8 @@ name: "Banzai harness"
 description: "Runs a Codex agent against one tracker issue inside a GitHub Actions job."
 
 inputs:
-  issue_id:
-    description: "GitHub issue node ID (e.g. I_kwDOSk69...)."
+  issue_number:
+    description: "Issue number within its repo (e.g. 12)."
     required: true
   attempt:
     description: "Dispatch attempt counter from the orchestrator (0 for the first run)."
@@ -11,8 +11,14 @@ inputs:
   tracker_kind:
     description: "Always 'github_projects_v2' for now."
     required: true
-  tracker_project_id:
-    description: "Project v2 node ID (e.g. PVT_kw...)."
+  project_owner:
+    description: "Projects v2 owner login (org or user), e.g. framna-dk."
+    required: true
+  project_number:
+    description: "Projects v2 board number, e.g. 23."
+    required: true
+  project_node_id:
+    description: "Projects v2 node ID (e.g. PVT_kw...). Used for `gh project item-edit`."
     required: true
   prompt_path:
     description: "Path to the Liquid prompt template (relative to the workspace repo, or absolute). Required; there is no built-in default prompt."

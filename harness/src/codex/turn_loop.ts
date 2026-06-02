@@ -3,14 +3,22 @@ import { log } from "../logging.js";
 import { fetchIssueSnapshot, type IssueSnapshot } from "../issue.js";
 import { renderPrompt, renderContinuation } from "../prompt.js";
 import { makeSetIssueStatusTool } from "../tools/set_issue_status.js";
-import { makeGithubGraphqlTool } from "../tools/github_graphql.js";
 import type { HarnessConfig } from "../config.js";
+
+export interface TrackerRefBase {
+  owner: string;
+  projectNumber: number;
+  projectNodeId: string;
+  issueNumber: number;
+  repoSlug: string;
+}
 
 export interface RunInput {
   workspacePath: string;
   promptPath: string;
   cfg: HarnessConfig;
   token: string;
+  tracker: TrackerRefBase;
   attempt: number;
   initialSnapshot: IssueSnapshot;
 }
@@ -43,41 +51,32 @@ interface TurnCompletedNotification {
 }
 
 export async function runTurns(input: RunInput): Promise<RunOutcome> {
-  const { workspacePath, promptPath, cfg, token, attempt } = input;
+  const { workspacePath, promptPath, cfg, token, tracker, attempt } = input;
   let snapshot = input.initialSnapshot;
   let turnCount = 0;
 
   const refreshAfter = async () => {
     snapshot = await fetchIssueSnapshot({
-      endpoint: cfg.tracker.endpoint,
       token,
-      issueId: snapshot.issue.id,
-      projectId: cfg.tracker.project_id,
+      owner: tracker.owner,
+      projectNumber: tracker.projectNumber,
+      issueNumber: tracker.issueNumber,
+      repoSlug: tracker.repoSlug,
     });
   };
 
-  const toolCtxBase = {
-    endpoint: cfg.tracker.endpoint,
-    token,
-    projectId: cfg.tracker.project_id,
-  };
-
   const setStatus = makeSetIssueStatusTool({
-    ...toolCtxBase,
+    token,
+    projectNodeId: tracker.projectNodeId,
     snapshot: () => snapshot,
     refreshAfter,
   });
-  const ghGraphql = makeGithubGraphqlTool({ endpoint: toolCtxBase.endpoint, token: toolCtxBase.token });
 
   const dynamicTools: DynamicToolSpec[] = [];
   const handlers: Array<[string, ToolHandler]> = [];
   if (cfg.agent.tools.set_issue_status) {
     dynamicTools.push(setStatus.spec);
     handlers.push([setStatus.spec.name, setStatus.handler]);
-  }
-  if (cfg.agent.tools.github_graphql) {
-    dynamicTools.push(ghGraphql.spec);
-    handlers.push([ghGraphql.spec.name, ghGraphql.handler]);
   }
 
   const client = new CodexAppServerClient(cfg.agent.codex.command);

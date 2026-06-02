@@ -2,19 +2,23 @@ import { spawnSync } from "node:child_process";
 import { log, setLogLevel } from "./logging.js";
 
 interface Inputs {
-  issue_id?: string;
+  issue_number?: string;
   attempt?: string;
   tracker_kind?: string;
-  tracker_project_id?: string;
+  project_owner?: string;
+  project_number?: string;
+  project_node_id?: string;
   prompt_path?: string;
   log_level?: string;
 }
 
 const REQUIRED_INPUTS: Array<keyof Inputs> = [
-  "issue_id",
+  "issue_number",
   "attempt",
   "tracker_kind",
-  "tracker_project_id",
+  "project_owner",
+  "project_number",
+  "project_node_id",
   "prompt_path",
 ];
 
@@ -77,8 +81,8 @@ function main(): number {
   log.info({
     module: "preflight",
     event: "ok",
-    issue_id: inputs.issue_id,
-    message: `attempt=${inputs.attempt} project=${inputs.tracker_project_id}`,
+    issue_identifier: `#${inputs.issue_number}`,
+    message: `attempt=${inputs.attempt} project=${inputs.project_owner}/${inputs.project_number}`,
   });
   return 0;
 }

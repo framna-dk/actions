@@ -5358,7 +5358,6 @@ async function createWorkBranch(workspacePath, identifier) {
 
 
 const DEFAULTS = {
-    endpoint: "https://api.github.com/graphql",
     active_states: ["Todo", "In Progress"],
     terminal_states: ["Done", "Cancelled", "Canceled", "Duplicate", "Closed"],
     max_turns: 20,
@@ -5394,8 +5393,8 @@ async function loadConfig(workspacePath) {
         raw = await (0,promises_namespaceObject.readFile)(cfgPath, "utf8");
     }
     catch (e) {
-        // A missing config file is fine: the built-in defaults plus the
-        // tracker_project_id action input are sufficient to run. Only a genuine
+        // A missing config file is fine: the built-in defaults plus the action
+        // inputs (project identity, prompt) are sufficient to run. Only a genuine
         // read error (permissions, etc.) is fatal.
         if (e.code !== "ENOENT") {
             throw new Error(`config_unreadable: ${cfgPath}: ${e.message}`);
@@ -5423,8 +5422,6 @@ async function loadConfig(workspacePath) {
     const cfg = {
         tracker: {
             kind: "github_projects_v2",
-            project_id: asStr(trackerRaw.project_id, ""),
-            endpoint: asStr(trackerRaw.endpoint, DEFAULTS.endpoint),
             active_states: asStrArr(trackerRaw.active_states, DEFAULTS.active_states),
             terminal_states: asStrArr(trackerRaw.terminal_states, DEFAULTS.terminal_states),
         },
@@ -5440,7 +5437,6 @@ async function loadConfig(workspacePath) {
                 turn_timeout_ms: asInt(codexRaw.turn_timeout_ms, DEFAULTS.turn_timeout_ms),
             },
             tools: {
-                github_graphql: asBool(toolsRaw.github_graphql, true),
                 set_issue_status: asBool(toolsRaw.set_issue_status, true),
             },
         },
@@ -5451,162 +5447,124 @@ async function loadConfig(workspacePath) {
     return cfg;
 }
 
+;// CONCATENATED MODULE: ./src/gh.ts
+
+/**
+ * Run a `gh` CLI command, capturing stdout/stderr. The GitHub token is passed
+ * via the GH_TOKEN env var (gh's standard auth channel); prompts are disabled so
+ * a misconfigured runner fails fast instead of hanging.
+ */
+async function gh(args, token) {
+    return new Promise((resolve, reject) => {
+        const p = (0,external_node_child_process_namespaceObject.spawn)("gh", args, {
+            stdio: ["ignore", "pipe", "pipe"],
+            env: { ...process.env, GH_TOKEN: token, GH_PROMPT_DISABLED: "1" },
+        });
+        const out = [];
+        const err = [];
+        p.stdout.setEncoding("utf8");
+        p.stderr.setEncoding("utf8");
+        p.stdout.on("data", (c) => out.push(c));
+        p.stderr.on("data", (c) => err.push(c));
+        p.on("error", reject);
+        p.on("exit", (code) => {
+            const stdout = out.join("");
+            const stderr = err.join("");
+            if (code === 0) {
+                resolve({ stdout, stderr });
+            }
+            else {
+                const tail = (stderr.trim() || stdout.trim()).slice(-500);
+                reject(new Error(`gh ${args.join(" ")} exited ${code}: ${tail}`));
+            }
+        });
+    });
+}
+/** Run a `gh` command with `--format json` and parse the result. */
+async function ghJson(args, token) {
+    const { stdout } = await gh(args, token);
+    try {
+        return JSON.parse(stdout);
+    }
+    catch (e) {
+        throw new Error(`gh_json_parse_failed: ${args.join(" ")}: ${e.message}`);
+    }
+}
+
 ;// CONCATENATED MODULE: ./src/issue.ts
 
-const QUERY = /* GraphQL */ `
-  query ($issueId: ID!, $projectId: ID!, $after: String) {
-    issue: node(id: $issueId) {
-      ... on Issue {
-        id
-        number
-        title
-        body
-        url
-        createdAt
-        updatedAt
-        labels(first: 20) { nodes { name } }
-      }
-    }
-    project: node(id: $projectId) {
-      ... on ProjectV2 {
-        field(name: "Status") {
-          ... on ProjectV2SingleSelectField {
-            id
-            options { id name }
-          }
-        }
-        items(first: 100, after: $after) {
-          pageInfo { hasNextPage endCursor }
-          nodes {
-            id
-            content {
-              ... on Issue { id }
-              ... on PullRequest { id }
-            }
-            fieldValues(first: 20) {
-              nodes {
-                __typename
-                ... on ProjectV2ItemFieldSingleSelectValue {
-                  name
-                  field { ... on ProjectV2FieldCommon { name } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-`;
+
+// `gh project item-list` paginates internally up to --limit (default 30), with
+// no --paginate flag. We request a high cap and warn if a board exceeds it
+// rather than silently truncating.
+const ITEM_LIST_LIMIT = 5000;
 /**
- * Low-level mutation: sets a project item's Status single-select to a known option.
- * Throws on transport or GraphQL errors. No snapshot bookkeeping; the caller
- * should re-fetch if it needs the updated state.
+ * Set a project item's Status single-select to a known option via
+ * `gh project item-edit`. Throws on non-zero exit. No snapshot bookkeeping; the
+ * caller should re-fetch if it needs the updated state.
  */
 async function setProjectItemStatus(input) {
-    const mutation = /* GraphQL */ `
-    mutation ($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-      updateProjectV2ItemFieldValue(input: {
-        projectId: $projectId
-        itemId: $itemId
-        fieldId: $fieldId
-        value: { singleSelectOptionId: $optionId }
-      }) { projectV2Item { id } }
-    }
-  `;
-    const resp = await fetch(input.endpoint, {
-        method: "POST",
-        headers: {
-            "User-Agent": "banzai-harness",
-            Authorization: `Bearer ${input.token}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-            query: mutation,
-            variables: {
-                projectId: input.projectId,
-                itemId: input.itemId,
-                fieldId: input.fieldId,
-                optionId: input.optionId,
-            },
-        }),
-    });
-    if (!resp.ok)
-        throw new Error(`status_update_failed: HTTP ${resp.status}`);
-    const json = (await resp.json());
-    if (json.errors && json.errors.length > 0) {
-        throw new Error(`status_update_failed: ${json.errors.map((e) => e.message).join("; ")}`);
-    }
+    await ghJson([
+        "project",
+        "item-edit",
+        "--id",
+        input.itemId,
+        "--project-id",
+        input.projectNodeId,
+        "--field-id",
+        input.fieldId,
+        "--single-select-option-id",
+        input.optionId,
+        "--format",
+        "json",
+    ], input.token);
 }
-async function fetchPage(input, after) {
-    const { endpoint, token, issueId, projectId } = input;
-    const resp = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-            "User-Agent": "banzai-harness",
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ query: QUERY, variables: { issueId, projectId, after } }),
-    });
-    if (!resp.ok) {
-        throw new Error(`issue_fetch_failed: HTTP ${resp.status}`);
+async function fetchIssueSnapshot(ref) {
+    const ownerArgs = ["--owner", ref.owner, "--format", "json"];
+    // Status field id + option ids.
+    const fields = await ghJson(["project", "field-list", String(ref.projectNumber), ...ownerArgs], ref.token);
+    const statusField = fields.fields.find((f) => f.name.toLowerCase() === "status" && Array.isArray(f.options));
+    if (!statusField) {
+        throw new Error(`issue_fetch_failed: project ${ref.owner}/${ref.projectNumber} has no Status field`);
     }
-    const json = (await resp.json());
-    if (json.errors && json.errors.length > 0) {
-        throw new Error(`issue_fetch_failed: ${json.errors.map((e) => e.message).join("; ")}`);
+    // The issue's board item.
+    const list = await ghJson([
+        "project",
+        "item-list",
+        String(ref.projectNumber),
+        "--owner",
+        ref.owner,
+        "--limit",
+        String(ITEM_LIST_LIMIT),
+        "--format",
+        "json",
+    ], ref.token);
+    if (typeof list.totalCount === "number" && list.totalCount > list.items.length) {
+        log.warn({
+            module: "issue",
+            event: "item_list_truncated",
+            message: `board has ${list.totalCount} items but only ${list.items.length} fetched (limit ${ITEM_LIST_LIMIT})`,
+        });
     }
-    if (!json.data?.issue)
-        throw new Error(`issue_fetch_failed: issue not found`);
-    if (!json.data?.project)
-        throw new Error(`issue_fetch_failed: project not found`);
-    return { ...json.data.project, issue: json.data.issue };
-}
-async function fetchIssueSnapshot(input) {
-    // Walk every page of the project board: the dispatched issue may sit beyond
-    // the first 100 items, so we keep paginating until we find it (or run out).
-    let after = null;
-    let raw = null;
-    let field = null;
-    let matchingItem;
-    do {
-        const page = await fetchPage(input, after);
-        raw = page.issue;
-        field = page.field;
-        if (!field) {
-            throw new Error(`issue_fetch_failed: project has no Status field`);
-        }
-        matchingItem = page.items.nodes.find((it) => it.content?.id === raw.id);
-        after = page.items.pageInfo.hasNextPage ? page.items.pageInfo.endCursor : null;
-    } while (!matchingItem && after);
-    if (!raw || !field)
-        throw new Error(`issue_fetch_failed: project not found`);
-    if (!matchingItem) {
-        throw new Error(`issue_fetch_failed: issue ${raw.id} is not in project ${input.projectId}`);
+    const item = list.items.find((it) => it.content?.type === "Issue" &&
+        it.content.number === ref.issueNumber &&
+        it.content.repository === ref.repoSlug);
+    if (!item) {
+        throw new Error(`issue_fetch_failed: issue ${ref.repoSlug}#${ref.issueNumber} is not in project ${ref.owner}/${ref.projectNumber}`);
     }
-    let state = "";
-    for (const fv of matchingItem.fieldValues.nodes) {
-        if (fv.__typename === "ProjectV2ItemFieldSingleSelectValue" &&
-            fv.field?.name === "Status" &&
-            typeof fv.name === "string") {
-            state = fv.name;
-        }
-    }
+    const state = typeof item.status === "string" ? item.status : "";
     const issue = {
-        id: raw.id,
-        identifier: `#${raw.number}`,
-        title: raw.title,
-        description: raw.body ?? null,
+        id: `${ref.repoSlug}#${ref.issueNumber}`,
+        identifier: `#${ref.issueNumber}`,
+        title: item.content?.title ?? "",
+        description: item.content?.body ?? null,
         state,
-        url: raw.url ?? null,
-        labels: (raw.labels?.nodes ?? []).map((l) => l.name.toLowerCase()),
-        created_at: raw.createdAt ?? null,
-        updated_at: raw.updatedAt ?? null,
+        url: item.content?.url ?? null,
     };
     const projectStatus = {
-        projectItemId: matchingItem.id,
-        statusFieldId: field.id,
-        statusOptions: field.options,
+        projectItemId: item.id,
+        statusFieldId: statusField.id,
+        statusOptions: statusField.options ?? [],
     };
     log.info({
         module: "issue",
@@ -5857,6 +5815,7 @@ function renderContinuation(turn, maxTurns) {
 
 ;// CONCATENATED MODULE: ./src/tools/set_issue_status.ts
 
+
 const SPEC = {
     name: "set_issue_status",
     description: "Move the current issue's status (a single-select field named 'Status' on the configured GitHub Projects v2 board) to a new value. Use this when the work is complete or when handing off to a human. Always call this before exiting if the issue is still in an active state, otherwise the orchestrator will redispatch.",
@@ -5885,39 +5844,17 @@ function makeSetIssueStatusTool(ctx) {
             const known = snap.projectStatus.statusOptions.map((o) => o.name).join(", ");
             return fail(`status '${wanted}' not found among options: ${known}`);
         }
-        const mutation = /* GraphQL */ `
-      mutation ($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-        updateProjectV2ItemFieldValue(input: {
-          projectId: $projectId
-          itemId: $itemId
-          fieldId: $fieldId
-          value: { singleSelectOptionId: $optionId }
-        }) { projectV2Item { id } }
-      }
-    `;
-        const resp = await fetch(ctx.endpoint, {
-            method: "POST",
-            headers: {
-                "User-Agent": "banzai-harness",
-                Authorization: `Bearer ${ctx.token}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                query: mutation,
-                variables: {
-                    projectId: ctx.projectId,
-                    itemId: snap.projectStatus.projectItemId,
-                    fieldId: snap.projectStatus.statusFieldId,
-                    optionId: opt.id,
-                },
-            }),
-        });
-        if (!resp.ok) {
-            return fail(`HTTP ${resp.status} from GraphQL endpoint`);
+        try {
+            await setProjectItemStatus({
+                token: ctx.token,
+                projectNodeId: ctx.projectNodeId,
+                itemId: snap.projectStatus.projectItemId,
+                fieldId: snap.projectStatus.statusFieldId,
+                optionId: opt.id,
+            });
         }
-        const json = (await resp.json());
-        if (json.errors && json.errors.length > 0) {
-            return fail(`GraphQL errors: ${json.errors.map((e) => e.message).join("; ")}`);
+        catch (e) {
+            return fail(`status_update_failed: ${e.message}`);
         }
         log.info({
             module: "tool",
@@ -5939,116 +5876,36 @@ function fail(text) {
     return { success: false, contentItems: [{ type: "inputText", text }] };
 }
 
-;// CONCATENATED MODULE: ./src/tools/github_graphql.ts
-
-const github_graphql_SPEC = {
-    name: "github_graphql",
-    description: "Execute a single GraphQL operation against the configured GitHub GraphQL endpoint. Use only when set_issue_status cannot express what you need (e.g. complex queries). Provide a single-operation document; multi-operation documents are rejected.",
-    inputSchema: {
-        type: "object",
-        additionalProperties: false,
-        required: ["query"],
-        properties: {
-            query: { type: "string", description: "A single GraphQL operation." },
-            variables: { type: "object", description: "Optional variables object." },
-        },
-    },
-};
-const OP_RE = /\b(query|mutation|subscription)\b/gi;
-function makeGithubGraphqlTool(ctx) {
-    const handler = async (params) => {
-        const args = (params.arguments ?? {});
-        if (typeof args.query !== "string" || args.query.trim() === "") {
-            return github_graphql_fail("query must be a non-empty string");
-        }
-        const opCount = (args.query.match(OP_RE) ?? []).length;
-        if (opCount > 1) {
-            return github_graphql_fail("multi-operation documents are not allowed; submit one operation per call");
-        }
-        let variables;
-        if (args.variables !== undefined) {
-            if (typeof args.variables !== "object" || args.variables === null || Array.isArray(args.variables)) {
-                return github_graphql_fail("variables must be an object if present");
-            }
-            variables = args.variables;
-        }
-        const resp = await fetch(ctx.endpoint, {
-            method: "POST",
-            headers: {
-                "User-Agent": "banzai-harness",
-                Authorization: `Bearer ${ctx.token}`,
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({ query: args.query, variables }),
-        });
-        let body;
-        try {
-            body = await resp.json();
-        }
-        catch {
-            return github_graphql_fail(`non-JSON response from GraphQL endpoint (HTTP ${resp.status})`);
-        }
-        if (!resp.ok) {
-            return github_graphql_fail(`HTTP ${resp.status}: ${JSON.stringify(body).slice(0, 1000)}`);
-        }
-        const j = body;
-        if (j.errors && j.errors.length > 0) {
-            log.info({ module: "tool", event: "github_graphql_errors", message: j.errors.map((e) => e.message).join("; ") });
-            return {
-                success: false,
-                contentItems: [{ type: "inputText", text: JSON.stringify(j).slice(0, 4000) }],
-            };
-        }
-        return github_graphql_ok(JSON.stringify(j).slice(0, 8000));
-    };
-    return { spec: github_graphql_SPEC, handler };
-}
-function github_graphql_ok(text) {
-    return { success: true, contentItems: [{ type: "inputText", text }] };
-}
-function github_graphql_fail(text) {
-    return { success: false, contentItems: [{ type: "inputText", text }] };
-}
-
 ;// CONCATENATED MODULE: ./src/codex/turn_loop.ts
 
 
 
 
 
-
 async function runTurns(input) {
-    const { workspacePath, promptPath, cfg, token, attempt } = input;
+    const { workspacePath, promptPath, cfg, token, tracker, attempt } = input;
     let snapshot = input.initialSnapshot;
     let turnCount = 0;
     const refreshAfter = async () => {
         snapshot = await fetchIssueSnapshot({
-            endpoint: cfg.tracker.endpoint,
             token,
-            issueId: snapshot.issue.id,
-            projectId: cfg.tracker.project_id,
+            owner: tracker.owner,
+            projectNumber: tracker.projectNumber,
+            issueNumber: tracker.issueNumber,
+            repoSlug: tracker.repoSlug,
         });
     };
-    const toolCtxBase = {
-        endpoint: cfg.tracker.endpoint,
-        token,
-        projectId: cfg.tracker.project_id,
-    };
     const setStatus = makeSetIssueStatusTool({
-        ...toolCtxBase,
+        token,
+        projectNodeId: tracker.projectNodeId,
         snapshot: () => snapshot,
         refreshAfter,
     });
-    const ghGraphql = makeGithubGraphqlTool({ endpoint: toolCtxBase.endpoint, token: toolCtxBase.token });
     const dynamicTools = [];
     const handlers = [];
     if (cfg.agent.tools.set_issue_status) {
         dynamicTools.push(setStatus.spec);
         handlers.push([setStatus.spec.name, setStatus.handler]);
-    }
-    if (cfg.agent.tools.github_graphql) {
-        dynamicTools.push(ghGraphql.spec);
-        handlers.push([ghGraphql.spec.name, ghGraphql.handler]);
     }
     const client = new CodexAppServerClient(cfg.agent.codex.command);
     for (const [name, h] of handlers)
@@ -6289,18 +6146,39 @@ async function main() {
     }
     registerSecret(token);
     registerSecret(process.env.OPENAI_API_KEY);
+    const repoSlug = inputs.repo_url || repoSlugFromEnv();
+    const issueNumber = parseInt(inputs.issue_number, 10);
+    const projectNumber = parseInt(inputs.project_number, 10);
     log.info({
         module: "harness",
         event: "start",
-        issue_id: inputs.issue_id,
-        message: `attempt=${inputs.attempt}`,
+        issue_identifier: `#${inputs.issue_number}`,
+        message: `repo=${repoSlug} project=${inputs.project_owner}/${inputs.project_number} attempt=${inputs.attempt}`,
     });
-    const repoSlug = inputs.repo_url || repoSlugFromEnv();
     const workspaceRoot = expand(inputs.workspace_root || "$HOME/banzai-workspaces");
     try {
+        if (!inputs.project_owner || !Number.isFinite(projectNumber)) {
+            throw new Error("missing_project: project_owner and project_number inputs are required");
+        }
+        if (!inputs.project_node_id) {
+            throw new Error("missing_project_node_id: the project_node_id input is required");
+        }
+        if (!Number.isFinite(issueNumber)) {
+            throw new Error("missing_issue_number: the issue_number input is required");
+        }
+        if (!inputs.prompt_path) {
+            throw new Error("missing_prompt_path: the prompt_path input is required");
+        }
+        const trackerRef = {
+            token,
+            owner: inputs.project_owner,
+            projectNumber,
+            issueNumber,
+            repoSlug,
+        };
         const prep = await prepareWorkspace({
             workspaceRoot,
-            workspaceKey: inputs.issue_id,
+            workspaceKey: inputs.issue_number,
             repoSlug,
             baseBranch: inputs.base_branch || "main",
         });
@@ -6310,21 +6188,7 @@ async function main() {
             message: `${prep.workspacePath} (createdNow=${prep.createdNow})`,
         });
         const cfg = await loadConfig(prep.workspacePath);
-        // Allow env-supplied project id to override the file when present.
-        if (inputs.tracker_project_id)
-            cfg.tracker.project_id = inputs.tracker_project_id;
-        if (!cfg.tracker.project_id) {
-            throw new Error("config_missing_project_id: set tracker_project_id input or tracker.project_id in .banzai/config.json");
-        }
-        if (!inputs.prompt_path) {
-            throw new Error("missing_prompt_path: the prompt_path input is required");
-        }
-        let snapshot = await fetchIssueSnapshot({
-            endpoint: cfg.tracker.endpoint,
-            token,
-            issueId: inputs.issue_id,
-            projectId: cfg.tracker.project_id,
-        });
+        let snapshot = await fetchIssueSnapshot(trackerRef);
         // Cut the agent's working branch now that we know the issue identifier.
         const branch = await createWorkBranch(prep.workspacePath, snapshot.issue.identifier);
         log.info({
@@ -6342,9 +6206,8 @@ async function main() {
             if (inProgress) {
                 try {
                     await setProjectItemStatus({
-                        endpoint: cfg.tracker.endpoint,
                         token,
-                        projectId: cfg.tracker.project_id,
+                        projectNodeId: inputs.project_node_id,
                         itemId: snapshot.projectStatus.projectItemId,
                         fieldId: snapshot.projectStatus.statusFieldId,
                         optionId: inProgress.id,
@@ -6356,12 +6219,7 @@ async function main() {
                         issue_identifier: snapshot.issue.identifier,
                         message: "Todo → In Progress",
                     });
-                    snapshot = await fetchIssueSnapshot({
-                        endpoint: cfg.tracker.endpoint,
-                        token,
-                        issueId: inputs.issue_id,
-                        projectId: cfg.tracker.project_id,
-                    });
+                    snapshot = await fetchIssueSnapshot(trackerRef);
                 }
                 catch (e) {
                     log.warn({
@@ -6377,6 +6235,13 @@ async function main() {
             promptPath: inputs.prompt_path,
             cfg,
             token,
+            tracker: {
+                owner: inputs.project_owner,
+                projectNumber,
+                projectNodeId: inputs.project_node_id,
+                issueNumber,
+                repoSlug,
+            },
             attempt: parseInt(inputs.attempt, 10) || 0,
             initialSnapshot: snapshot,
         });
@@ -6390,7 +6255,7 @@ async function main() {
         log.info({
             module: "harness",
             event: "exit",
-            issue_id: inputs.issue_id,
+            issue_id: snapshot.issue.id,
             issue_identifier: snapshot.issue.identifier,
             message: `${result.outcome} reason=${result.reason} state=${result.tracker_state_at_exit} turns=${result.turn_count}`,
         });

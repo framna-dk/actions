@@ -5,8 +5,6 @@ import { log } from "./logging.js";
 export interface HarnessConfig {
   tracker: {
     kind: "github_projects_v2";
-    project_id: string;
-    endpoint: string;
     active_states: string[];
     terminal_states: string[];
   };
@@ -19,14 +17,12 @@ export interface HarnessConfig {
       turn_timeout_ms: number;
     };
     tools: {
-      github_graphql: boolean;
       set_issue_status: boolean;
     };
   };
 }
 
 const DEFAULTS = {
-  endpoint: "https://api.github.com/graphql",
   active_states: ["Todo", "In Progress"],
   terminal_states: ["Done", "Cancelled", "Canceled", "Duplicate", "Closed"],
   max_turns: 20,
@@ -66,8 +62,8 @@ export async function loadConfig(workspacePath: string): Promise<HarnessConfig> 
   try {
     raw = await readFile(cfgPath, "utf8");
   } catch (e) {
-    // A missing config file is fine: the built-in defaults plus the
-    // tracker_project_id action input are sufficient to run. Only a genuine
+    // A missing config file is fine: the built-in defaults plus the action
+    // inputs (project identity, prompt) are sufficient to run. Only a genuine
     // read error (permissions, etc.) is fatal.
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       throw new Error(`config_unreadable: ${cfgPath}: ${(e as Error).message}`);
@@ -95,8 +91,6 @@ export async function loadConfig(workspacePath: string): Promise<HarnessConfig> 
   const cfg: HarnessConfig = {
     tracker: {
       kind: "github_projects_v2",
-      project_id: asStr(trackerRaw.project_id, ""),
-      endpoint: asStr(trackerRaw.endpoint, DEFAULTS.endpoint),
       active_states: asStrArr(trackerRaw.active_states, DEFAULTS.active_states),
       terminal_states: asStrArr(trackerRaw.terminal_states, DEFAULTS.terminal_states),
     },
@@ -112,7 +106,6 @@ export async function loadConfig(workspacePath: string): Promise<HarnessConfig> 
         turn_timeout_ms: asInt(codexRaw.turn_timeout_ms, DEFAULTS.turn_timeout_ms),
       },
       tools: {
-        github_graphql: asBool(toolsRaw.github_graphql, true),
         set_issue_status: asBool(toolsRaw.set_issue_status, true),
       },
     },

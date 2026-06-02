@@ -1,15 +1,15 @@
 import { log } from "./logging.js";
+import { ghJson } from "./gh.js";
 
 export interface NormalizedIssue {
+  // No GraphQL node id is available via `gh project`; this is a stable human id
+  // ("owner/repo#12") used only for logging.
   id: string;
   identifier: string;
   title: string;
   description: string | null;
   state: string;
   url: string | null;
-  labels: string[];
-  created_at: string | null;
-  updated_at: string | null;
 }
 
 export interface ProjectStatusInfo {
@@ -23,215 +23,141 @@ export interface IssueSnapshot {
   projectStatus: ProjectStatusInfo;
 }
 
-interface FetchInput {
-  endpoint: string;
+export interface TrackerRef {
   token: string;
-  issueId: string;
-  projectId: string;
+  owner: string; // project owner login (org or user)
+  projectNumber: number;
+  issueNumber: number;
+  repoSlug: string; // "owner/repo" of the issue, to disambiguate boards spanning repos
 }
 
-const QUERY = /* GraphQL */ `
-  query ($issueId: ID!, $projectId: ID!, $after: String) {
-    issue: node(id: $issueId) {
-      ... on Issue {
-        id
-        number
-        title
-        body
-        url
-        createdAt
-        updatedAt
-        labels(first: 20) { nodes { name } }
-      }
-    }
-    project: node(id: $projectId) {
-      ... on ProjectV2 {
-        field(name: "Status") {
-          ... on ProjectV2SingleSelectField {
-            id
-            options { id name }
-          }
-        }
-        items(first: 100, after: $after) {
-          pageInfo { hasNextPage endCursor }
-          nodes {
-            id
-            content {
-              ... on Issue { id }
-              ... on PullRequest { id }
-            }
-            fieldValues(first: 20) {
-              nodes {
-                __typename
-                ... on ProjectV2ItemFieldSingleSelectValue {
-                  name
-                  field { ... on ProjectV2FieldCommon { name } }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-`;
-
-interface RawIssue {
-  id: string;
-  number: number;
-  title: string;
-  body: string | null;
-  url: string | null;
-  createdAt: string | null;
-  updatedAt: string | null;
-  labels?: { nodes: Array<{ name: string }> };
-}
-
-interface RawProjectItem {
-  id: string;
-  content: { id?: string } | null;
-  fieldValues: {
-    nodes: Array<{
-      __typename: string;
-      name?: string | null;
-      field?: { name?: string };
-    }>;
-  };
-}
-
-interface RawProject {
-  field: { id: string; options: Array<{ id: string; name: string }> } | null;
-  items: {
-    pageInfo: { hasNextPage: boolean; endCursor: string | null };
-    nodes: RawProjectItem[];
-  };
-}
-
-interface SetStatusInput {
-  endpoint: string;
+export interface SetStatusInput {
   token: string;
-  projectId: string;
+  projectNodeId: string;
   itemId: string;
   fieldId: string;
   optionId: string;
 }
 
+// `gh project item-list` paginates internally up to --limit (default 30), with
+// no --paginate flag. We request a high cap and warn if a board exceeds it
+// rather than silently truncating.
+const ITEM_LIST_LIMIT = 5000;
+
+interface FieldListJson {
+  fields: Array<{
+    id: string;
+    name: string;
+    type?: string;
+    options?: Array<{ id: string; name: string }>;
+  }>;
+}
+
+interface ItemListJson {
+  items: Array<{
+    id: string;
+    status?: string;
+    content?: {
+      type?: string;
+      number?: number;
+      title?: string;
+      body?: string;
+      url?: string;
+      repository?: string;
+    };
+  }>;
+  totalCount?: number;
+}
+
 /**
- * Low-level mutation: sets a project item's Status single-select to a known option.
- * Throws on transport or GraphQL errors. No snapshot bookkeeping; the caller
- * should re-fetch if it needs the updated state.
+ * Set a project item's Status single-select to a known option via
+ * `gh project item-edit`. Throws on non-zero exit. No snapshot bookkeeping; the
+ * caller should re-fetch if it needs the updated state.
  */
 export async function setProjectItemStatus(input: SetStatusInput): Promise<void> {
-  const mutation = /* GraphQL */ `
-    mutation ($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-      updateProjectV2ItemFieldValue(input: {
-        projectId: $projectId
-        itemId: $itemId
-        fieldId: $fieldId
-        value: { singleSelectOptionId: $optionId }
-      }) { projectV2Item { id } }
-    }
-  `;
-  const resp = await fetch(input.endpoint, {
-    method: "POST",
-    headers: {
-      "User-Agent": "banzai-harness",
-      Authorization: `Bearer ${input.token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query: mutation,
-      variables: {
-        projectId: input.projectId,
-        itemId: input.itemId,
-        fieldId: input.fieldId,
-        optionId: input.optionId,
-      },
-    }),
-  });
-  if (!resp.ok) throw new Error(`status_update_failed: HTTP ${resp.status}`);
-  const json = (await resp.json()) as { errors?: Array<{ message: string }> };
-  if (json.errors && json.errors.length > 0) {
-    throw new Error(`status_update_failed: ${json.errors.map((e) => e.message).join("; ")}`);
-  }
+  await ghJson(
+    [
+      "project",
+      "item-edit",
+      "--id",
+      input.itemId,
+      "--project-id",
+      input.projectNodeId,
+      "--field-id",
+      input.fieldId,
+      "--single-select-option-id",
+      input.optionId,
+      "--format",
+      "json",
+    ],
+    input.token,
+  );
 }
 
-async function fetchPage(input: FetchInput, after: string | null): Promise<RawProject & { issue: RawIssue }> {
-  const { endpoint, token, issueId, projectId } = input;
-  const resp = await fetch(endpoint, {
-    method: "POST",
-    headers: {
-      "User-Agent": "banzai-harness",
-      Authorization: `Bearer ${token}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query: QUERY, variables: { issueId, projectId, after } }),
-  });
-  if (!resp.ok) {
-    throw new Error(`issue_fetch_failed: HTTP ${resp.status}`);
-  }
-  const json = (await resp.json()) as {
-    data?: { issue: RawIssue | null; project: RawProject | null };
-    errors?: Array<{ message: string }>;
-  };
-  if (json.errors && json.errors.length > 0) {
-    throw new Error(`issue_fetch_failed: ${json.errors.map((e) => e.message).join("; ")}`);
-  }
-  if (!json.data?.issue) throw new Error(`issue_fetch_failed: issue not found`);
-  if (!json.data?.project) throw new Error(`issue_fetch_failed: project not found`);
-  return { ...json.data.project, issue: json.data.issue };
-}
+export async function fetchIssueSnapshot(ref: TrackerRef): Promise<IssueSnapshot> {
+  const ownerArgs = ["--owner", ref.owner, "--format", "json"];
 
-export async function fetchIssueSnapshot(input: FetchInput): Promise<IssueSnapshot> {
-  // Walk every page of the project board: the dispatched issue may sit beyond
-  // the first 100 items, so we keep paginating until we find it (or run out).
-  let after: string | null = null;
-  let raw: RawIssue | null = null;
-  let field: RawProject["field"] = null;
-  let matchingItem: RawProjectItem | undefined;
-  do {
-    const page = await fetchPage(input, after);
-    raw = page.issue;
-    field = page.field;
-    if (!field) {
-      throw new Error(`issue_fetch_failed: project has no Status field`);
-    }
-    matchingItem = page.items.nodes.find((it) => it.content?.id === raw!.id);
-    after = page.items.pageInfo.hasNextPage ? page.items.pageInfo.endCursor : null;
-  } while (!matchingItem && after);
-
-  if (!raw || !field) throw new Error(`issue_fetch_failed: project not found`);
-  if (!matchingItem) {
-    throw new Error(`issue_fetch_failed: issue ${raw.id} is not in project ${input.projectId}`);
+  // Status field id + option ids.
+  const fields = await ghJson<FieldListJson>(
+    ["project", "field-list", String(ref.projectNumber), ...ownerArgs],
+    ref.token,
+  );
+  const statusField = fields.fields.find(
+    (f) => f.name.toLowerCase() === "status" && Array.isArray(f.options),
+  );
+  if (!statusField) {
+    throw new Error(`issue_fetch_failed: project ${ref.owner}/${ref.projectNumber} has no Status field`);
   }
 
-  let state = "";
-  for (const fv of matchingItem.fieldValues.nodes) {
-    if (
-      fv.__typename === "ProjectV2ItemFieldSingleSelectValue" &&
-      fv.field?.name === "Status" &&
-      typeof fv.name === "string"
-    ) {
-      state = fv.name;
-    }
+  // The issue's board item.
+  const list = await ghJson<ItemListJson>(
+    [
+      "project",
+      "item-list",
+      String(ref.projectNumber),
+      "--owner",
+      ref.owner,
+      "--limit",
+      String(ITEM_LIST_LIMIT),
+      "--format",
+      "json",
+    ],
+    ref.token,
+  );
+  if (typeof list.totalCount === "number" && list.totalCount > list.items.length) {
+    log.warn({
+      module: "issue",
+      event: "item_list_truncated",
+      message: `board has ${list.totalCount} items but only ${list.items.length} fetched (limit ${ITEM_LIST_LIMIT})`,
+    });
   }
 
+  const item = list.items.find(
+    (it) =>
+      it.content?.type === "Issue" &&
+      it.content.number === ref.issueNumber &&
+      it.content.repository === ref.repoSlug,
+  );
+  if (!item) {
+    throw new Error(
+      `issue_fetch_failed: issue ${ref.repoSlug}#${ref.issueNumber} is not in project ${ref.owner}/${ref.projectNumber}`,
+    );
+  }
+
+  const state = typeof item.status === "string" ? item.status : "";
   const issue: NormalizedIssue = {
-    id: raw.id,
-    identifier: `#${raw.number}`,
-    title: raw.title,
-    description: raw.body ?? null,
+    id: `${ref.repoSlug}#${ref.issueNumber}`,
+    identifier: `#${ref.issueNumber}`,
+    title: item.content?.title ?? "",
+    description: item.content?.body ?? null,
     state,
-    url: raw.url ?? null,
-    labels: (raw.labels?.nodes ?? []).map((l) => l.name.toLowerCase()),
-    created_at: raw.createdAt ?? null,
-    updated_at: raw.updatedAt ?? null,
+    url: item.content?.url ?? null,
   };
 
   const projectStatus: ProjectStatusInfo = {
-    projectItemId: matchingItem.id,
-    statusFieldId: field.id,
-    statusOptions: field.options,
+    projectItemId: item.id,
+    statusFieldId: statusField.id,
+    statusOptions: statusField.options ?? [],
   };
 
   log.info({

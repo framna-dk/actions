@@ -51,10 +51,12 @@ const log = {
 
 
 const REQUIRED_INPUTS = [
-    "issue_id",
+    "issue_number",
     "attempt",
     "tracker_kind",
-    "tracker_project_id",
+    "project_owner",
+    "project_number",
+    "project_node_id",
     "prompt_path",
 ];
 const REQUIRED_BINS = ["node", "codex", "gh", "git", "jq", "bash"];
@@ -110,8 +112,8 @@ function main() {
     log.info({
         module: "preflight",
         event: "ok",
-        issue_id: inputs.issue_id,
-        message: `attempt=${inputs.attempt} project=${inputs.tracker_project_id}`,
+        issue_identifier: `#${inputs.issue_number}`,
+        message: `attempt=${inputs.attempt} project=${inputs.project_owner}/${inputs.project_number}`,
     });
     return 0;
 }

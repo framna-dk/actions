@@ -1,11 +1,10 @@
 import type { ToolCallParams, ToolCallResult } from "../codex/app_server.js";
-import type { IssueSnapshot } from "../issue.js";
+import { setProjectItemStatus, type IssueSnapshot } from "../issue.js";
 import { log } from "../logging.js";
 
 interface Ctx {
-  endpoint: string;
   token: string;
-  projectId: string;
+  projectNodeId: string;
   snapshot: () => IssueSnapshot;       // late-bound: the harness updates this when refreshing
   refreshAfter: () => Promise<void>;   // re-fetch after the mutation succeeds
 }
@@ -44,39 +43,16 @@ export function makeSetIssueStatusTool(ctx: Ctx) {
       return fail(`status '${wanted}' not found among options: ${known}`);
     }
 
-    const mutation = /* GraphQL */ `
-      mutation ($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-        updateProjectV2ItemFieldValue(input: {
-          projectId: $projectId
-          itemId: $itemId
-          fieldId: $fieldId
-          value: { singleSelectOptionId: $optionId }
-        }) { projectV2Item { id } }
-      }
-    `;
-    const resp = await fetch(ctx.endpoint, {
-      method: "POST",
-      headers: {
-        "User-Agent": "banzai-harness",
-        Authorization: `Bearer ${ctx.token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        query: mutation,
-        variables: {
-          projectId: ctx.projectId,
-          itemId: snap.projectStatus.projectItemId,
-          fieldId: snap.projectStatus.statusFieldId,
-          optionId: opt.id,
-        },
-      }),
-    });
-    if (!resp.ok) {
-      return fail(`HTTP ${resp.status} from GraphQL endpoint`);
-    }
-    const json = (await resp.json()) as { errors?: Array<{ message: string }> };
-    if (json.errors && json.errors.length > 0) {
-      return fail(`GraphQL errors: ${json.errors.map((e) => e.message).join("; ")}`);
+    try {
+      await setProjectItemStatus({
+        token: ctx.token,
+        projectNodeId: ctx.projectNodeId,
+        itemId: snap.projectStatus.projectItemId,
+        fieldId: snap.projectStatus.statusFieldId,
+        optionId: opt.id,
+      });
+    } catch (e) {
+      return fail(`status_update_failed: ${(e as Error).message}`);
     }
 
     log.info({
