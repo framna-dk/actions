@@ -9,6 +9,7 @@ export interface HarnessConfig {
     terminal_states: string[];
   };
   agent: {
+    runtime: string; // which AgentRuntime to use (e.g. "codex")
     max_turns: number;
     codex: {
       command: string;
@@ -25,6 +26,7 @@ export interface HarnessConfig {
 const DEFAULTS = {
   active_states: ["Todo", "In Progress"],
   terminal_states: ["Done", "Cancelled", "Canceled", "Duplicate", "Closed"],
+  runtime: "codex",
   max_turns: 20,
   codex_command: "codex app-server",
   approval_policy: "never",
@@ -95,6 +97,7 @@ export async function loadConfig(workspacePath: string): Promise<HarnessConfig> 
       terminal_states: asStrArr(trackerRaw.terminal_states, DEFAULTS.terminal_states),
     },
     agent: {
+      runtime: asStr(agentRaw.runtime, DEFAULTS.runtime),
       max_turns: Math.max(1, asInt(agentRaw.max_turns, DEFAULTS.max_turns)),
       codex: {
         command: asStr(codexRaw.command, DEFAULTS.codex_command),

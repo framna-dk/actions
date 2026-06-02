@@ -1,12 +1,11 @@
-import type { ToolCallParams, ToolCallResult } from "../codex/app_server.js";
-import { setProjectItemStatus, type IssueSnapshot } from "../issue.js";
+import type { ToolCallParams, ToolCallResult, ToolDefinition } from "../agent/types.js";
+import type { Tracker, IssueSnapshot } from "../tracker/types.js";
 import { log } from "../logging.js";
 
 interface Ctx {
-  token: string;
-  projectNodeId: string;
-  snapshot: () => IssueSnapshot;       // late-bound: the harness updates this when refreshing
-  refreshAfter: () => Promise<void>;   // re-fetch after the mutation succeeds
+  tracker: Tracker;
+  snapshot: () => IssueSnapshot; // late-bound: the harness updates this when refreshing
+  refreshAfter: () => Promise<void>; // re-fetch after the mutation succeeds
 }
 
 const SPEC = {
@@ -27,7 +26,7 @@ const SPEC = {
   },
 } as const;
 
-export function makeSetIssueStatusTool(ctx: Ctx) {
+export function makeSetIssueStatusTool(ctx: Ctx): ToolDefinition {
   const handler = async (params: ToolCallParams): Promise<ToolCallResult> => {
     const args = (params.arguments ?? {}) as { status_name?: unknown };
     if (typeof args.status_name !== "string" || args.status_name.trim() === "") {
@@ -35,22 +34,16 @@ export function makeSetIssueStatusTool(ctx: Ctx) {
     }
     const wanted = args.status_name.trim();
     const snap = ctx.snapshot();
-    const opt = snap.projectStatus.statusOptions.find(
-      (o) => o.name === wanted || o.name.toLowerCase() === wanted.toLowerCase(),
+    const match = snap.availableStates.find(
+      (s) => s === wanted || s.toLowerCase() === wanted.toLowerCase(),
     );
-    if (!opt) {
-      const known = snap.projectStatus.statusOptions.map((o) => o.name).join(", ");
-      return fail(`status '${wanted}' not found among options: ${known}`);
+    if (!match) {
+      return fail(`status '${wanted}' not found among options: ${snap.availableStates.join(", ")}`);
     }
 
+    const prev = snap.issue.state;
     try {
-      await setProjectItemStatus({
-        token: ctx.token,
-        projectNodeId: ctx.projectNodeId,
-        itemId: snap.projectStatus.projectItemId,
-        fieldId: snap.projectStatus.statusFieldId,
-        optionId: opt.id,
-      });
+      await ctx.tracker.setStatus(match);
     } catch (e) {
       return fail(`status_update_failed: ${(e as Error).message}`);
     }
@@ -60,11 +53,11 @@ export function makeSetIssueStatusTool(ctx: Ctx) {
       event: "set_issue_status_ok",
       issue_id: snap.issue.id,
       issue_identifier: snap.issue.identifier,
-      message: `${snap.issue.state} → ${opt.name}`,
+      message: `${prev} → ${match}`,
     });
     // Refresh local snapshot so subsequent turn-decisions see the new state.
     await ctx.refreshAfter();
-    return ok(`Set issue ${snap.issue.identifier} status from '${snap.issue.state}' to '${opt.name}'.`);
+    return ok(`Set issue ${snap.issue.identifier} status from '${prev}' to '${match}'.`);
   };
   return { spec: SPEC, handler };
 }

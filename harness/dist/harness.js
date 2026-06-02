@@ -5360,6 +5360,7 @@ async function createWorkBranch(workspacePath, identifier) {
 const DEFAULTS = {
     active_states: ["Todo", "In Progress"],
     terminal_states: ["Done", "Cancelled", "Canceled", "Duplicate", "Closed"],
+    runtime: "codex",
     max_turns: 20,
     codex_command: "codex app-server",
     approval_policy: "never",
@@ -5426,6 +5427,7 @@ async function loadConfig(workspacePath) {
             terminal_states: asStrArr(trackerRaw.terminal_states, DEFAULTS.terminal_states),
         },
         agent: {
+            runtime: asStr(agentRaw.runtime, DEFAULTS.runtime),
             max_turns: Math.max(1, asInt(agentRaw.max_turns, DEFAULTS.max_turns)),
             codex: {
                 command: asStr(codexRaw.command, DEFAULTS.codex_command),
@@ -5491,7 +5493,24 @@ async function ghJson(args, token) {
     }
 }
 
-;// CONCATENATED MODULE: ./src/issue.ts
+;// CONCATENATED MODULE: ./src/tracker/types.ts
+/**
+ * Tracker abstraction. A tracker owns a single issue on some external board and
+ * exposes just what the harness needs: read the issue's current state, and move
+ * it to a named state. Concrete implementations (e.g. GitHub Projects v2) hide
+ * their own identifiers and transport. Add a new tracker by implementing this
+ * interface and wiring it into `createTracker`.
+ */
+class TrackerError extends Error {
+    code;
+    constructor(code, message) {
+        super(`${code}: ${message}`);
+        this.code = code;
+    }
+}
+
+;// CONCATENATED MODULE: ./src/tracker/github_projects.ts
+
 
 
 // `gh project item-list` paginates internally up to --limit (default 30), with
@@ -5499,95 +5518,131 @@ async function ghJson(args, token) {
 // rather than silently truncating.
 const ITEM_LIST_LIMIT = 5000;
 /**
- * Set a project item's Status single-select to a known option via
- * `gh project item-edit`. Throws on non-zero exit. No snapshot bookkeeping; the
- * caller should re-fetch if it needs the updated state.
+ * GitHub Projects v2 tracker, driven entirely through the `gh` CLI:
+ *   reads  → `gh project field-list` + `gh project item-list` (+ `gh issue view`)
+ *   writes → `gh project item-edit`
+ * The board item id and Status field/options are cached from `fetchSnapshot` so
+ * a subsequent `setStatus` need not re-read the whole board.
  */
-async function setProjectItemStatus(input) {
-    await ghJson([
-        "project",
-        "item-edit",
-        "--id",
-        input.itemId,
-        "--project-id",
-        input.projectNodeId,
-        "--field-id",
-        input.fieldId,
-        "--single-select-option-id",
-        input.optionId,
-        "--format",
-        "json",
-    ], input.token);
-}
-async function fetchIssueSnapshot(ref) {
-    const ownerArgs = ["--owner", ref.owner, "--format", "json"];
-    // Status field id + option ids.
-    const fields = await ghJson(["project", "field-list", String(ref.projectNumber), ...ownerArgs], ref.token);
-    const statusField = fields.fields.find((f) => f.name.toLowerCase() === "status" && Array.isArray(f.options));
-    if (!statusField) {
-        throw new Error(`issue_fetch_failed: project ${ref.owner}/${ref.projectNumber} has no Status field`);
+class GitHubProjectsTracker {
+    opts;
+    itemId = null;
+    statusFieldId = null;
+    statusOptions = [];
+    constructor(opts) {
+        this.opts = opts;
     }
-    // The issue's board item.
-    const list = await ghJson([
-        "project",
-        "item-list",
-        String(ref.projectNumber),
-        "--owner",
-        ref.owner,
-        "--limit",
-        String(ITEM_LIST_LIMIT),
-        "--format",
-        "json",
-    ], ref.token);
-    if (typeof list.totalCount === "number" && list.totalCount > list.items.length) {
-        log.warn({
-            module: "issue",
-            event: "item_list_truncated",
-            message: `board has ${list.totalCount} items but only ${list.items.length} fetched (limit ${ITEM_LIST_LIMIT})`,
+    async fetchSnapshot() {
+        const { token, owner, projectNumber, issueNumber, repoSlug } = this.opts;
+        // Status field id + option ids.
+        const fields = await ghJson(["project", "field-list", String(projectNumber), "--owner", owner, "--format", "json"], token);
+        const statusField = fields.fields.find((f) => f.name.toLowerCase() === "status" && Array.isArray(f.options));
+        if (!statusField) {
+            throw new TrackerError("status_field_missing", `project ${owner}/${projectNumber} has no Status field`);
+        }
+        // The issue's board item.
+        const list = await ghJson([
+            "project",
+            "item-list",
+            String(projectNumber),
+            "--owner",
+            owner,
+            "--limit",
+            String(ITEM_LIST_LIMIT),
+            "--format",
+            "json",
+        ], token);
+        if (typeof list.totalCount === "number" && list.totalCount > list.items.length) {
+            log.warn({
+                module: "tracker",
+                event: "item_list_truncated",
+                message: `board has ${list.totalCount} items but only ${list.items.length} fetched (limit ${ITEM_LIST_LIMIT})`,
+            });
+        }
+        const item = list.items.find((it) => it.content?.type === "Issue" &&
+            it.content.number === issueNumber &&
+            it.content.repository === repoSlug);
+        if (!item) {
+            throw new TrackerError("issue_not_in_project", `issue ${repoSlug}#${issueNumber} is not in project ${owner}/${projectNumber}`);
+        }
+        // Labels live on the issue, not the project item — best-effort lookup.
+        let labels = [];
+        try {
+            const view = await ghJson(["issue", "view", String(issueNumber), "--repo", repoSlug, "--json", "labels"], token);
+            labels = (view.labels ?? []).map((l) => l.name.toLowerCase());
+        }
+        catch (e) {
+            log.warn({ module: "tracker", event: "labels_fetch_failed", message: String(e.message) });
+        }
+        // Cache identifiers so setStatus needn't re-read the board.
+        this.itemId = item.id;
+        this.statusFieldId = statusField.id;
+        this.statusOptions = statusField.options ?? [];
+        const state = typeof item.status === "string" ? item.status : "";
+        const issue = {
+            id: `${repoSlug}#${issueNumber}`,
+            identifier: `#${issueNumber}`,
+            title: item.content?.title ?? "",
+            description: item.content?.body ?? null,
+            state,
+            url: item.content?.url ?? null,
+            labels,
+        };
+        log.info({
+            module: "tracker",
+            event: "fetched",
+            issue_id: issue.id,
+            issue_identifier: issue.identifier,
+            message: `state=${state} options=${this.statusOptions.map((o) => o.name).join(",")}`,
         });
+        return { issue, availableStates: this.statusOptions.map((o) => o.name) };
     }
-    const item = list.items.find((it) => it.content?.type === "Issue" &&
-        it.content.number === ref.issueNumber &&
-        it.content.repository === ref.repoSlug);
-    if (!item) {
-        throw new Error(`issue_fetch_failed: issue ${ref.repoSlug}#${ref.issueNumber} is not in project ${ref.owner}/${ref.projectNumber}`);
+    async setStatus(statusName) {
+        if (!this.itemId || !this.statusFieldId) {
+            // Warm the cache (and validate the issue is on the board) first.
+            await this.fetchSnapshot();
+        }
+        const wanted = statusName.trim();
+        const opt = this.statusOptions.find((o) => o.name === wanted || o.name.toLowerCase() === wanted.toLowerCase());
+        if (!opt) {
+            throw new TrackerError("unknown_status", `status '${wanted}' not found among: ${this.statusOptions.map((o) => o.name).join(", ")}`);
+        }
+        await ghJson([
+            "project",
+            "item-edit",
+            "--id",
+            this.itemId,
+            "--project-id",
+            this.opts.projectNodeId,
+            "--field-id",
+            this.statusFieldId,
+            "--single-select-option-id",
+            opt.id,
+            "--format",
+            "json",
+        ], this.opts.token);
     }
-    // Labels live on the issue, not the project item — fetch them separately.
-    // Best-effort: a failure here shouldn't sink the whole run.
-    let labels = [];
-    try {
-        const view = await ghJson(["issue", "view", String(ref.issueNumber), "--repo", ref.repoSlug, "--json", "labels"], ref.token);
-        labels = (view.labels ?? []).map((l) => l.name.toLowerCase());
-    }
-    catch (e) {
-        log.warn({ module: "issue", event: "labels_fetch_failed", message: String(e.message) });
-    }
-    const state = typeof item.status === "string" ? item.status : "";
-    const issue = {
-        id: `${ref.repoSlug}#${ref.issueNumber}`,
-        identifier: `#${ref.issueNumber}`,
-        title: item.content?.title ?? "",
-        description: item.content?.body ?? null,
-        state,
-        url: item.content?.url ?? null,
-        labels,
-    };
-    const projectStatus = {
-        projectItemId: item.id,
-        statusFieldId: statusField.id,
-        statusOptions: statusField.options ?? [],
-    };
-    log.info({
-        module: "issue",
-        event: "fetched",
-        issue_id: issue.id,
-        issue_identifier: issue.identifier,
-        message: `state=${state} options=${projectStatus.statusOptions.map((o) => o.name).join(",")}`,
-    });
-    return { issue, projectStatus };
 }
 
-;// CONCATENATED MODULE: ./src/codex/app_server.ts
+;// CONCATENATED MODULE: ./src/tracker/index.ts
+
+
+/**
+ * Construct the tracker for the given kind. Today only GitHub Projects v2 is
+ * supported; a new tracker is added by implementing `Tracker` and adding a case
+ * here (its construction options are tracker-specific, mapped from the action
+ * inputs by the caller).
+ */
+function createTracker(kind, opts) {
+    switch (kind) {
+        case "github_projects_v2":
+            return new GitHubProjectsTracker(opts);
+        default:
+            throw new Error(`unsupported_tracker_kind: ${kind}`);
+    }
+}
+
+;// CONCATENATED MODULE: ./src/agent/codex/app_server.ts
 
 
 /**
@@ -5792,273 +5847,123 @@ function parseShellWords(s) {
     return out;
 }
 
-// EXTERNAL MODULE: ./node_modules/liquidjs/dist/liquid.node.js
-var liquid_node = __nccwpck_require__(694);
-;// CONCATENATED MODULE: ./src/prompt.ts
+;// CONCATENATED MODULE: ./src/agent/codex/runtime.ts
 
 
-
-const engine = new liquid_node/* Liquid */.HX({ strictVariables: true, strictFilters: true });
 /**
- * Render the prompt template at `promptPath`. The path is required and resolved
- * against the workspace when relative; there is no built-in fallback template,
- * so a missing or unreadable prompt is a hard error.
+ * Codex implementation of AgentRuntime: spawns the Codex app-server, opens a
+ * thread, and drives turns. Per-turn prompts and the continue/stop decision are
+ * supplied by the caller — this class owns only the Codex protocol mechanics.
  */
-async function renderPrompt(workspacePath, promptPath, ctx) {
-    const resolved = (0,external_node_path_namespaceObject.isAbsolute)(promptPath) ? promptPath : (0,external_node_path_namespaceObject.join)(workspacePath, promptPath);
-    let template;
-    try {
-        template = await (0,promises_namespaceObject.readFile)(resolved, "utf8");
-    }
-    catch (e) {
-        throw new Error(`prompt_missing: ${resolved}: ${e.message}`);
-    }
-    try {
-        return await engine.parseAndRender(template, ctx);
-    }
-    catch (e) {
-        throw new Error(`prompt_render_failed: ${e.message}`);
-    }
-}
-function renderContinuation(turn, maxTurns) {
-    return `Continue working on the issue. You are on turn ${turn} of ${maxTurns}. When the work is complete, call \`set_issue_status\` to move the issue out of "Todo" / "In Progress".`;
-}
-
-;// CONCATENATED MODULE: ./src/tools/set_issue_status.ts
-
-
-const SPEC = {
-    name: "set_issue_status",
-    description: "Move the current issue's status (a single-select field named 'Status' on the configured GitHub Projects v2 board) to a new value. Use this when the work is complete or when handing off to a human. Always call this before exiting if the issue is still in an active state, otherwise the orchestrator will redispatch.",
-    inputSchema: {
-        type: "object",
-        additionalProperties: false,
-        required: ["status_name"],
-        properties: {
-            status_name: {
-                type: "string",
-                description: "The target status option name on the project board (e.g. 'Human Review', 'Done'). Must match an existing option of the 'Status' single-select field exactly (case-insensitive match is attempted).",
-            },
-        },
-    },
-};
-function makeSetIssueStatusTool(ctx) {
-    const handler = async (params) => {
-        const args = (params.arguments ?? {});
-        if (typeof args.status_name !== "string" || args.status_name.trim() === "") {
-            return fail(`status_name must be a non-empty string`);
-        }
-        const wanted = args.status_name.trim();
-        const snap = ctx.snapshot();
-        const opt = snap.projectStatus.statusOptions.find((o) => o.name === wanted || o.name.toLowerCase() === wanted.toLowerCase());
-        if (!opt) {
-            const known = snap.projectStatus.statusOptions.map((o) => o.name).join(", ");
-            return fail(`status '${wanted}' not found among options: ${known}`);
-        }
+class CodexRuntime {
+    async run(opts) {
+        const { settings, tools, maxTurns } = opts;
+        let turnCount = 0;
+        const dynamicTools = tools.map((t) => t.spec);
+        const client = new CodexAppServerClient(settings.command);
+        for (const t of tools)
+            client.registerTool(t.spec.name, t.handler);
+        let activeTurnId = null;
+        let resolveActiveTurn = null;
+        let rejectActiveTurn = null;
+        client.onNotification((method, params) => {
+            if (method === "turn/completed") {
+                const p = params;
+                if (p.turn.id === activeTurnId && resolveActiveTurn) {
+                    const r = resolveActiveTurn;
+                    resolveActiveTurn = null;
+                    rejectActiveTurn = null;
+                    activeTurnId = null;
+                    r(p);
+                }
+                return;
+            }
+            if (method === "thread/closed") {
+                log.warn({ module: "codex", event: method, message: shortJson(params) });
+                if (rejectActiveTurn)
+                    rejectActiveTurn(new Error(`thread closed during turn`));
+                return;
+            }
+            if (method === "item/completed") {
+                const summary = summarizeItem(params);
+                if (summary)
+                    log.info({ module: "codex", event: "item", message: summary });
+                else
+                    log.debug({ module: "codex", event: method, message: shortJson(params) });
+                return;
+            }
+            if (MILESTONE_METHODS.has(method)) {
+                log.info({ module: "codex", event: method, message: shortJson(params) });
+                return;
+            }
+            log.debug({ module: "codex", event: method, message: shortJson(params) });
+        });
         try {
-            await setProjectItemStatus({
-                token: ctx.token,
-                projectNodeId: ctx.projectNodeId,
-                itemId: snap.projectStatus.projectItemId,
-                fieldId: snap.projectStatus.statusFieldId,
-                optionId: opt.id,
+            await client.request("initialize", {
+                clientInfo: { name: "banzai-harness", version: "0.1.0" },
+                capabilities: { experimentalApi: true },
             });
-        }
-        catch (e) {
-            return fail(`status_update_failed: ${e.message}`);
-        }
-        log.info({
-            module: "tool",
-            event: "set_issue_status_ok",
-            issue_id: snap.issue.id,
-            issue_identifier: snap.issue.identifier,
-            message: `${snap.issue.state} → ${opt.name}`,
-        });
-        // Refresh local snapshot so subsequent turn-decisions see the new state.
-        await ctx.refreshAfter();
-        return ok(`Set issue ${snap.issue.identifier} status from '${snap.issue.state}' to '${opt.name}'.`);
-    };
-    return { spec: SPEC, handler };
-}
-function ok(text) {
-    return { success: true, contentItems: [{ type: "inputText", text }] };
-}
-function fail(text) {
-    return { success: false, contentItems: [{ type: "inputText", text }] };
-}
-
-;// CONCATENATED MODULE: ./src/codex/turn_loop.ts
-
-
-
-
-
-async function runTurns(input) {
-    const { workspacePath, promptPath, cfg, token, tracker, attempt } = input;
-    let snapshot = input.initialSnapshot;
-    let turnCount = 0;
-    const refreshAfter = async () => {
-        snapshot = await fetchIssueSnapshot({
-            token,
-            owner: tracker.owner,
-            projectNumber: tracker.projectNumber,
-            issueNumber: tracker.issueNumber,
-            repoSlug: tracker.repoSlug,
-        });
-    };
-    const setStatus = makeSetIssueStatusTool({
-        token,
-        projectNodeId: tracker.projectNodeId,
-        snapshot: () => snapshot,
-        refreshAfter,
-    });
-    const dynamicTools = [];
-    const handlers = [];
-    if (cfg.agent.tools.set_issue_status) {
-        dynamicTools.push(setStatus.spec);
-        handlers.push([setStatus.spec.name, setStatus.handler]);
-    }
-    const client = new CodexAppServerClient(cfg.agent.codex.command);
-    for (const [name, h] of handlers)
-        client.registerTool(name, h);
-    // Track turn completion via notifications. We resolve a per-turn deferred
-    // when we see `turn/completed` for the matching turnId.
-    let activeTurnId = null;
-    let resolveActiveTurn = null;
-    let rejectActiveTurn = null;
-    client.onNotification((method, params) => {
-        if (method === "turn/completed") {
-            const p = params;
-            if (p.turn.id === activeTurnId && resolveActiveTurn) {
-                const r = resolveActiveTurn;
-                resolveActiveTurn = null;
-                rejectActiveTurn = null;
-                activeTurnId = null;
-                r(p);
-            }
-            return;
-        }
-        if (method === "thread/closed") {
-            log.warn({ module: "codex", event: method, message: shortJson(params) });
-            if (rejectActiveTurn)
-                rejectActiveTurn(new Error(`thread closed during turn`));
-            return;
-        }
-        // item/completed carries the high-signal work: agent messages, commands
-        // run, tool calls. Log a compact one-line summary at info; everything else
-        // (per-word deltas, item/started, reasoning, status churn) is debug.
-        if (method === "item/completed") {
-            const summary = summarizeItem(params);
-            if (summary)
-                log.info({ module: "codex", event: "item", message: summary });
-            else
-                log.debug({ module: "codex", event: method, message: shortJson(params) });
-            return;
-        }
-        if (MILESTONE_METHODS.has(method)) {
-            log.info({ module: "codex", event: method, message: shortJson(params) });
-            return;
-        }
-        log.debug({ module: "codex", event: method, message: shortJson(params) });
-    });
-    try {
-        await client.request("initialize", {
-            clientInfo: { name: "banzai-harness", version: "0.1.0" },
-            capabilities: { experimentalApi: true },
-        });
-        log.info({ module: "codex", event: "initialized" });
-        const threadRes = (await client.request("thread/start", {
-            cwd: workspacePath,
-            sandbox: cfg.agent.codex.sandbox,
-            approvalPolicy: cfg.agent.codex.approval_policy ?? "never",
-            dynamicTools,
-        }));
-        const threadId = threadRes.thread.id;
-        log.info({ module: "codex", event: "thread_started", message: threadId });
-        for (let turn = 1; turn <= cfg.agent.max_turns; turn++) {
-            turnCount = turn;
-            const promptText = turn === 1
-                ? await renderPrompt(workspacePath, promptPath, { issue: snapshot.issue, attempt, turn })
-                : renderContinuation(turn, cfg.agent.max_turns);
-            log.info({ module: "codex", event: "turn_starting", message: `turn=${turn}/${cfg.agent.max_turns}` });
-            const turnPromise = new Promise((resolve, reject) => {
-                resolveActiveTurn = resolve;
-                rejectActiveTurn = reject;
-            });
-            const startRes = (await client.request("turn/start", {
-                threadId,
-                input: [{ type: "text", text: promptText }],
+            log.info({ module: "codex", event: "initialized" });
+            const threadRes = (await client.request("thread/start", {
+                cwd: opts.workspacePath,
+                sandbox: settings.sandbox,
+                approvalPolicy: settings.approvalPolicy ?? "never",
+                dynamicTools,
             }));
-            activeTurnId = startRes.turn.id;
-            const timeoutMs = cfg.agent.codex.turn_timeout_ms;
-            const completed = await Promise.race([
-                turnPromise,
-                new Promise((_, reject) => setTimeout(() => reject(new Error(`turn_timeout: ${timeoutMs}ms`)), timeoutMs)),
-            ]);
-            log.info({
-                module: "codex",
-                event: "turn_completed",
-                issue_id: snapshot.issue.id,
-                issue_identifier: snapshot.issue.identifier,
-                message: `turn=${turn} id=${completed.turn.id} status=${completed.turn.status}`,
-            });
-            if (completed.turn.status === "failed" || completed.turn.status === "interrupted") {
-                const reason = completed.turn.status === "failed"
-                    ? `turn_failed:${completed.turn.error?.message ?? "unknown"}`
-                    : "turn_cancelled";
-                log.error({ module: "codex", event: "turn_nonsuccess", message: reason });
-                await client.shutdown();
-                return {
-                    outcome: "failure",
-                    reason,
-                    tracker_state_at_exit: snapshot.issue.state,
-                    turn_count: turnCount,
-                };
-            }
-            // Refresh state — the agent may have called set_issue_status which updates
-            // `snapshot` via refreshAfter, but tools the agent invokes outside our
-            // helper (e.g. raw gh CLI) won't. Always re-fetch to be safe.
-            await refreshAfter();
-            const stateLower = snapshot.issue.state.toLowerCase();
-            const activeLower = cfg.tracker.active_states.map((s) => s.toLowerCase());
-            if (!activeLower.includes(stateLower)) {
+            const threadId = threadRes.thread.id;
+            log.info({ module: "codex", event: "thread_started", message: threadId });
+            for (let turn = 1; turn <= maxTurns; turn++) {
+                turnCount = turn;
+                const promptText = await opts.prompt(turn);
+                log.info({ module: "codex", event: "turn_starting", message: `turn=${turn}/${maxTurns}` });
+                const turnPromise = new Promise((resolve, reject) => {
+                    resolveActiveTurn = resolve;
+                    rejectActiveTurn = reject;
+                });
+                const startRes = (await client.request("turn/start", {
+                    threadId,
+                    input: [{ type: "text", text: promptText }],
+                }));
+                activeTurnId = startRes.turn.id;
+                const timeoutMs = settings.turnTimeoutMs;
+                const completed = await Promise.race([
+                    turnPromise,
+                    new Promise((_, reject) => setTimeout(() => reject(new Error(`turn_timeout: ${timeoutMs}ms`)), timeoutMs)),
+                ]);
                 log.info({
                     module: "codex",
-                    event: "exit_state_inactive",
-                    message: `state=${snapshot.issue.state}`,
+                    event: "turn_completed",
+                    message: `turn=${turn} id=${completed.turn.id} status=${completed.turn.status}`,
                 });
-                await client.shutdown();
-                return {
-                    outcome: "success",
-                    reason: null,
-                    tracker_state_at_exit: snapshot.issue.state,
-                    turn_count: turnCount,
-                };
+                if (completed.turn.status === "failed" || completed.turn.status === "interrupted") {
+                    await client.shutdown();
+                    if (completed.turn.status === "failed") {
+                        return {
+                            turnCount,
+                            stopReason: "turn_failed",
+                            error: `turn_failed:${completed.turn.error?.message ?? "unknown"}`,
+                        };
+                    }
+                    return { turnCount, stopReason: "turn_interrupted", error: "turn_cancelled" };
+                }
+                const decision = await opts.onTurnComplete(turn);
+                if (decision === "stop") {
+                    await client.shutdown();
+                    return { turnCount, stopReason: "stop_requested" };
+                }
             }
+            await client.shutdown();
+            return { turnCount, stopReason: "max_turns" };
         }
-        log.warn({
-            module: "codex",
-            event: "exit_max_turns",
-            message: `max_turns=${cfg.agent.max_turns} reached with state=${snapshot.issue.state}`,
-        });
-        await client.shutdown();
-        return {
-            outcome: "success",
-            reason: "max_turns_reached_with_active_state",
-            tracker_state_at_exit: snapshot.issue.state,
-            turn_count: turnCount,
-        };
-    }
-    catch (e) {
-        const msg = e.message ?? String(e);
-        log.error({ module: "codex", event: "turn_loop_error", message: msg });
-        await client.shutdown();
-        return {
-            outcome: "failure",
-            reason: msg.startsWith("turn_timeout") ? "turn_timeout" : msg,
-            tracker_state_at_exit: snapshot.issue.state,
-            turn_count: turnCount,
-        };
+        catch (e) {
+            const msg = e.message ?? String(e);
+            log.error({ module: "codex", event: "turn_loop_error", message: msg });
+            await client.shutdown();
+            if (msg.startsWith("turn_timeout")) {
+                return { turnCount, stopReason: "turn_timeout", error: "turn_timeout" };
+            }
+            return { turnCount, stopReason: "error", error: msg };
+        }
     }
 }
 function shortJson(p) {
@@ -6110,14 +6015,119 @@ function summarizeItem(params) {
         case "fileChange":
             return `file_change: ${truncate(JSON.stringify(item.changes ?? item), 200)}`;
         case "reasoning":
-            // Reasoning summaries are usually empty and high-frequency → debug.
             return null;
         default:
             return null;
     }
 }
 
+;// CONCATENATED MODULE: ./src/agent/index.ts
+
+/**
+ * Construct the agent runtime for the given kind. Today only Codex is
+ * supported; a new runtime is added by implementing `AgentRuntime` and adding a
+ * case here.
+ */
+function createAgentRuntime(kind) {
+    switch (kind) {
+        case "codex":
+            return new CodexRuntime();
+        default:
+            throw new Error(`unsupported_agent_runtime: ${kind}`);
+    }
+}
+
+;// CONCATENATED MODULE: ./src/tools/set_issue_status.ts
+
+const SPEC = {
+    name: "set_issue_status",
+    description: "Move the current issue's status (a single-select field named 'Status' on the configured GitHub Projects v2 board) to a new value. Use this when the work is complete or when handing off to a human. Always call this before exiting if the issue is still in an active state, otherwise the orchestrator will redispatch.",
+    inputSchema: {
+        type: "object",
+        additionalProperties: false,
+        required: ["status_name"],
+        properties: {
+            status_name: {
+                type: "string",
+                description: "The target status option name on the project board (e.g. 'Human Review', 'Done'). Must match an existing option of the 'Status' single-select field exactly (case-insensitive match is attempted).",
+            },
+        },
+    },
+};
+function makeSetIssueStatusTool(ctx) {
+    const handler = async (params) => {
+        const args = (params.arguments ?? {});
+        if (typeof args.status_name !== "string" || args.status_name.trim() === "") {
+            return fail(`status_name must be a non-empty string`);
+        }
+        const wanted = args.status_name.trim();
+        const snap = ctx.snapshot();
+        const match = snap.availableStates.find((s) => s === wanted || s.toLowerCase() === wanted.toLowerCase());
+        if (!match) {
+            return fail(`status '${wanted}' not found among options: ${snap.availableStates.join(", ")}`);
+        }
+        const prev = snap.issue.state;
+        try {
+            await ctx.tracker.setStatus(match);
+        }
+        catch (e) {
+            return fail(`status_update_failed: ${e.message}`);
+        }
+        log.info({
+            module: "tool",
+            event: "set_issue_status_ok",
+            issue_id: snap.issue.id,
+            issue_identifier: snap.issue.identifier,
+            message: `${prev} → ${match}`,
+        });
+        // Refresh local snapshot so subsequent turn-decisions see the new state.
+        await ctx.refreshAfter();
+        return ok(`Set issue ${snap.issue.identifier} status from '${prev}' to '${match}'.`);
+    };
+    return { spec: SPEC, handler };
+}
+function ok(text) {
+    return { success: true, contentItems: [{ type: "inputText", text }] };
+}
+function fail(text) {
+    return { success: false, contentItems: [{ type: "inputText", text }] };
+}
+
+// EXTERNAL MODULE: ./node_modules/liquidjs/dist/liquid.node.js
+var liquid_node = __nccwpck_require__(694);
+;// CONCATENATED MODULE: ./src/prompt.ts
+
+
+
+const engine = new liquid_node/* Liquid */.HX({ strictVariables: true, strictFilters: true });
+/**
+ * Render the prompt template at `promptPath`. The path is required and resolved
+ * against the workspace when relative; there is no built-in fallback template,
+ * so a missing or unreadable prompt is a hard error.
+ */
+async function renderPrompt(workspacePath, promptPath, ctx) {
+    const resolved = (0,external_node_path_namespaceObject.isAbsolute)(promptPath) ? promptPath : (0,external_node_path_namespaceObject.join)(workspacePath, promptPath);
+    let template;
+    try {
+        template = await (0,promises_namespaceObject.readFile)(resolved, "utf8");
+    }
+    catch (e) {
+        throw new Error(`prompt_missing: ${resolved}: ${e.message}`);
+    }
+    try {
+        return await engine.parseAndRender(template, ctx);
+    }
+    catch (e) {
+        throw new Error(`prompt_render_failed: ${e.message}`);
+    }
+}
+function renderContinuation(turn, maxTurns) {
+    return `Continue working on the issue. You are on turn ${turn} of ${maxTurns}. When the work is complete, call \`set_issue_status\` to move the issue out of "Todo" / "In Progress".`;
+}
+
 ;// CONCATENATED MODULE: ./src/harness.ts
+
+
 
 
 
@@ -6144,6 +6154,22 @@ async function writeOutcome(outcome) {
     }
     catch (e) {
         log.warn({ module: "harness", event: "outcome_write_failed", message: String(e.message) });
+    }
+}
+// Map an agent run result into the harness outcome. Reaching a non-active state
+// (or running out of turns) is success; a turn failing/timing out is failure.
+function toOutcome(result, stoppedInactive, state) {
+    switch (result.stopReason) {
+        case "stop_requested":
+            return stoppedInactive
+                ? { outcome: "success", reason: null }
+                : { outcome: "success", reason: `stopped_with_state:${state}` };
+        case "max_turns":
+            return { outcome: "success", reason: "max_turns_reached_with_active_state" };
+        case "turn_timeout":
+            return { outcome: "failure", reason: "turn_timeout" };
+        default:
+            return { outcome: "failure", reason: result.error ?? result.stopReason };
     }
 }
 async function main() {
@@ -6180,13 +6206,14 @@ async function main() {
         if (!inputs.prompt_path) {
             throw new Error("missing_prompt_path: the prompt_path input is required");
         }
-        const trackerRef = {
+        const tracker = createTracker(inputs.tracker_kind, {
             token,
             owner: inputs.project_owner,
             projectNumber,
+            projectNodeId: inputs.project_node_id,
             issueNumber,
             repoSlug,
-        };
+        });
         const prep = await prepareWorkspace({
             workspaceRoot,
             workspaceKey: inputs.issue_number,
@@ -6199,7 +6226,7 @@ async function main() {
             message: `${prep.workspacePath} (createdNow=${prep.createdNow})`,
         });
         const cfg = await loadConfig(prep.workspacePath);
-        let snapshot = await fetchIssueSnapshot(trackerRef);
+        let snapshot = await tracker.fetchSnapshot();
         // Cut the agent's working branch now that we know the issue identifier.
         const branch = await createWorkBranch(prep.workspacePath, snapshot.issue.identifier);
         log.info({
@@ -6213,16 +6240,10 @@ async function main() {
         // "the runner is actively working on me". The agent later transitions to
         // a non-active state (typically Human Review) when done.
         if (snapshot.issue.state.toLowerCase() === "todo") {
-            const inProgress = snapshot.projectStatus.statusOptions.find((o) => o.name.toLowerCase() === "in progress");
+            const inProgress = snapshot.availableStates.find((s) => s.toLowerCase() === "in progress");
             if (inProgress) {
                 try {
-                    await setProjectItemStatus({
-                        token,
-                        projectNodeId: inputs.project_node_id,
-                        itemId: snapshot.projectStatus.projectItemId,
-                        fieldId: snapshot.projectStatus.statusFieldId,
-                        optionId: inProgress.id,
-                    });
+                    await tracker.setStatus(inProgress);
                     log.info({
                         module: "harness",
                         event: "state_transition",
@@ -6230,7 +6251,7 @@ async function main() {
                         issue_identifier: snapshot.issue.identifier,
                         message: "Todo → In Progress",
                     });
-                    snapshot = await fetchIssueSnapshot(trackerRef);
+                    snapshot = await tracker.fetchSnapshot();
                 }
                 catch (e) {
                     log.warn({
@@ -6241,26 +6262,54 @@ async function main() {
                 }
             }
         }
-        const result = await runTurns({
+        // Run the agent. The runtime is tracker-agnostic: we supply per-turn prompts
+        // and decide when to stop (when the issue leaves the active states).
+        const runtime = createAgentRuntime(cfg.agent.runtime);
+        const attempt = parseInt(inputs.attempt, 10) || 0;
+        const activeLower = cfg.tracker.active_states.map((s) => s.toLowerCase());
+        let stoppedInactive = false;
+        const tools = cfg.agent.tools.set_issue_status
+            ? [
+                makeSetIssueStatusTool({
+                    tracker,
+                    snapshot: () => snapshot,
+                    refreshAfter: async () => {
+                        snapshot = await tracker.fetchSnapshot();
+                    },
+                }),
+            ]
+            : [];
+        const runResult = await runtime.run({
             workspacePath: prep.workspacePath,
-            promptPath: inputs.prompt_path,
-            cfg,
-            token,
-            tracker: {
-                owner: inputs.project_owner,
-                projectNumber,
-                projectNodeId: inputs.project_node_id,
-                issueNumber,
-                repoSlug,
+            settings: {
+                command: cfg.agent.codex.command,
+                approvalPolicy: cfg.agent.codex.approval_policy,
+                sandbox: cfg.agent.codex.sandbox,
+                turnTimeoutMs: cfg.agent.codex.turn_timeout_ms,
             },
-            attempt: parseInt(inputs.attempt, 10) || 0,
-            initialSnapshot: snapshot,
+            tools,
+            maxTurns: cfg.agent.max_turns,
+            prompt: (turn) => turn === 1
+                ? renderPrompt(prep.workspacePath, inputs.prompt_path, { issue: snapshot.issue, attempt, turn })
+                : renderContinuation(turn, cfg.agent.max_turns),
+            onTurnComplete: async () => {
+                // The agent may have moved the issue via set_issue_status (which refreshes
+                // `snapshot`) or via raw gh; re-fetch to be sure, then stop once it leaves
+                // the active states.
+                snapshot = await tracker.fetchSnapshot();
+                if (!activeLower.includes(snapshot.issue.state.toLowerCase())) {
+                    stoppedInactive = true;
+                    return "stop";
+                }
+                return "continue";
+            },
         });
+        const outcome = toOutcome(runResult, stoppedInactive, snapshot.issue.state);
         await writeOutcome({
-            outcome: result.outcome,
-            reason: result.reason,
-            tracker_state_at_exit: result.tracker_state_at_exit,
-            turn_count: result.turn_count,
+            outcome: outcome.outcome,
+            reason: outcome.reason,
+            tracker_state_at_exit: snapshot.issue.state,
+            turn_count: runResult.turnCount,
             ended_at_ms: Date.now(),
         });
         log.info({
@@ -6268,9 +6317,9 @@ async function main() {
             event: "exit",
             issue_id: snapshot.issue.id,
             issue_identifier: snapshot.issue.identifier,
-            message: `${result.outcome} reason=${result.reason} state=${result.tracker_state_at_exit} turns=${result.turn_count}`,
+            message: `${outcome.outcome} reason=${outcome.reason} state=${snapshot.issue.state} turns=${runResult.turnCount}`,
         });
-        return result.outcome === "success" ? 0 : 1;
+        return outcome.outcome === "success" ? 0 : 1;
     }
     catch (e) {
         const msg = e.message ?? String(e);

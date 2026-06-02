@@ -4,8 +4,10 @@ import { join } from "node:path";
 import { log, registerSecret, setLogLevel } from "./logging.js";
 import { prepareWorkspace, createWorkBranch } from "./workspace.js";
 import { loadConfig } from "./config.js";
-import { fetchIssueSnapshot, setProjectItemStatus } from "./issue.js";
-import { runTurns } from "./codex/turn_loop.js";
+import { createTracker } from "./tracker/index.js";
+import { createAgentRuntime, type AgentRunResult } from "./agent/index.js";
+import { makeSetIssueStatusTool } from "./tools/set_issue_status.js";
+import { renderPrompt, renderContinuation } from "./prompt.js";
 
 interface Inputs {
   issue_number: string;
@@ -39,6 +41,27 @@ async function writeOutcome(outcome: object): Promise<void> {
     log.info({ module: "harness", event: "outcome_written", message: path });
   } catch (e) {
     log.warn({ module: "harness", event: "outcome_write_failed", message: String((e as Error).message) });
+  }
+}
+
+// Map an agent run result into the harness outcome. Reaching a non-active state
+// (or running out of turns) is success; a turn failing/timing out is failure.
+function toOutcome(
+  result: AgentRunResult,
+  stoppedInactive: boolean,
+  state: string,
+): { outcome: "success" | "failure"; reason: string | null } {
+  switch (result.stopReason) {
+    case "stop_requested":
+      return stoppedInactive
+        ? { outcome: "success", reason: null }
+        : { outcome: "success", reason: `stopped_with_state:${state}` };
+    case "max_turns":
+      return { outcome: "success", reason: "max_turns_reached_with_active_state" };
+    case "turn_timeout":
+      return { outcome: "failure", reason: "turn_timeout" };
+    default:
+      return { outcome: "failure", reason: result.error ?? result.stopReason };
   }
 }
 
@@ -82,13 +105,14 @@ async function main(): Promise<number> {
       throw new Error("missing_prompt_path: the prompt_path input is required");
     }
 
-    const trackerRef = {
+    const tracker = createTracker(inputs.tracker_kind, {
       token,
       owner: inputs.project_owner,
       projectNumber,
+      projectNodeId: inputs.project_node_id,
       issueNumber,
       repoSlug,
-    };
+    });
 
     const prep = await prepareWorkspace({
       workspaceRoot,
@@ -104,7 +128,7 @@ async function main(): Promise<number> {
 
     const cfg = await loadConfig(prep.workspacePath);
 
-    let snapshot = await fetchIssueSnapshot(trackerRef);
+    let snapshot = await tracker.fetchSnapshot();
 
     // Cut the agent's working branch now that we know the issue identifier.
     const branch = await createWorkBranch(prep.workspacePath, snapshot.issue.identifier);
@@ -120,18 +144,10 @@ async function main(): Promise<number> {
     // "the runner is actively working on me". The agent later transitions to
     // a non-active state (typically Human Review) when done.
     if (snapshot.issue.state.toLowerCase() === "todo") {
-      const inProgress = snapshot.projectStatus.statusOptions.find(
-        (o) => o.name.toLowerCase() === "in progress",
-      );
+      const inProgress = snapshot.availableStates.find((s) => s.toLowerCase() === "in progress");
       if (inProgress) {
         try {
-          await setProjectItemStatus({
-            token,
-            projectNodeId: inputs.project_node_id,
-            itemId: snapshot.projectStatus.projectItemId,
-            fieldId: snapshot.projectStatus.statusFieldId,
-            optionId: inProgress.id,
-          });
+          await tracker.setStatus(inProgress);
           log.info({
             module: "harness",
             event: "state_transition",
@@ -139,7 +155,7 @@ async function main(): Promise<number> {
             issue_identifier: snapshot.issue.identifier,
             message: "Todo → In Progress",
           });
-          snapshot = await fetchIssueSnapshot(trackerRef);
+          snapshot = await tracker.fetchSnapshot();
         } catch (e) {
           log.warn({
             module: "harness",
@@ -150,27 +166,58 @@ async function main(): Promise<number> {
       }
     }
 
-    const result = await runTurns({
+    // Run the agent. The runtime is tracker-agnostic: we supply per-turn prompts
+    // and decide when to stop (when the issue leaves the active states).
+    const runtime = createAgentRuntime(cfg.agent.runtime);
+    const attempt = parseInt(inputs.attempt, 10) || 0;
+    const activeLower = cfg.tracker.active_states.map((s) => s.toLowerCase());
+    let stoppedInactive = false;
+
+    const tools = cfg.agent.tools.set_issue_status
+      ? [
+          makeSetIssueStatusTool({
+            tracker,
+            snapshot: () => snapshot,
+            refreshAfter: async () => {
+              snapshot = await tracker.fetchSnapshot();
+            },
+          }),
+        ]
+      : [];
+
+    const runResult = await runtime.run({
       workspacePath: prep.workspacePath,
-      promptPath: inputs.prompt_path,
-      cfg,
-      token,
-      tracker: {
-        owner: inputs.project_owner,
-        projectNumber,
-        projectNodeId: inputs.project_node_id,
-        issueNumber,
-        repoSlug,
+      settings: {
+        command: cfg.agent.codex.command,
+        approvalPolicy: cfg.agent.codex.approval_policy,
+        sandbox: cfg.agent.codex.sandbox,
+        turnTimeoutMs: cfg.agent.codex.turn_timeout_ms,
       },
-      attempt: parseInt(inputs.attempt, 10) || 0,
-      initialSnapshot: snapshot,
+      tools,
+      maxTurns: cfg.agent.max_turns,
+      prompt: (turn) =>
+        turn === 1
+          ? renderPrompt(prep.workspacePath, inputs.prompt_path, { issue: snapshot.issue, attempt, turn })
+          : renderContinuation(turn, cfg.agent.max_turns),
+      onTurnComplete: async () => {
+        // The agent may have moved the issue via set_issue_status (which refreshes
+        // `snapshot`) or via raw gh; re-fetch to be sure, then stop once it leaves
+        // the active states.
+        snapshot = await tracker.fetchSnapshot();
+        if (!activeLower.includes(snapshot.issue.state.toLowerCase())) {
+          stoppedInactive = true;
+          return "stop";
+        }
+        return "continue";
+      },
     });
 
+    const outcome = toOutcome(runResult, stoppedInactive, snapshot.issue.state);
     await writeOutcome({
-      outcome: result.outcome,
-      reason: result.reason,
-      tracker_state_at_exit: result.tracker_state_at_exit,
-      turn_count: result.turn_count,
+      outcome: outcome.outcome,
+      reason: outcome.reason,
+      tracker_state_at_exit: snapshot.issue.state,
+      turn_count: runResult.turnCount,
       ended_at_ms: Date.now(),
     });
 
@@ -179,9 +226,9 @@ async function main(): Promise<number> {
       event: "exit",
       issue_id: snapshot.issue.id,
       issue_identifier: snapshot.issue.identifier,
-      message: `${result.outcome} reason=${result.reason} state=${result.tracker_state_at_exit} turns=${result.turn_count}`,
+      message: `${outcome.outcome} reason=${outcome.reason} state=${snapshot.issue.state} turns=${runResult.turnCount}`,
     });
-    return result.outcome === "success" ? 0 : 1;
+    return outcome.outcome === "success" ? 0 : 1;
   } catch (e) {
     const msg = (e as Error).message ?? String(e);
     log.error({ module: "harness", event: "fatal", message: msg });

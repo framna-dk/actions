@@ -1,5 +1,8 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
-import { log } from "../logging.js";
+import { log } from "../../logging.js";
+import type { DynamicToolSpec, ToolCallParams, ToolCallResult, ToolHandler } from "../types.js";
+
+export type { DynamicToolSpec, ToolCallParams, ToolCallResult, ToolHandler };
 
 interface JsonRpcRequest {
   jsonrpc?: "2.0";
@@ -23,27 +26,6 @@ interface JsonRpcNotification {
 
 type IncomingMessage = JsonRpcRequest | JsonRpcResponse | JsonRpcNotification;
 
-export interface DynamicToolSpec {
-  name: string;
-  description: string;
-  inputSchema: unknown;
-}
-
-export interface ToolCallParams {
-  tool: string;
-  arguments: unknown;
-  callId: string;
-  threadId: string;
-  turnId: string;
-  namespace?: string | null;
-}
-
-export interface ToolCallResult {
-  success: boolean;
-  contentItems: Array<{ type: "inputText"; text: string }>;
-}
-
-export type ToolHandler = (params: ToolCallParams) => Promise<ToolCallResult>;
 export type NotificationHandler = (method: string, params: unknown) => void;
 
 interface PendingRequest {

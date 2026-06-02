@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 import { isAbsolute, join } from "node:path";
 import { Liquid } from "liquidjs";
-import type { NormalizedIssue } from "./issue.js";
+import type { NormalizedIssue } from "./tracker/types.js";
 
 export interface RenderContext {
   issue: NormalizedIssue;
