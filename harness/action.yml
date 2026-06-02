@@ -2,23 +2,14 @@ name: "Banzai harness"
 description: "Runs a Codex agent against one tracker issue inside a GitHub Actions job."
 
 inputs:
+  github_project_board:
+    description: "Projects v2 board as its URL-path key, e.g. orgs/framna-dk/projects/23 (org or user). The node ID for writes is resolved from this."
+    required: true
   issue_number:
     description: "Issue number within its repo (e.g. 12)."
     required: true
   attempt:
     description: "Dispatch attempt counter from the orchestrator (0 for the first run)."
-    required: true
-  tracker_kind:
-    description: "Always 'github_projects_v2' for now."
-    required: true
-  project_owner:
-    description: "Projects v2 owner login (org or user), e.g. framna-dk."
-    required: true
-  project_number:
-    description: "Projects v2 board number, e.g. 23."
-    required: true
-  project_node_id:
-    description: "Projects v2 node ID (e.g. PVT_kw...). Used for `gh project item-edit`."
     required: true
   prompt_path:
     description: "Path to the Liquid prompt template (relative to the workspace repo, or absolute). Required; there is no built-in default prompt."
@@ -43,13 +34,15 @@ inputs:
 runs:
   using: composite
   steps:
+    # The implementation is the `banzai-harness` CLI (repo:
+    # framna-dk/banzai-codes-actions-harness), a runner prerequisite on PATH.
     - name: harness-preflight
       shell: bash
       env:
         HARNESS_INPUTS_JSON: ${{ toJson(inputs) }}
-      run: node ${{ github.action_path }}/dist/preflight.js
+      run: banzai-harness preflight
     - name: harness-run
       shell: bash
       env:
         HARNESS_INPUTS_JSON: ${{ toJson(inputs) }}
-      run: node ${{ github.action_path }}/dist/harness.js
+      run: banzai-harness run

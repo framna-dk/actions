@@ -1,24 +1,23 @@
 ## [harness](https://github.com/framna-dk/actions/blob/main/harness/action.yml)
 
-Runs a Codex agent against a single tracker issue inside a GitHub Actions job. Dispatched by [banzai-codes-worker](https://github.com/framna-dk/banzai-codes-worker), which polls a GitHub Projects v2 board and triggers one run per actionable issue. The action prepares a per-issue workspace, runs the agent, and updates the issue's board status; it is self-contained (compiled output in `dist/`).
+Runs a Codex agent against a single tracker issue inside a GitHub Actions job. Dispatched by [banzai-codes-worker](https://github.com/framna-dk/banzai-codes-worker), which polls a GitHub Projects v2 board and triggers one run per actionable issue. The action prepares a per-issue workspace, runs the agent, and updates the issue's board status.
+
+This action is a thin composite: it shells out to the **`banzai-harness` CLI**, whose implementation lives in [banzai-codes-actions-harness](https://github.com/framna-dk/banzai-codes-actions-harness). The CLI must be installed on the runner (see prerequisites below).
 
 The action has the following inputs:
 
 | Name               | Description                                                                 | Required | Default                          |
 | ------------------ | --------------------------------------------------------------------------- | -------- | -------------------------------- |
+| github_project_board | Projects v2 board as its URL-path key, e.g. `orgs/framna-dk/projects/23` (org or user). The `PVT_…` node ID for writes is resolved from this. | `true`   | None                             |
 | issue_number       | Issue number within its repo (e.g. `12`).                                    | `true`   | None                             |
 | attempt            | Dispatch attempt counter from the orchestrator (`0` for the first run).      | `true`   | None                             |
-| tracker_kind       | Tracker type; always `github_projects_v2` for now.                          | `true`   | None                             |
-| project_owner      | Projects v2 owner login (org or user), e.g. `framna-dk`.                     | `true`   | None                             |
-| project_number     | Projects v2 board number, e.g. `23`.                                         | `true`   | None                             |
-| project_node_id    | Projects v2 node ID (e.g. `PVT_kw...`); used for `gh project item-edit`.     | `true`   | None                             |
 | prompt_path        | Path to the Liquid prompt template (relative to the workspace repo, or absolute). There is no built-in default prompt. | `true`   | None                             |
 | workspace_root     | Directory under which per-issue workspaces are created.                      | `false`  | `$HOME/banzai-workspaces`        |
 | repo_url           | The issue's `owner/repo` (defaults to the current repo). Used to clone and to match the board item. | `false`  | `""`                             |
 | base_branch        | Branch the workspace resets from on each run; the agent's working branch is cut from it. | `false`  | `main`                           |
 | log_level          | `info` \| `warn` \| `error`.                                                 | `false`  | `info`                           |
 
-The action talks to GitHub Projects entirely through the `gh` CLI (`gh project field-list`/`item-list`/`item-edit`), authenticating with the `GH_TOKEN` environment variable (a GitHub App installation token with org-level Projects v2 access; the token needs the `project` scope). Self-hosted runner prerequisites: `codex`, `gh`, `node`, `git`, `jq`, and an authenticated Codex CLI.
+The action talks to GitHub Projects entirely through the `gh` CLI (`gh project field-list`/`item-list`/`item-edit`), authenticating with the `GH_TOKEN` environment variable (a GitHub App installation token with org-level Projects v2 access; the token needs the `project` scope). Self-hosted runner prerequisites: `banzai-harness` (from [banzai-codes-actions-harness](https://github.com/framna-dk/banzai-codes-actions-harness)), `codex`, `gh`, `node`, `git`, `jq`, and an authenticated Codex CLI.
 
 ### Usage
 
@@ -34,12 +33,9 @@ The action talks to GitHub Projects entirely through the `gh` CLI (`gh project f
 - name: Run harness
   uses: framna-dk/actions/harness@main
   with:
+    github_project_board: orgs/framna-dk/projects/23
     issue_number: ${{ inputs.issue_number }}
     attempt: ${{ inputs.attempt }}
-    tracker_kind: ${{ inputs.tracker_kind }}
-    project_owner: ${{ inputs.project_owner }}
-    project_number: ${{ inputs.project_number }}
-    project_node_id: ${{ inputs.project_node_id }}
     prompt_path: .banzai/prompt.md
     repo_url: ${{ inputs.repo_url }}
   env:
