@@ -1,0 +1,112 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+export interface HarnessConfig {
+  tracker: {
+    kind: "github_projects_v2";
+    project_id: string;
+    endpoint: string;
+    active_states: string[];
+    terminal_states: string[];
+  };
+  agent: {
+    max_turns: number;
+    codex: {
+      command: string;
+      approval_policy: string | null;
+      sandbox: "read-only" | "workspace-write" | "danger-full-access";
+      turn_timeout_ms: number;
+    };
+    tools: {
+      github_graphql: boolean;
+      set_issue_status: boolean;
+    };
+  };
+}
+
+const DEFAULTS = {
+  endpoint: "https://api.github.com/graphql",
+  active_states: ["Todo", "In Progress"],
+  terminal_states: ["Done", "Cancelled", "Canceled", "Duplicate", "Closed"],
+  max_turns: 20,
+  codex_command: "codex app-server",
+  approval_policy: "never",
+  sandbox: "danger-full-access" as const,
+  turn_timeout_ms: 3_600_000,
+};
+
+const SANDBOX_OPTIONS = new Set(["read-only", "workspace-write", "danger-full-access"]);
+
+function asStrArr(v: unknown, fallback: string[]): string[] {
+  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === "string");
+  return fallback;
+}
+
+function asInt(v: unknown, fallback: number): number {
+  if (typeof v === "number" && Number.isFinite(v)) return v | 0;
+  return fallback;
+}
+
+function asStr(v: unknown, fallback: string): string {
+  return typeof v === "string" ? v : fallback;
+}
+
+function asBool(v: unknown, fallback: boolean): boolean {
+  return typeof v === "boolean" ? v : fallback;
+}
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+export async function loadConfig(workspacePath: string): Promise<HarnessConfig> {
+  const cfgPath = join(workspacePath, ".banzai", "config.json");
+  let raw: string;
+  try {
+    raw = await readFile(cfgPath, "utf8");
+  } catch (e) {
+    throw new Error(`config_missing: ${cfgPath}`);
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    throw new Error(`config_invalid_json: ${(e as Error).message}`);
+  }
+  const root = isRecord(parsed) ? parsed : {};
+  const trackerRaw = isRecord(root.tracker) ? root.tracker : {};
+  const agentRaw = isRecord(root.agent) ? root.agent : {};
+  const codexRaw = isRecord(agentRaw.codex) ? agentRaw.codex : {};
+  const toolsRaw = isRecord(agentRaw.tools) ? agentRaw.tools : {};
+
+  const cfg: HarnessConfig = {
+    tracker: {
+      kind: "github_projects_v2",
+      project_id: asStr(trackerRaw.project_id, ""),
+      endpoint: asStr(trackerRaw.endpoint, DEFAULTS.endpoint),
+      active_states: asStrArr(trackerRaw.active_states, DEFAULTS.active_states),
+      terminal_states: asStrArr(trackerRaw.terminal_states, DEFAULTS.terminal_states),
+    },
+    agent: {
+      max_turns: Math.max(1, asInt(agentRaw.max_turns, DEFAULTS.max_turns)),
+      codex: {
+        command: asStr(codexRaw.command, DEFAULTS.codex_command),
+        approval_policy: asStr(codexRaw.approval_policy, DEFAULTS.approval_policy),
+        sandbox: (() => {
+          const raw = asStr(codexRaw.sandbox, DEFAULTS.sandbox);
+          return (SANDBOX_OPTIONS.has(raw) ? raw : DEFAULTS.sandbox) as HarnessConfig["agent"]["codex"]["sandbox"];
+        })(),
+        turn_timeout_ms: asInt(codexRaw.turn_timeout_ms, DEFAULTS.turn_timeout_ms),
+      },
+      tools: {
+        github_graphql: asBool(toolsRaw.github_graphql, true),
+        set_issue_status: asBool(toolsRaw.set_issue_status, true),
+      },
+    },
+  };
+
+  if (asStr(trackerRaw.kind, "github_projects_v2") !== "github_projects_v2") {
+    throw new Error(`config_invalid: unsupported tracker.kind ${trackerRaw.kind}`);
+  }
+  return cfg;
+}

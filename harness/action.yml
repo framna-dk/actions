@@ -1,0 +1,56 @@
+name: "Banzai harness"
+description: "Runs a Codex agent against one tracker issue inside a GitHub Actions job."
+
+inputs:
+  issue_id:
+    description: "GitHub issue node ID (e.g. I_kwDOSk69...)."
+    required: true
+  issue_identifier:
+    description: "Human-readable identifier such as #12."
+    required: true
+  attempt:
+    description: "Dispatch attempt counter from the orchestrator (0 for the first run)."
+    required: true
+  tracker_kind:
+    description: "Always 'github_projects_v2' for now."
+    required: true
+  tracker_endpoint:
+    description: "GraphQL endpoint."
+    required: false
+    default: "https://api.github.com/graphql"
+  tracker_project_id:
+    description: "Project v2 node ID (e.g. PVT_kw...)."
+    required: true
+  dispatch_nonce:
+    description: "Unique per-dispatch nonce (log correlation only)."
+    required: true
+  workspace_root:
+    description: "Directory under which per-issue workspaces are created."
+    required: false
+    default: "$HOME/banzai-workspaces"
+  repo_url:
+    description: "Override the git URL for the workspace clone (defaults to current repo)."
+    required: false
+    default: ""
+  repo_ref:
+    description: "Branch the workspace resets from on each run."
+    required: false
+    default: "main"
+  log_level:
+    description: "info | warn | error"
+    required: false
+    default: "info"
+
+runs:
+  using: composite
+  steps:
+    - name: harness-preflight
+      shell: bash
+      env:
+        HARNESS_INPUTS_JSON: ${{ toJson(inputs) }}
+      run: node ${{ github.action_path }}/dist/preflight.js
+    - name: harness-run
+      shell: bash
+      env:
+        HARNESS_INPUTS_JSON: ${{ toJson(inputs) }}
+      run: node ${{ github.action_path }}/dist/harness.js
