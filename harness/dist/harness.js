@@ -5317,11 +5317,8 @@ async function run(cmd, args, cwd) {
 }
 async function prepareWorkspace(input) {
     // Key the workspace by both repo and issue so a shared runner using a common
-    // workspaceRoot never reuses (and pushes to) the wrong repository when two
-    // repos happen to share an issue identifier such as `#12`.
-    const issueKey = sanitize(input.issueIdentifier);
-    const repoKey = sanitize(input.repoSlug);
-    const key = `${repoKey}__${issueKey}`;
+    // workspaceRoot never reuses (and pushes to) the wrong repository.
+    const key = `${sanitize(input.repoSlug)}__${sanitize(input.workspaceKey)}`;
     const workspacePath = (0,external_node_path_namespaceObject.join)(input.workspaceRoot, key);
     await (0,promises_namespaceObject.mkdir)(input.workspaceRoot, { recursive: true });
     await assertContained(workspacePath, input.workspaceRoot);
@@ -5339,13 +5336,21 @@ async function prepareWorkspace(input) {
         }
     }
     await assertContained(await realpathOrSelf(workspacePath), input.workspaceRoot);
-    const branch = `agent/${issueKey}`;
-    log.info({ module: "workspace", event: "branch_reset", message: branch });
+    log.info({ module: "workspace", event: "base_reset", message: input.baseBranch });
     await run("git", ["-C", workspacePath, "fetch", "origin", "--prune"]);
-    await run("git", ["-C", workspacePath, "checkout", input.repoRef]);
+    await run("git", ["-C", workspacePath, "checkout", input.baseBranch]);
     await run("git", ["-C", workspacePath, "pull", "--ff-only"]);
+    return { workspacePath, createdNow };
+}
+/**
+ * Create (or reset) the agent's working branch from the current HEAD. Run after
+ * the issue is fetched so the branch can be named from the issue identifier.
+ */
+async function createWorkBranch(workspacePath, identifier) {
+    const branch = `agent/${sanitize(identifier)}`;
+    log.info({ module: "workspace", event: "branch", message: branch });
     await run("git", ["-C", workspacePath, "checkout", "-B", branch]);
-    return { workspacePath, branch, createdNow };
+    return branch;
 }
 
 ;// CONCATENATED MODULE: ./src/config.ts
@@ -5389,9 +5394,9 @@ async function loadConfig(workspacePath) {
         raw = await (0,promises_namespaceObject.readFile)(cfgPath, "utf8");
     }
     catch (e) {
-        // A missing config file is fine: the built-in defaults plus action inputs
-        // (tracker_project_id / tracker_endpoint) are sufficient to run. Only a
-        // genuine read error (permissions, etc.) is fatal.
+        // A missing config file is fine: the built-in defaults plus the
+        // tracker_project_id action input are sufficient to run. Only a genuine
+        // read error (permissions, etc.) is fatal.
         if (e.code !== "ENOENT") {
             throw new Error(`config_unreadable: ${cfgPath}: ${e.message}`);
         }
@@ -6288,29 +6293,26 @@ async function main() {
         module: "harness",
         event: "start",
         issue_id: inputs.issue_id,
-        issue_identifier: inputs.issue_identifier,
-        message: `attempt=${inputs.attempt} nonce=${inputs.dispatch_nonce} config_sha=${inputs.config_sha}`,
+        message: `attempt=${inputs.attempt}`,
     });
     const repoSlug = inputs.repo_url || repoSlugFromEnv();
     const workspaceRoot = expand(inputs.workspace_root || "$HOME/banzai-workspaces");
     try {
         const prep = await prepareWorkspace({
             workspaceRoot,
-            issueIdentifier: inputs.issue_identifier,
+            workspaceKey: inputs.issue_id,
             repoSlug,
-            repoRef: inputs.repo_ref || "main",
+            baseBranch: inputs.base_branch || "main",
         });
         log.info({
             module: "harness",
             event: "workspace_ready",
-            message: `${prep.workspacePath} (createdNow=${prep.createdNow}) branch=${prep.branch}`,
+            message: `${prep.workspacePath} (createdNow=${prep.createdNow})`,
         });
         const cfg = await loadConfig(prep.workspacePath);
         // Allow env-supplied project id to override the file when present.
         if (inputs.tracker_project_id)
             cfg.tracker.project_id = inputs.tracker_project_id;
-        if (inputs.tracker_endpoint)
-            cfg.tracker.endpoint = inputs.tracker_endpoint;
         if (!cfg.tracker.project_id) {
             throw new Error("config_missing_project_id: set tracker_project_id input or tracker.project_id in .banzai/config.json");
         }
@@ -6322,6 +6324,15 @@ async function main() {
             token,
             issueId: inputs.issue_id,
             projectId: cfg.tracker.project_id,
+        });
+        // Cut the agent's working branch now that we know the issue identifier.
+        const branch = await createWorkBranch(prep.workspacePath, snapshot.issue.identifier);
+        log.info({
+            module: "harness",
+            event: "branch_ready",
+            issue_id: snapshot.issue.id,
+            issue_identifier: snapshot.issue.identifier,
+            message: branch,
         });
         // Move the issue from Todo to In Progress so the project board reflects
         // "the runner is actively working on me". The agent later transitions to
@@ -6380,7 +6391,7 @@ async function main() {
             module: "harness",
             event: "exit",
             issue_id: inputs.issue_id,
-            issue_identifier: inputs.issue_identifier,
+            issue_identifier: snapshot.issue.identifier,
             message: `${result.outcome} reason=${result.reason} state=${result.tracker_state_at_exit} turns=${result.turn_count}`,
         });
         return result.outcome === "success" ? 0 : 1;

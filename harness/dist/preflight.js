@@ -52,7 +52,6 @@ const log = {
 
 const REQUIRED_INPUTS = [
     "issue_id",
-    "issue_identifier",
     "attempt",
     "tracker_kind",
     "tracker_project_id",
@@ -112,7 +111,6 @@ function main() {
         module: "preflight",
         event: "ok",
         issue_id: inputs.issue_id,
-        issue_identifier: inputs.issue_identifier,
         message: `attempt=${inputs.attempt} project=${inputs.tracker_project_id}`,
     });
     return 0;

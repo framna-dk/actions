@@ -3,7 +3,6 @@ import { log, setLogLevel } from "./logging.js";
 
 interface Inputs {
   issue_id?: string;
-  issue_identifier?: string;
   attempt?: string;
   tracker_kind?: string;
   tracker_project_id?: string;
@@ -13,7 +12,6 @@ interface Inputs {
 
 const REQUIRED_INPUTS: Array<keyof Inputs> = [
   "issue_id",
-  "issue_identifier",
   "attempt",
   "tracker_kind",
   "tracker_project_id",
@@ -80,7 +78,6 @@ function main(): number {
     module: "preflight",
     event: "ok",
     issue_id: inputs.issue_id,
-    issue_identifier: inputs.issue_identifier,
     message: `attempt=${inputs.attempt} project=${inputs.tracker_project_id}`,
   });
   return 0;

@@ -7,16 +7,13 @@ The action has the following inputs:
 | Name               | Description                                                                 | Required | Default                          |
 | ------------------ | --------------------------------------------------------------------------- | -------- | -------------------------------- |
 | issue_id           | GitHub issue node ID (e.g. `I_kwDOSk69...`).                                 | `true`   | None                             |
-| issue_identifier   | Human-readable identifier such as `#12`.                                     | `true`   | None                             |
 | attempt            | Dispatch attempt counter from the orchestrator (`0` for the first run).      | `true`   | None                             |
 | tracker_kind       | Tracker type; always `github_projects_v2` for now.                          | `true`   | None                             |
 | tracker_project_id | Projects v2 node ID (e.g. `PVT_kw...`).                                      | `true`   | None                             |
 | prompt_path        | Path to the Liquid prompt template (relative to the workspace repo, or absolute). There is no built-in default prompt. | `true`   | None                             |
-| dispatch_nonce     | Unique per-dispatch nonce; embed in the run name for run↔claim correlation. | `true`   | None                             |
-| tracker_endpoint   | GraphQL endpoint.                                                           | `false`  | `https://api.github.com/graphql` |
 | workspace_root     | Directory under which per-issue workspaces are created.                      | `false`  | `$HOME/banzai-workspaces`        |
 | repo_url           | Override the git URL for the workspace clone (defaults to the current repo). | `false`  | `""`                             |
-| repo_ref           | Branch the workspace resets from on each run.                                | `false`  | `main`                           |
+| base_branch        | Branch the workspace resets from on each run; the agent's working branch is cut from it. | `false`  | `main`                           |
 | log_level          | `info` \| `warn` \| `error`.                                                 | `false`  | `info`                           |
 
 The agent authenticates with the `GH_TOKEN` environment variable (a GitHub App installation token with org-level Projects v2 access). Self-hosted runner prerequisites: `codex`, `gh`, `node`, `git`, `jq`, and an authenticated Codex CLI.
@@ -36,12 +33,10 @@ The agent authenticates with the `GH_TOKEN` environment variable (a GitHub App i
   uses: framna-dk/actions/harness@main
   with:
     issue_id: ${{ inputs.issue_id }}
-    issue_identifier: ${{ inputs.issue_identifier }}
     attempt: ${{ inputs.attempt }}
     tracker_kind: ${{ inputs.tracker_kind }}
     tracker_project_id: ${{ inputs.tracker_project_id }}
     prompt_path: .banzai/prompt.md
-    dispatch_nonce: ${{ inputs.dispatch_nonce }}
   env:
     GH_TOKEN: ${{ steps.app-token.outputs.token }}
 ```

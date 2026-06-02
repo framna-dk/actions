@@ -2,24 +2,20 @@ import { writeFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import { log, registerSecret, setLogLevel } from "./logging.js";
-import { prepareWorkspace } from "./workspace.js";
+import { prepareWorkspace, createWorkBranch } from "./workspace.js";
 import { loadConfig } from "./config.js";
 import { fetchIssueSnapshot, setProjectItemStatus } from "./issue.js";
 import { runTurns } from "./codex/turn_loop.js";
 
 interface Inputs {
   issue_id: string;
-  issue_identifier: string;
   attempt: string;
   tracker_kind: string;
-  tracker_endpoint: string;
   tracker_project_id: string;
   prompt_path: string;
-  config_sha: string;
-  dispatch_nonce: string;
   workspace_root: string;
   repo_url: string;
-  repo_ref: string;
+  base_branch: string;
   log_level: string;
 }
 
@@ -61,8 +57,7 @@ async function main(): Promise<number> {
     module: "harness",
     event: "start",
     issue_id: inputs.issue_id,
-    issue_identifier: inputs.issue_identifier,
-    message: `attempt=${inputs.attempt} nonce=${inputs.dispatch_nonce} config_sha=${inputs.config_sha}`,
+    message: `attempt=${inputs.attempt}`,
   });
 
   const repoSlug = inputs.repo_url || repoSlugFromEnv();
@@ -71,20 +66,19 @@ async function main(): Promise<number> {
   try {
     const prep = await prepareWorkspace({
       workspaceRoot,
-      issueIdentifier: inputs.issue_identifier,
+      workspaceKey: inputs.issue_id,
       repoSlug,
-      repoRef: inputs.repo_ref || "main",
+      baseBranch: inputs.base_branch || "main",
     });
     log.info({
       module: "harness",
       event: "workspace_ready",
-      message: `${prep.workspacePath} (createdNow=${prep.createdNow}) branch=${prep.branch}`,
+      message: `${prep.workspacePath} (createdNow=${prep.createdNow})`,
     });
 
     const cfg = await loadConfig(prep.workspacePath);
     // Allow env-supplied project id to override the file when present.
     if (inputs.tracker_project_id) cfg.tracker.project_id = inputs.tracker_project_id;
-    if (inputs.tracker_endpoint) cfg.tracker.endpoint = inputs.tracker_endpoint;
     if (!cfg.tracker.project_id) {
       throw new Error(
         "config_missing_project_id: set tracker_project_id input or tracker.project_id in .banzai/config.json",
@@ -99,6 +93,16 @@ async function main(): Promise<number> {
       token,
       issueId: inputs.issue_id,
       projectId: cfg.tracker.project_id,
+    });
+
+    // Cut the agent's working branch now that we know the issue identifier.
+    const branch = await createWorkBranch(prep.workspacePath, snapshot.issue.identifier);
+    log.info({
+      module: "harness",
+      event: "branch_ready",
+      issue_id: snapshot.issue.id,
+      issue_identifier: snapshot.issue.identifier,
+      message: branch,
     });
 
     // Move the issue from Todo to In Progress so the project board reflects
@@ -162,7 +166,7 @@ async function main(): Promise<number> {
       module: "harness",
       event: "exit",
       issue_id: inputs.issue_id,
-      issue_identifier: inputs.issue_identifier,
+      issue_identifier: snapshot.issue.identifier,
       message: `${result.outcome} reason=${result.reason} state=${result.tracker_state_at_exit} turns=${result.turn_count}`,
     });
     return result.outcome === "success" ? 0 : 1;

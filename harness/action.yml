@@ -5,27 +5,17 @@ inputs:
   issue_id:
     description: "GitHub issue node ID (e.g. I_kwDOSk69...)."
     required: true
-  issue_identifier:
-    description: "Human-readable identifier such as #12."
-    required: true
   attempt:
     description: "Dispatch attempt counter from the orchestrator (0 for the first run)."
     required: true
   tracker_kind:
     description: "Always 'github_projects_v2' for now."
     required: true
-  tracker_endpoint:
-    description: "GraphQL endpoint."
-    required: false
-    default: "https://api.github.com/graphql"
   tracker_project_id:
     description: "Project v2 node ID (e.g. PVT_kw...)."
     required: true
   prompt_path:
     description: "Path to the Liquid prompt template (relative to the workspace repo, or absolute). Required; there is no built-in default prompt."
-    required: true
-  dispatch_nonce:
-    description: "Unique per-dispatch nonce (log correlation only)."
     required: true
   workspace_root:
     description: "Directory under which per-issue workspaces are created."
@@ -35,8 +25,8 @@ inputs:
     description: "Override the git URL for the workspace clone (defaults to current repo)."
     required: false
     default: ""
-  repo_ref:
-    description: "Branch the workspace resets from on each run."
+  base_branch:
+    description: "Branch the workspace resets from on each run; the agent's working branch is cut from it."
     required: false
     default: "main"
   log_level:

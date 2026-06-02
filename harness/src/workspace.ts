@@ -6,14 +6,13 @@ import { log } from "./logging.js";
 
 export interface PrepInput {
   workspaceRoot: string;        // e.g. $HOME/banzai-workspaces (already expanded)
-  issueIdentifier: string;      // e.g. #12
+  workspaceKey: string;         // stable per-issue key (the issue node ID)
   repoSlug: string;             // e.g. framna-dk/Harness-playground
-  repoRef: string;              // e.g. main
+  baseBranch: string;           // e.g. main
 }
 
 export interface PrepResult {
   workspacePath: string;
-  branch: string;
   createdNow: boolean;
 }
 
@@ -49,11 +48,8 @@ async function run(cmd: string, args: string[], cwd?: string): Promise<void> {
 
 export async function prepareWorkspace(input: PrepInput): Promise<PrepResult> {
   // Key the workspace by both repo and issue so a shared runner using a common
-  // workspaceRoot never reuses (and pushes to) the wrong repository when two
-  // repos happen to share an issue identifier such as `#12`.
-  const issueKey = sanitize(input.issueIdentifier);
-  const repoKey = sanitize(input.repoSlug);
-  const key = `${repoKey}__${issueKey}`;
+  // workspaceRoot never reuses (and pushes to) the wrong repository.
+  const key = `${sanitize(input.repoSlug)}__${sanitize(input.workspaceKey)}`;
   const workspacePath = join(input.workspaceRoot, key);
 
   await mkdir(input.workspaceRoot, { recursive: true });
@@ -74,12 +70,21 @@ export async function prepareWorkspace(input: PrepInput): Promise<PrepResult> {
 
   await assertContained(await realpathOrSelf(workspacePath), input.workspaceRoot);
 
-  const branch = `agent/${issueKey}`;
-  log.info({ module: "workspace", event: "branch_reset", message: branch });
+  log.info({ module: "workspace", event: "base_reset", message: input.baseBranch });
   await run("git", ["-C", workspacePath, "fetch", "origin", "--prune"]);
-  await run("git", ["-C", workspacePath, "checkout", input.repoRef]);
+  await run("git", ["-C", workspacePath, "checkout", input.baseBranch]);
   await run("git", ["-C", workspacePath, "pull", "--ff-only"]);
-  await run("git", ["-C", workspacePath, "checkout", "-B", branch]);
 
-  return { workspacePath, branch, createdNow };
+  return { workspacePath, createdNow };
+}
+
+/**
+ * Create (or reset) the agent's working branch from the current HEAD. Run after
+ * the issue is fetched so the branch can be named from the issue identifier.
+ */
+export async function createWorkBranch(workspacePath: string, identifier: string): Promise<string> {
+  const branch = `agent/${sanitize(identifier)}`;
+  log.info({ module: "workspace", event: "branch", message: branch });
+  await run("git", ["-C", workspacePath, "checkout", "-B", branch]);
+  return branch;
 }

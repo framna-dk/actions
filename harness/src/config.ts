@@ -66,9 +66,9 @@ export async function loadConfig(workspacePath: string): Promise<HarnessConfig> 
   try {
     raw = await readFile(cfgPath, "utf8");
   } catch (e) {
-    // A missing config file is fine: the built-in defaults plus action inputs
-    // (tracker_project_id / tracker_endpoint) are sufficient to run. Only a
-    // genuine read error (permissions, etc.) is fatal.
+    // A missing config file is fine: the built-in defaults plus the
+    // tracker_project_id action input are sufficient to run. Only a genuine
+    // read error (permissions, etc.) is fatal.
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       throw new Error(`config_unreadable: ${cfgPath}: ${(e as Error).message}`);
     }
