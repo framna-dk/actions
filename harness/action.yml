@@ -35,14 +35,28 @@ runs:
   using: composite
   steps:
     # The implementation is the `banzai-harness` CLI (repo:
-    # framna-dk/banzai-codes-actions-harness), a runner prerequisite on PATH.
+    # framna-dk/banzai-codes-harness), a runner prerequisite on PATH. Non-secret
+    # inputs are explicit flags; secrets (GH_TOKEN, OPENAI_API_KEY) are read from
+    # the environment only.
     - name: harness-preflight
       shell: bash
-      env:
-        HARNESS_INPUTS_JSON: ${{ toJson(inputs) }}
-      run: banzai-harness preflight
+      run: >-
+        banzai-harness preflight
+        --github-project-board "${{ inputs.github_project_board }}"
+        --issue-number "${{ inputs.issue_number }}"
+        --attempt "${{ inputs.attempt }}"
+        --prompt-path "${{ inputs.prompt_path }}"
+        --log-level "${{ inputs.log_level }}"
     - name: harness-run
       shell: bash
-      env:
-        HARNESS_INPUTS_JSON: ${{ toJson(inputs) }}
-      run: banzai-harness run
+      run: >-
+        banzai-harness run
+        --github-project-board "${{ inputs.github_project_board }}"
+        --issue-number "${{ inputs.issue_number }}"
+        --attempt "${{ inputs.attempt }}"
+        --prompt-path "${{ inputs.prompt_path }}"
+        --log-level "${{ inputs.log_level }}"
+        --repo-url "${{ inputs.repo_url }}"
+        --workspace-root "${{ inputs.workspace_root }}"
+        --base-branch "${{ inputs.base_branch }}"
+        --runner-temp "${{ runner.temp }}"
