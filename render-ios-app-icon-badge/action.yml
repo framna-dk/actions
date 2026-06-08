@@ -9,11 +9,11 @@ inputs:
     required: true
     default: .
   style:
-    description: The style of the badge to be applied. Currently, only "beta" is available.
+    description: The style of the badge to be applied. Available options are "beta" and "preview".
     required: true
     default: beta
   curl-color:
-    description: A hex color to use for the curl effect, supported when the style is "beta". Automatically selects a color based on the color of the app icon when not specified.
+    description: A hex color to use for the curl effect, supported when the style is "beta" or "preview". Automatically selects a color based on the color of the app icon when not specified.
     required: false
 runs:
   using: composite
