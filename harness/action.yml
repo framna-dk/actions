@@ -12,8 +12,9 @@ inputs:
     description: "Dispatch attempt counter from the orchestrator (0 for the first run)."
     required: true
   prompt_path:
-    description: "Path to the Liquid prompt template (relative to the workspace repo, or absolute). Required; there is no built-in default prompt."
-    required: true
+    description: "Optional override for the prompt template (relative to the workspace repo, or absolute). When omitted, the harness uses its embedded canonical workflow template. An override is validated against the banzai-workflow version marker and fails fast if stale."
+    required: false
+    default: ""
   workspace_root:
     description: "Directory under which per-issue workspaces are created."
     required: false
@@ -38,25 +39,34 @@ runs:
     # framna-dk/banzai-codes-harness), a runner prerequisite on PATH. Non-secret
     # inputs are explicit flags; secrets (GH_TOKEN, OPENAI_API_KEY) are read from
     # the environment only.
+    # `--prompt-path` is only forwarded when prompt_path is non-empty. Omitting
+    # it makes the harness fall back to its embedded canonical workflow; a
+    # supplied override is passed through unchanged for the harness to validate.
     - name: harness-preflight
       shell: bash
-      run: >-
-        banzai-harness preflight
-        --github-project-board "${{ inputs.github_project_board }}"
-        --issue-number "${{ inputs.issue_number }}"
-        --attempt "${{ inputs.attempt }}"
-        --prompt-path "${{ inputs.prompt_path }}"
-        --log-level "${{ inputs.log_level }}"
+      env:
+        PROMPT_PATH: ${{ inputs.prompt_path }}
+      run: |
+        args=(preflight
+          --github-project-board "${{ inputs.github_project_board }}"
+          --issue-number "${{ inputs.issue_number }}"
+          --attempt "${{ inputs.attempt }}"
+          --log-level "${{ inputs.log_level }}")
+        [ -n "$PROMPT_PATH" ] && args+=(--prompt-path "$PROMPT_PATH")
+        banzai-harness "${args[@]}"
     - name: harness-run
       shell: bash
-      run: >-
-        banzai-harness run
-        --github-project-board "${{ inputs.github_project_board }}"
-        --issue-number "${{ inputs.issue_number }}"
-        --attempt "${{ inputs.attempt }}"
-        --prompt-path "${{ inputs.prompt_path }}"
-        --log-level "${{ inputs.log_level }}"
-        --repo-url "${{ inputs.repo_url }}"
-        --workspace-root "${{ inputs.workspace_root }}"
-        --base-branch "${{ inputs.base_branch }}"
-        --runner-temp "${{ runner.temp }}"
+      env:
+        PROMPT_PATH: ${{ inputs.prompt_path }}
+      run: |
+        args=(run
+          --github-project-board "${{ inputs.github_project_board }}"
+          --issue-number "${{ inputs.issue_number }}"
+          --attempt "${{ inputs.attempt }}"
+          --log-level "${{ inputs.log_level }}"
+          --repo-url "${{ inputs.repo_url }}"
+          --workspace-root "${{ inputs.workspace_root }}"
+          --base-branch "${{ inputs.base_branch }}"
+          --runner-temp "${{ runner.temp }}")
+        [ -n "$PROMPT_PATH" ] && args+=(--prompt-path "$PROMPT_PATH")
+        banzai-harness "${args[@]}"
