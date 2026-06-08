@@ -1,5 +1,5 @@
 name: "Banzai harness"
-description: "Runs a Codex agent against one tracker issue inside a GitHub Actions job."
+description: "Runs a coding agent against one tracker issue inside a GitHub Actions job."
 
 inputs:
   github_project_board:
@@ -35,13 +35,6 @@ inputs:
 runs:
   using: composite
   steps:
-    # The implementation is the `banzai-harness` CLI (repo:
-    # framna-dk/banzai-codes-harness), a runner prerequisite on PATH. Non-secret
-    # inputs are explicit flags; secrets (GH_TOKEN, OPENAI_API_KEY) are read from
-    # the environment only.
-    # `--prompt-path` is only forwarded when prompt_path is non-empty. Omitting
-    # it makes the harness fall back to its embedded canonical workflow; a
-    # supplied override is passed through unchanged for the harness to validate.
     - name: harness-preflight
       shell: bash
       env:

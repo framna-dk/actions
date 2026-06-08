@@ -1,6 +1,6 @@
 ## [harness](https://github.com/framna-dk/actions/blob/main/harness/action.yml)
 
-Runs a Codex agent against a single tracker issue inside a GitHub Actions job. Dispatched by [banzai-codes-worker](https://github.com/framna-dk/banzai-codes-worker), which polls a GitHub Projects v2 board and triggers one run per actionable issue. The action prepares a per-issue workspace, runs the agent, and updates the issue's board status.
+Runs a coding agent against a single tracker issue inside a GitHub Actions job. Dispatched by [banzai-codes-worker](https://github.com/framna-dk/banzai-codes-worker), which polls a GitHub Projects v2 board and triggers one run per actionable issue. The action prepares a per-issue workspace, runs the agent, and updates the issue's board status.
 
 This action is a thin composite: it shells out to the **`banzai-harness` CLI**, whose implementation lives in [banzai-codes-actions-harness](https://github.com/framna-dk/banzai-codes-actions-harness). The CLI must be installed on the runner (see prerequisites below).
 
@@ -17,7 +17,7 @@ The action has the following inputs:
 | base_branch        | Branch the workspace resets from on each run; the agent's working branch is cut from it. | `false`  | `main`                           |
 | log_level          | `info` \| `warn` \| `error`.                                                 | `false`  | `info`                           |
 
-The action talks to GitHub Projects entirely through the `gh` CLI (`gh project field-list`/`item-list`/`item-edit`), authenticating with the `GH_TOKEN` environment variable (a GitHub App installation token with org-level Projects v2 access; the token needs the `project` scope). Self-hosted runner prerequisites: `banzai-harness` (from [banzai-codes-actions-harness](https://github.com/framna-dk/banzai-codes-actions-harness)), `codex`, `gh`, `node`, `git`, `jq`, and an authenticated Codex CLI.
+The action talks to GitHub Projects entirely through the `gh` CLI (`gh project field-list`/`item-list`/`item-edit`), authenticating with the `GH_TOKEN` environment variable (a GitHub App installation token with org-level Projects v2 access; the token needs the `project` scope). Self-hosted runner prerequisites: `banzai-harness` (from [banzai-codes-actions-harness](https://github.com/framna-dk/banzai-codes-actions-harness)), `gh`, `node`, `git`, `jq`, and an authenticated coding agent CLI.
 
 ### Usage
 
