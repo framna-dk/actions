@@ -21,7 +21,7 @@ async function renderBadge(options: { filePath: string, style: string, curlColor
   const gridFilePath = path.join(resourcesDir, "grid.png")
   const curlFilePath = path.join(resourcesDir, "curl.png")
   const curlShadowFilePath = path.join(resourcesDir, "curl_shadow.png")
-  const curlHiglightsFilePath = path.join(resourcesDir, "curl_highlights.png")
+  const curlHighlightsFilePath = path.join(resourcesDir, "curl_highlights.png")
   const curlInnerGlowFilePath = path.join(resourcesDir, "curl_inner_glow.png")
   const curlShadowOnGridFilePath = path.join(resourcesDir, "curl_shadow_on_grid.png")
   const tmpRecoloredCurlImage = makeTmpFile()
@@ -31,7 +31,7 @@ async function renderBadge(options: { filePath: string, style: string, curlColor
     backgroundFilePath,
     curlShadowFilePath,
     tmpRecoloredCurlImage.filePath,
-    curlHiglightsFilePath,
+    curlHighlightsFilePath,
     gridFilePath,
     curlInnerGlowFilePath,
     curlShadowOnGridFilePath
