@@ -54,7 +54,7 @@ schedule (see [the folder README](../README.md) for the full pipeline workflow).
     owner: framna-dk
     repositories: my-app,banzai-work-orders
 
-- uses: framna-dk/actions/banzai/handoff-work-orders@main
+- uses: framna-dk/actions/banzai-codes/handoff-work-orders@main
   with:
     github-token: ${{ steps.app-token.outputs.token }}
     work-order-project-owner: framna-dk

@@ -63,7 +63,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - uses: framna-dk/actions/banzai/generate-prd@main
+      - uses: framna-dk/actions/banzai-codes/generate-prd@main
         with:
           github-token: ${{ github.token }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}

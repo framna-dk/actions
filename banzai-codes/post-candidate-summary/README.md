@@ -59,7 +59,7 @@ No repository checkout is required.
     owner: framna-dk
     repositories: my-app,banzai-work-orders
 
-- uses: framna-dk/actions/banzai/post-candidate-summary@main
+- uses: framna-dk/actions/banzai-codes/post-candidate-summary@main
   with:
     github-token: ${{ steps.app-token.outputs.token }}
     openai-api-key: ${{ secrets.OPENAI_API_KEY }}

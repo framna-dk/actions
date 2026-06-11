@@ -54,7 +54,7 @@ jobs:
           private-key: ${{ secrets.PROJECTS_APP_PEM }}
           owner: framna-dk
           repositories: my-app,banzai-work-orders
-      - uses: framna-dk/actions/banzai/handoff-work-orders@main
+      - uses: framna-dk/actions/banzai-codes/handoff-work-orders@main
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           work-order-project-owner: framna-dk
@@ -75,7 +75,7 @@ jobs:
           private-key: ${{ secrets.PROJECTS_APP_PEM }}
           owner: framna-dk
           repositories: my-app,banzai-work-orders
-      - uses: framna-dk/actions/banzai/post-candidate-summary@main
+      - uses: framna-dk/actions/banzai-codes/post-candidate-summary@main
         with:
           github-token: ${{ steps.app-token.outputs.token }}
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
