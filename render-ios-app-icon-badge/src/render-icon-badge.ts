@@ -68,20 +68,20 @@ interface IconConfig {
   "supported-platforms"?: any
 }
 
-export default async (options: { iconPaths: string[], curlColor?: string }) => {
+export default async (options: { iconPaths: string[], style: string, curlColor?: string }) => {
   return await Promise.all(options.iconPaths.map(async iconPath => {
-    return await renderBetaBadgeToIcon({ iconPath, curlColor: options.curlColor })
+    return await renderBadgeToIcon({ iconPath, style: options.style, curlColor: options.curlColor })
   }))
 }
 
-async function renderBetaBadgeToIcon(options: { iconPath: string, curlColor?: string }) {
+async function renderBadgeToIcon(options: { iconPath: string, style: string, curlColor?: string }) {
   const iconJsonPath = path.join(options.iconPath, "icon.json")
   const assetsDir = path.join(options.iconPath, "Assets")
 
   const iconConfigContent = fs.readFileSync(iconJsonPath, "utf-8")
   const iconConfig: IconConfig = JSON.parse(iconConfigContent)
 
-  const betaResourcesDir = path.join(__dirname, "../resources/beta")
+  const resourcesDir = path.join(__dirname, "../resources", options.style)
   const badgeAssets = [
     "grid.png",
     "curl.png",
@@ -93,7 +93,7 @@ async function renderBetaBadgeToIcon(options: { iconPath: string, curlColor?: st
   ]
 
   for (const asset of badgeAssets) {
-    const sourcePath = path.join(betaResourcesDir, asset)
+    const sourcePath = path.join(resourcesDir, asset)
     const destPath = path.join(assetsDir, asset)
 
     if (fs.existsSync(sourcePath)) {

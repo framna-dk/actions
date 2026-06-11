@@ -2,8 +2,10 @@ import { Command } from "commander"
 import path from "path"
 import fs from "fs"
 import findAppIconFiles from "./utils/find-appicon-files"
-import renderBetaBadge from "./render-beta-badge"
-import renderIconBetaBadge from "./render-icon-beta-badge"
+import renderBadge from "./render-badge"
+import renderIconBadge from "./render-icon-badge"
+
+const SUPPORTED_STYLES = ["beta", "preview"]
 
 const program = new Command()
 
@@ -17,7 +19,7 @@ program
   .description("Render the iOS app icon badge")
   .argument("<search-dir>", "path to the directory")
   .option("--style <style>", "style of the badge", "beta")
-  .option("--curl-color [hex]", "hex color for the curl. Only used by the \"beta\" style badge")
+  .option("--curl-color [hex]", "hex color for the curl. Used by the \"beta\" and \"preview\" style badges")
   .action(async (searchDir: string, options: { style: string, curlColor?: string }) => {
     const absolutePath = path.resolve(searchDir)
     if (!fs.existsSync(absolutePath)) {
@@ -36,25 +38,27 @@ program
     }
 
     const style = options.style || "beta"
-    if (style === "beta") {
-      if (appIconFiles.iconFiles.length > 0) {
-        console.log(`Found ${appIconFiles.iconFiles.length} .icon file(s)`)
-        await renderIconBetaBadge({
-          iconPaths: appIconFiles.iconFiles,
-          curlColor: options.curlColor
-        })
-      }
-
-      if (appIconFiles.imageFiles.length > 0) {
-        console.log(`Found ${appIconFiles.imageFiles.length} image app icon file(s)`)
-        await renderBetaBadge({
-          filePaths: appIconFiles.imageFiles,
-          curlColor: options.curlColor
-        })
-      }
-    } else {
-      console.error('Invalid style. Only "beta" is supported.')
+    if (!SUPPORTED_STYLES.includes(style)) {
+      console.error(`Invalid style. Only "beta" and "preview" are supported.`)
       process.exit(1)
+    }
+
+    if (appIconFiles.iconFiles.length > 0) {
+      console.log(`Found ${appIconFiles.iconFiles.length} .icon file(s)`)
+      await renderIconBadge({
+        iconPaths: appIconFiles.iconFiles,
+        style,
+        curlColor: options.curlColor
+      })
+    }
+
+    if (appIconFiles.imageFiles.length > 0) {
+      console.log(`Found ${appIconFiles.imageFiles.length} image app icon file(s)`)
+      await renderBadge({
+        filePaths: appIconFiles.imageFiles,
+        style,
+        curlColor: options.curlColor
+      })
     }
   })
 

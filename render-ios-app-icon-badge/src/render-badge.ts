@@ -8,22 +8,22 @@ import {
 import { hexToRgb } from "./utils/hex"
 import makeTmpFile from "./utils/make-tmp-file"
 
-export default async (options: { filePaths: string[], curlColor?: string }) => {
+export default async (options: { filePaths: string[], style: string, curlColor?: string }) => {
   return await Promise.all(options.filePaths.map(async filePath => {
-    return await renderBetaBadge({ filePath, curlColor: options.curlColor })
+    return await renderBadge({ filePath, style: options.style, curlColor: options.curlColor })
   }))
 }
 
-async function renderBetaBadge(options: { filePath: string, curlColor?: string }) {
+async function renderBadge(options: { filePath: string, style: string, curlColor?: string }) {
   const curlColor = await getCurlColor(options.filePath, options.curlColor)
-  const betaResourcesDir = path.join(__dirname, "../resources/beta")
-  const backgroundFilePath = path.join(betaResourcesDir, "background.png")
-  const gridFilePath = path.join(betaResourcesDir, "grid.png")
-  const curlFilePath = path.join(betaResourcesDir, "curl.png")
-  const curlShadowFilePath = path.join(betaResourcesDir, "curl_shadow.png")
-  const curlHiglightsFilePath = path.join(betaResourcesDir, "curl_highlights.png")
-  const curlInnerGlowFilePath = path.join(betaResourcesDir, "curl_inner_glow.png")
-  const curlShadowOnGridFilePath = path.join(betaResourcesDir, "curl_shadow_on_grid.png")
+  const resourcesDir = path.join(__dirname, "../resources", options.style)
+  const backgroundFilePath = path.join(resourcesDir, "background.png")
+  const gridFilePath = path.join(resourcesDir, "grid.png")
+  const curlFilePath = path.join(resourcesDir, "curl.png")
+  const curlShadowFilePath = path.join(resourcesDir, "curl_shadow.png")
+  const curlHighlightsFilePath = path.join(resourcesDir, "curl_highlights.png")
+  const curlInnerGlowFilePath = path.join(resourcesDir, "curl_inner_glow.png")
+  const curlShadowOnGridFilePath = path.join(resourcesDir, "curl_shadow_on_grid.png")
   const tmpRecoloredCurlImage = makeTmpFile()
   await recolorPixels(curlFilePath, tmpRecoloredCurlImage.filePath, curlColor)
   const layers = [
@@ -31,7 +31,7 @@ async function renderBetaBadge(options: { filePath: string, curlColor?: string }
     backgroundFilePath,
     curlShadowFilePath,
     tmpRecoloredCurlImage.filePath,
-    curlHiglightsFilePath,
+    curlHighlightsFilePath,
     gridFilePath,
     curlInnerGlowFilePath,
     curlShadowOnGridFilePath
