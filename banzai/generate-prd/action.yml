@@ -1,0 +1,216 @@
+name: Banzai generate PRD
+description: Generate or incrementally update a Product Requirements Document for the checked-out app and open a pull request.
+
+inputs:
+  github-token:
+    description: Token with Contents read/write and Pull requests read/write on the repository.
+    required: true
+  openai-api-key:
+    description: OpenAI API key used by Codex to explore the codebase and write the PRD.
+    required: true
+  output-directory:
+    description: PRD folder, relative to the repository root.
+    required: false
+    default: docs/prd
+  base-branch:
+    description: Base branch for the pull request. Defaults to the currently checked-out branch.
+    required: false
+    default: ""
+  branch-name:
+    description: Working branch the PRD is pushed to. The fixed name makes re-runs update the same pull request.
+    required: false
+    default: banzai/prd-update
+  codex-model:
+    description: Model used by Codex.
+    required: false
+    default: gpt-5.4
+  codex-effort:
+    description: Reasoning effort used by Codex.
+    required: false
+    default: ""
+  codex-sandbox:
+    description: Sandbox mode for Codex.
+    required: false
+    default: workspace-write
+  codex-safety-strategy:
+    description: Safety strategy passed to codex-action.
+    required: false
+    default: unsafe
+  extra-instructions:
+    description: Additional instructions appended to the PRD prompt (product context, areas to emphasize).
+    required: false
+    default: ""
+  pr-title:
+    description: Title for the PRD pull request.
+    required: false
+    default: Update product requirements documentation
+
+outputs:
+  changed:
+    description: Whether the PRD changed in this run.
+    value: ${{ steps.push.outputs.changed }}
+  pr-url:
+    description: URL of the created or updated pull request (empty when unchanged).
+    value: ${{ steps.pr.outputs.pr_url }}
+  pr-number:
+    description: Number of the created or updated pull request (empty when unchanged).
+    value: ${{ steps.pr.outputs.pr_number }}
+
+runs:
+  using: composite
+  steps:
+    - name: Preflight
+      id: preflight
+      shell: bash
+      env:
+        BASE_BRANCH: ${{ inputs.base-branch }}
+        BRANCH_NAME: ${{ inputs.branch-name }}
+        OUTPUT_DIRECTORY: ${{ inputs.output-directory }}
+      run: |
+        if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+          echo "::error::generate-prd must run inside a checked-out repository. Add an actions/checkout step before this action."
+          exit 1
+        fi
+        OUTPUT_DIR="${OUTPUT_DIRECTORY%/}"
+        case "$OUTPUT_DIR" in
+          ""|/*|*..*)
+            echo "::error::output-directory must be a relative path inside the repository, got \"$OUTPUT_DIRECTORY\"."
+            exit 1
+            ;;
+        esac
+        BASE="$BASE_BRANCH"
+        if [ -z "$BASE" ]; then
+          if ! BASE="$(git symbolic-ref --short HEAD 2>/dev/null)"; then
+            echo "::error::HEAD is detached and no base-branch input was provided."
+            exit 1
+          fi
+        fi
+        if [ "$BASE" = "$BRANCH_NAME" ]; then
+          echo "::error::branch-name ($BRANCH_NAME) must differ from the base branch ($BASE)."
+          exit 1
+        fi
+        echo "base_branch=$BASE" >> "$GITHUB_OUTPUT"
+        echo "output_dir=$OUTPUT_DIR" >> "$GITHUB_OUTPUT"
+
+    - name: Build PRD prompt
+      id: prompt
+      uses: actions/github-script@v8
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        OUTPUT_DIRECTORY: ${{ steps.preflight.outputs.output_dir }}
+        EXTRA_INSTRUCTIONS: ${{ inputs.extra-instructions }}
+      with:
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+          const template = fs.readFileSync(path.join(process.env.ACTION_PATH, 'prompt.md'), 'utf8');
+          let prompt = template.replaceAll('{{OUTPUT_DIRECTORY}}', process.env.OUTPUT_DIRECTORY);
+          const extra = (process.env.EXTRA_INSTRUCTIONS || '').trim();
+          if (extra) {
+            prompt += `\n\n## Additional instructions\n\n${extra}`;
+          }
+          core.setOutput('prompt', prompt);
+
+    - name: Generate PRD
+      id: run_codex
+      uses: openai/codex-action@v1
+      with:
+        openai-api-key: ${{ inputs.openai-api-key }}
+        model: ${{ inputs.codex-model }}
+        effort: ${{ inputs.codex-effort }}
+        sandbox: ${{ inputs.codex-sandbox }}
+        safety-strategy: ${{ inputs.codex-safety-strategy }}
+        prompt: ${{ steps.prompt.outputs.prompt }}
+
+    - name: Guard change scope
+      shell: bash
+      env:
+        OUTPUT_DIR: ${{ steps.preflight.outputs.output_dir }}
+      run: |
+        violations="$(git status --porcelain=v1 --untracked-files=all \
+          | sed -E 's/^.{3}//' \
+          | sed -E 's/^.* -> //' \
+          | sed -E 's/^"(.*)"$/\1/' \
+          | grep -v "^${OUTPUT_DIR}/" || true)"
+        if [ -n "$violations" ]; then
+          echo "::error::Codex modified files outside ${OUTPUT_DIR}/:"
+          echo "$violations"
+          exit 1
+        fi
+
+    - name: Commit and push PRD branch
+      id: push
+      shell: bash
+      env:
+        OUTPUT_DIR: ${{ steps.preflight.outputs.output_dir }}
+        BRANCH_NAME: ${{ inputs.branch-name }}
+      run: |
+        if [ -z "$(git status --porcelain --untracked-files=all -- "$OUTPUT_DIR")" ]; then
+          echo "PRD is already up to date; nothing to push."
+          echo "changed=false" >> "$GITHUB_OUTPUT"
+          exit 0
+        fi
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git checkout -B "$BRANCH_NAME"
+        git add -- "$OUTPUT_DIR"
+        git commit -m "docs: update PRD"
+        git push --force origin "HEAD:refs/heads/$BRANCH_NAME"
+        echo "changed=true" >> "$GITHUB_OUTPUT"
+
+    - name: Open or update pull request
+      id: pr
+      if: steps.push.outputs.changed == 'true'
+      uses: actions/github-script@v8
+      env:
+        BRANCH_NAME: ${{ inputs.branch-name }}
+        BASE_BRANCH: ${{ steps.preflight.outputs.base_branch }}
+        OUTPUT_DIR: ${{ steps.preflight.outputs.output_dir }}
+        PR_TITLE: ${{ inputs.pr-title }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const branch = process.env.BRANCH_NAME;
+          const body = [
+            `Regenerated Product Requirements Documentation in \`${process.env.OUTPUT_DIR}/\`.`,
+            '',
+            'The PRD describes how the application currently works. It grounds the Banzai Codes',
+            'define flow, so feature refinement starts from the actual behavior of the product.',
+            '',
+            'Review the changed files for statements that misrepresent the product before merging.',
+            'This branch is force-pushed on every run, so the PR always reflects the latest generation.',
+          ].join('\n');
+
+          const { data: existing } = await github.rest.pulls.list({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            state: 'open',
+            head: `${context.repo.owner}:${branch}`,
+          });
+
+          let pullRequest;
+          if (existing.length > 0) {
+            pullRequest = existing[0];
+            await github.rest.pulls.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pullRequest.number,
+              title: process.env.PR_TITLE,
+              body,
+            });
+            core.info(`Updated existing PR ${pullRequest.html_url}`);
+          } else {
+            const { data: created } = await github.rest.pulls.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: process.env.PR_TITLE,
+              head: branch,
+              base: process.env.BASE_BRANCH,
+              body,
+            });
+            pullRequest = created;
+            core.info(`Opened PR ${pullRequest.html_url}`);
+          }
+
+          core.setOutput('pr_url', pullRequest.html_url);
+          core.setOutput('pr_number', String(pullRequest.number));
