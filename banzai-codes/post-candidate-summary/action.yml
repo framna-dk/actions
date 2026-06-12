@@ -1,19 +1,31 @@
 name: Banzai post candidate summary
-description: Generate a Product-Manager-facing summary for a harness issue in human review and post it on the parent work-order issue.
+description: Generate a Product-Manager-facing summary for a work order in human review, post it on the issue and open the acceptance gate.
 
 inputs:
   github-token:
-    description: GitHub App installation token with org Projects read and Issues read/write on the harness and work-order repositories.
+    description: GitHub App installation token with org Projects read/write and Issues read/write on the work-order repository.
     required: true
   openai-api-key:
     description: OpenAI API key used by Codex to generate the summary.
     required: true
   harness-project-owner:
-    description: Organization login that owns the harness project.
+    description: Organization login that owns the harness (Development) project.
     required: true
   harness-project-number:
     description: Harness project number from the project URL.
     required: true
+  work-order-project-owner:
+    description: Organization login that owns the work-order (Product) project. Defaults to harness-project-owner.
+    required: false
+    default: ""
+  work-order-project-number:
+    description: Work-order project number. When set, the work order's Product-board status is moved to acceptance-status after the summary is posted; when empty, no status is changed.
+    required: false
+    default: ""
+  acceptance-status:
+    description: Status option set on the work-order (Product) board after the summary is posted.
+    required: false
+    default: Acceptance
   repository:
     description: Repository (owner/repo) whose issues on the harness board are eligible.
     required: false
@@ -23,11 +35,11 @@ inputs:
     required: false
     default: Human Review
   status-field-name:
-    description: Name of the single-select status field on the harness board.
+    description: Name of the single-select status field on both boards.
     required: false
     default: Status
   summary-marker:
-    description: Marker comment posted on the harness issue once its summary has been delivered.
+    description: Marker embedded in the summary comment, making the scan idempotent.
     required: false
     default: "<!-- banzai:summary:done -->"
   codex-model:
@@ -55,14 +67,11 @@ outputs:
   processed:
     description: Whether an eligible item was summarized by this run.
     value: ${{ steps.post.outputs.processed || 'false' }}
-  harness-issue-url:
-    description: URL of the harness issue handled by this run.
+  issue-url:
+    description: URL of the work-order issue handled by this run.
     value: ${{ steps.scan.outputs.issue_url }}
-  work-order-issue-url:
-    description: URL of the parent work-order issue that received the summary.
-    value: ${{ steps.scan.outputs.parent_url }}
   summary-comment-url:
-    description: URL of the summary comment posted on the work-order issue.
+    description: URL of the summary comment posted on the issue.
     value: ${{ steps.post.outputs.summary_comment_url }}
   remaining-count:
     description: Number of eligible items still queued after this run.
@@ -121,11 +130,6 @@ runs:
                               url
                               state
                               repository { nameWithOwner }
-                              parent {
-                                number
-                                url
-                                repository { nameWithOwner }
-                              }
                               comments(last: 100) {
                                 nodes { body }
                               }
@@ -150,10 +154,6 @@ runs:
               if (status !== triggerStatus || !issue || !issue.number || issue.state !== 'OPEN') continue;
               if (issue.repository.nameWithOwner.toLowerCase() !== repository.toLowerCase()) continue;
               if (issue.comments.nodes.some((comment) => comment.body.includes(summaryMarker))) continue;
-              if (!issue.parent) {
-                core.warning(`${issue.url} is in "${triggerStatus}" but has no parent work order; skipping.`);
-                continue;
-              }
               eligible.push(issue);
             }
             if (!project.items.pageInfo.hasNextPage) break;
@@ -173,9 +173,6 @@ runs:
           core.setOutput('found', 'true');
           core.setOutput('issue_number', String(issue.number));
           core.setOutput('issue_url', issue.url);
-          core.setOutput('parent_repo', issue.parent.repository.nameWithOwner);
-          core.setOutput('parent_number', String(issue.parent.number));
-          core.setOutput('parent_url', issue.parent.url);
           core.setOutput('remaining_count', String(eligible.length - 1));
 
     - name: Gather context and build prompt
@@ -348,7 +345,7 @@ runs:
         safety-strategy: ${{ inputs.codex-safety-strategy }}
         prompt: ${{ steps.prepare.outputs.prompt }}
 
-    - name: Post summary
+    - name: Post summary and open the acceptance gate
       id: post
       if: steps.scan.outputs.found == 'true'
       uses: actions/github-script@v8
@@ -356,37 +353,131 @@ runs:
         FINAL_MESSAGE: ${{ steps.run_codex.outputs.final-message }}
         REPOSITORY: ${{ inputs.repository }}
         ISSUE_NUMBER: ${{ steps.scan.outputs.issue_number }}
-        PARENT_REPO: ${{ steps.scan.outputs.parent_repo }}
-        PARENT_NUMBER: ${{ steps.scan.outputs.parent_number }}
-        PARENT_URL: ${{ steps.scan.outputs.parent_url }}
         SUMMARY_MARKER: ${{ inputs.summary-marker }}
+        WORK_ORDER_PROJECT_OWNER: ${{ inputs.work-order-project-owner }}
+        WORK_ORDER_PROJECT_NUMBER: ${{ inputs.work-order-project-number }}
+        ACCEPTANCE_STATUS: ${{ inputs.acceptance-status }}
+        HARNESS_PROJECT_OWNER: ${{ inputs.harness-project-owner }}
+        STATUS_FIELD_NAME: ${{ inputs.status-field-name }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          // Banzai Codes treats the latest comment WITHOUT an HTML marker as the
-          // candidate summary, so the posted comment must contain no HTML comments.
+          // Banzai Codes treats the most recent comment without one of ITS OWN markers
+          // (banzai:meta / banzai:chat:*) as the candidate summary. Stray HTML comments
+          // from the model are stripped, then our idempotency marker is embedded in the
+          // summary comment itself — a separate marker comment posted afterwards would
+          // shadow the summary as the most recent candidate.
           const summary = (process.env.FINAL_MESSAGE || '').replace(/<!--[\s\S]*?-->/g, '').trim();
           if (!summary) {
             core.setFailed('Codex returned an empty summary; nothing was posted.');
             return;
           }
 
-          const [parentOwner, parentRepo] = process.env.PARENT_REPO.split('/');
-          const summaryComment = await github.rest.issues.createComment({
-            owner: parentOwner,
-            repo: parentRepo,
-            issue_number: Number(process.env.PARENT_NUMBER),
-            body: summary,
-          });
-          core.info(`Posted candidate summary: ${summaryComment.data.html_url}`);
-
           const [owner, repo] = process.env.REPOSITORY.split('/');
-          await github.rest.issues.createComment({
+          const issueNumber = Number(process.env.ISSUE_NUMBER);
+          const summaryComment = await github.rest.issues.createComment({
             owner,
             repo,
-            issue_number: Number(process.env.ISSUE_NUMBER),
-            body: `${process.env.SUMMARY_MARKER}\nPosted the candidate summary to ${process.env.PARENT_URL}: ${summaryComment.data.html_url}`,
+            issue_number: issueNumber,
+            body: `${process.env.SUMMARY_MARKER}\n\n${summary}`,
           });
-
+          core.info(`Posted candidate summary: ${summaryComment.data.html_url}`);
           core.setOutput('processed', 'true');
           core.setOutput('summary_comment_url', summaryComment.data.html_url);
+
+          // Open the acceptance gate: move the work order's Product-board status so the
+          // Banzai Codes review gate surfaces the summary that now exists.
+          const workOrderProjectNumber = Number(process.env.WORK_ORDER_PROJECT_NUMBER || '');
+          if (!process.env.WORK_ORDER_PROJECT_NUMBER) {
+            core.info('work-order-project-number not set; leaving the Product board untouched.');
+            return;
+          }
+          if (!Number.isInteger(workOrderProjectNumber)) {
+            core.setFailed('work-order-project-number must be an integer when set.');
+            return;
+          }
+          const workOrderProjectOwner = process.env.WORK_ORDER_PROJECT_OWNER || process.env.HARNESS_PROJECT_OWNER;
+          const statusFieldName = process.env.STATUS_FIELD_NAME || 'Status';
+          const acceptanceStatus = process.env.ACCEPTANCE_STATUS || 'Acceptance';
+
+          const projectData = await github.graphql(
+            `
+              query($owner: String!, $number: Int!) {
+                organization(login: $owner) {
+                  projectV2(number: $number) {
+                    id
+                    fields(first: 50) {
+                      nodes {
+                        ... on ProjectV2SingleSelectField {
+                          id
+                          name
+                          options { id name }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `,
+            { owner: workOrderProjectOwner, number: workOrderProjectNumber }
+          );
+          const project = projectData.organization && projectData.organization.projectV2;
+          if (!project) {
+            core.setFailed(`Project ${workOrderProjectNumber} not found for organization "${workOrderProjectOwner}" (user-owned projects are not supported).`);
+            return;
+          }
+          const statusField = project.fields.nodes.find(
+            (field) => field && field.name === statusFieldName && Array.isArray(field.options)
+          );
+          const statusOption = statusField && statusField.options.find((option) => option.name === acceptanceStatus);
+          if (!statusOption) {
+            core.setFailed(`Status option "${acceptanceStatus}" not found on work-order project ${workOrderProjectNumber}.`);
+            return;
+          }
+
+          const itemData = await github.graphql(
+            `
+              query($owner: String!, $repo: String!, $number: Int!, $statusField: String!) {
+                repository(owner: $owner, name: $repo) {
+                  issue(number: $number) {
+                    projectItems(first: 50, includeArchived: true) {
+                      nodes {
+                        id
+                        project { id }
+                        fieldValueByName(name: $statusField) {
+                          ... on ProjectV2ItemFieldSingleSelectValue { name }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `,
+            { owner, repo, number: issueNumber, statusField: statusFieldName }
+          );
+          const item = itemData.repository.issue.projectItems.nodes.find(
+            (node) => node.project && node.project.id === project.id
+          );
+          if (!item) {
+            core.setFailed(`Issue #${issueNumber} is not on work-order project ${workOrderProjectNumber}; cannot open the acceptance gate.`);
+            return;
+          }
+          await github.graphql(
+            `
+              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                updateProjectV2ItemFieldValue(
+                  input: {
+                    projectId: $projectId
+                    itemId: $itemId
+                    fieldId: $fieldId
+                    value: { singleSelectOptionId: $optionId }
+                  }
+                ) {
+                  projectV2Item { id }
+                }
+              }
+            `,
+            { projectId: project.id, itemId: item.id, fieldId: statusField.id, optionId: statusOption.id }
+          );
+          const previousStatus = (item.fieldValueByName && item.fieldValueByName.name) || '(none)';
+          core.info(`Moved work-order status ${previousStatus} → "${acceptanceStatus}" on project ${workOrderProjectNumber}.`);
