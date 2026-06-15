@@ -31,7 +31,7 @@ inputs:
   codex-sandbox:
     description: Sandbox mode for Codex.
     required: false
-    default: workspace-write
+    default: danger-full-access
   codex-safety-strategy:
     description: Safety strategy passed to codex-action.
     required: false
