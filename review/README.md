@@ -1,15 +1,16 @@
 # Banzai review
 
-Reviews one pull request with the Codex agent. A thin composite over the
+Reviews one pull request. A thin composite over the
 `banzai-harness review` CLI (see
 [framna-dk/banzai-codes-harness](https://github.com/framna-dk/banzai-codes-harness)):
-it boots Codex on the PR head, reads the diff, and posts a concise review —
-inline comments plus one summary (`COMMENT`/`REQUEST_CHANGES`, never `APPROVE`).
-The review is **static** (no file edits, no commits), so it never re-triggers
-itself.
+it boots the review agent on the PR head, reads the diff, and posts a concise
+review — inline comments plus one summary (`COMMENT`/`REQUEST_CHANGES`, never
+`APPROVE`). The review is **static** (no file edits, no commits), so it never
+re-triggers itself.
 
 This is the sibling of the `harness` action and shares the same self-hosted
-runner pool: `banzai-harness`, `codex`, `gh`, and `git` must be on `PATH`.
+runner pool: `banzai-harness`, `gh`, and `git` (plus the runner's configured
+review agent) must be on `PATH`.
 
 ## Inputs
 
@@ -22,8 +23,9 @@ runner pool: `banzai-harness`, `codex`, `gh`, and `git` must be on `PATH`.
 | `workspace_root` | no | `$HOME/banzai-workspaces` | Per-PR review workspaces. |
 | `log_level` | no | `info` | `info` \| `warn` \| `error`. |
 
-Secrets are read from the environment, never passed on the command line: export
-`GH_TOKEN` (required) and `OPENAI_API_KEY` in the calling job.
+`GH_TOKEN` is read from the environment, never passed on the command line:
+export it in the calling job. The review agent's own credentials are configured
+on the runner, not supplied through this action.
 
 ## Usage
 
@@ -48,7 +50,6 @@ jobs:
           base_branch: ${{ github.event.pull_request.base.ref }}
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
 ```
 
 The agent reacts 👀 on the PR when it starts, then posts the review. It writes a

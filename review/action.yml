@@ -1,5 +1,5 @@
 name: "Banzai review"
-description: "Reviews one pull request with the Codex agent inside a GitHub Actions job."
+description: "Reviews one pull request with the Banzai harness inside a GitHub Actions job."
 
 inputs:
   pr_number:

@@ -131,7 +131,7 @@ Click on any action name below to view detailed documentation, usage examples, a
     </tr>
     <tr>
       <td nowrap><a href="./review/">review</a></td>
-      <td>Reviews one pull request with the Codex agent and posts inline + summary comments.</td>
+      <td>Reviews one pull request with the Banzai harness and posts inline + summary comments.</td>
     </tr>
     <tr>
       <td nowrap><a href="./swiftlint/">swiftlint</a></td>
