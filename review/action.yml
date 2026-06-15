@@ -34,6 +34,7 @@ runs:
       run: |
         banzai-harness preflight \
           --pr-number "${{ inputs.pr_number }}" \
+          --repo-url "${{ inputs.repo_url }}" \
           --log-level "${{ inputs.log_level }}"
     - name: review-run
       shell: bash
