@@ -120,6 +120,7 @@ runs:
         effort: ${{ inputs.codex-effort }}
         sandbox: ${{ inputs.codex-sandbox }}
         safety-strategy: ${{ inputs.codex-safety-strategy }}
+        allow-bot-users: "banzai-codes[bot]"
         prompt: ${{ steps.prompt.outputs.prompt }}
 
     - name: Guard change scope
