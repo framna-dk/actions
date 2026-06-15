@@ -1,0 +1,51 @@
+name: "Banzai review"
+description: "Reviews one pull request with the Codex agent inside a GitHub Actions job."
+
+inputs:
+  pr_number:
+    description: "Pull request number to review (e.g. 42)."
+    required: true
+  repo_url:
+    description: "Repository slug owner/repo the PR belongs to. Defaults to the current repo."
+    required: false
+    default: ${{ github.repository }}
+  base_branch:
+    description: "Branch the PR targets (used to scope the diff)."
+    required: false
+    default: "main"
+  prompt_path:
+    description: "Optional override for the review prompt template (relative to the workspace repo, or absolute). When omitted, the harness uses its embedded canonical review template. An override is validated against the banzai-review version marker and fails fast if stale."
+    required: false
+    default: ""
+  workspace_root:
+    description: "Directory under which per-PR review workspaces are created."
+    required: false
+    default: "$HOME/banzai-workspaces"
+  log_level:
+    description: "info | warn | error"
+    required: false
+    default: "info"
+
+runs:
+  using: composite
+  steps:
+    - name: review-preflight
+      shell: bash
+      run: |
+        banzai-harness preflight \
+          --pr-number "${{ inputs.pr_number }}" \
+          --log-level "${{ inputs.log_level }}"
+    - name: review-run
+      shell: bash
+      env:
+        PROMPT_PATH: ${{ inputs.prompt_path }}
+      run: |
+        args=(review
+          --repo-url "${{ inputs.repo_url }}"
+          --pr-number "${{ inputs.pr_number }}"
+          --base-branch "${{ inputs.base_branch }}"
+          --workspace-root "${{ inputs.workspace_root }}"
+          --log-level "${{ inputs.log_level }}"
+          --runner-temp "${{ runner.temp }}")
+        [ -n "$PROMPT_PATH" ] && args+=(--prompt-path "$PROMPT_PATH")
+        banzai-harness "${args[@]}"

@@ -130,6 +130,10 @@ Click on any action name below to view detailed documentation, usage examples, a
       <td>Adds a badge to an iOS app icon to indicate that the app is meant for testing purposes.</td>
     </tr>
     <tr>
+      <td nowrap><a href="./review/">review</a></td>
+      <td>Reviews one pull request with the Codex agent and posts inline + summary comments.</td>
+    </tr>
+    <tr>
       <td nowrap><a href="./swiftlint/">swiftlint</a></td>
       <td>Runs <a href="https://github.com/realm/SwiftLint">SwiftLint</a> on a codebase.</td>
     </tr>
