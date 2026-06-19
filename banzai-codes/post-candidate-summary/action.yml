@@ -1,45 +1,22 @@
 name: Banzai post candidate summary
-description: Generate a Product-Manager-facing summary for a work order in human review, post it on the issue and open the acceptance gate.
+description: Generate a Product-Manager-facing summary for a closed issue and post it as a comment on the issue.
 
 inputs:
   github-token:
-    description: GitHub App installation token with org Projects read/write and Issues read/write on the work-order repository.
+    description: GitHub App installation token with Issues read/write on the repository.
     required: true
   openai-api-key:
     description: OpenAI API key used by Codex to generate the summary.
     required: true
-  harness-project-owner:
-    description: Organization login that owns the harness (Development) project.
+  issue-number:
+    description: Number of the closed issue to summarize.
     required: true
-  harness-project-number:
-    description: Harness project number from the project URL.
-    required: true
-  work-order-project-owner:
-    description: Organization login that owns the work-order (Product) project. Defaults to harness-project-owner.
-    required: false
-    default: ""
-  work-order-project-number:
-    description: Work-order project number. When set, the work order's Product-board status is moved to acceptance-status after the summary is posted; when empty, no status is changed.
-    required: false
-    default: ""
-  acceptance-status:
-    description: Status option set on the work-order (Product) board after the summary is posted.
-    required: false
-    default: Acceptance
   repository:
-    description: Repository (owner/repo) whose issues on the harness board are eligible.
+    description: Repository (owner/repo) that owns the issue.
     required: false
     default: ${{ github.repository }}
-  trigger-status:
-    description: Status option on the harness board that makes an item eligible for a summary.
-    required: false
-    default: Human Review
-  status-field-name:
-    description: Name of the single-select status field on both boards.
-    required: false
-    default: Status
   summary-marker:
-    description: Marker embedded in the summary comment, making the scan idempotent.
+    description: Marker embedded in the summary comment, making the post idempotent across repeated closes.
     required: false
     default: "<!-- banzai:summary:done -->"
   codex-model:
@@ -65,43 +42,34 @@ inputs:
 
 outputs:
   processed:
-    description: Whether an eligible item was summarized by this run.
+    description: Whether the issue was summarized by this run.
     value: ${{ steps.post.outputs.processed || 'false' }}
   issue-url:
-    description: URL of the work-order issue handled by this run.
-    value: ${{ steps.scan.outputs.issue_url }}
+    description: URL of the issue handled by this run.
+    value: ${{ steps.check.outputs.issue_url }}
   summary-comment-url:
     description: URL of the summary comment posted on the issue.
     value: ${{ steps.post.outputs.summary_comment_url }}
-  remaining-count:
-    description: Number of eligible items still queued after this run.
-    value: ${{ steps.scan.outputs.remaining_count }}
 
 runs:
   using: composite
   steps:
-    - name: Scan harness board
-      id: scan
+    - name: Check issue
+      id: check
       uses: actions/github-script@v8
       env:
-        HARNESS_PROJECT_OWNER: ${{ inputs.harness-project-owner }}
-        HARNESS_PROJECT_NUMBER: ${{ inputs.harness-project-number }}
         REPOSITORY: ${{ inputs.repository }}
-        TRIGGER_STATUS: ${{ inputs.trigger-status }}
-        STATUS_FIELD_NAME: ${{ inputs.status-field-name }}
+        ISSUE_NUMBER: ${{ inputs.issue-number }}
         SUMMARY_MARKER: ${{ inputs.summary-marker }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          const projectOwner = process.env.HARNESS_PROJECT_OWNER;
-          const projectNumber = Number(process.env.HARNESS_PROJECT_NUMBER);
-          const repository = process.env.REPOSITORY;
-          const triggerStatus = process.env.TRIGGER_STATUS || 'Human Review';
-          const statusFieldName = process.env.STATUS_FIELD_NAME || 'Status';
+          const [owner, repo] = process.env.REPOSITORY.split('/');
+          const issueNumber = Number(process.env.ISSUE_NUMBER);
           const summaryMarker = process.env.SUMMARY_MARKER;
 
-          if (!Number.isInteger(projectNumber)) {
-            core.setFailed('harness-project-number must be an integer.');
+          if (!Number.isInteger(issueNumber)) {
+            core.setFailed('issue-number must be an integer.');
             return;
           }
           if (!summaryMarker) {
@@ -109,81 +77,37 @@ runs:
             return;
           }
 
-          const eligible = [];
-          let after = null;
-          while (true) {
-            const page = await github.graphql(
-              `
-                query($owner: String!, $number: Int!, $statusField: String!, $after: String) {
-                  organization(login: $owner) {
-                    projectV2(number: $number) {
-                      items(first: 50, after: $after) {
-                        pageInfo { hasNextPage endCursor }
-                        nodes {
-                          fieldValueByName(name: $statusField) {
-                            ... on ProjectV2ItemFieldSingleSelectValue { name }
-                          }
-                          content {
-                            ... on Issue {
-                              number
-                              title
-                              url
-                              state
-                              repository { nameWithOwner }
-                              comments(last: 100) {
-                                nodes { body }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              `,
-              { owner: projectOwner, number: projectNumber, statusField: statusFieldName, after }
-            );
-            const project = page.organization && page.organization.projectV2;
-            if (!project) {
-              core.setFailed(`Project ${projectNumber} not found for organization "${projectOwner}" (user-owned projects are not supported).`);
-              return;
-            }
-            for (const item of project.items.nodes) {
-              const status = item.fieldValueByName && item.fieldValueByName.name;
-              const issue = item.content;
-              if (status !== triggerStatus || !issue || !issue.number || issue.state !== 'OPEN') continue;
-              if (issue.repository.nameWithOwner.toLowerCase() !== repository.toLowerCase()) continue;
-              if (issue.comments.nodes.some((comment) => comment.body.includes(summaryMarker))) continue;
-              eligible.push(issue);
-            }
-            if (!project.items.pageInfo.hasNextPage) break;
-            after = project.items.pageInfo.endCursor;
-          }
+          const issue = (await github.rest.issues.get({ owner, repo, issue_number: issueNumber })).data;
 
-          if (eligible.length === 0) {
-            core.info(`No eligible items in "${triggerStatus}" on project ${projectNumber}.`);
+          // Idempotency guard: a reopen→close cycle re-fires this action, so skip
+          // when a summary comment carrying the marker is already on the issue.
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner,
+            repo,
+            issue_number: issueNumber,
+            per_page: 100,
+          });
+          if (comments.some((comment) => (comment.body || '').includes(summaryMarker))) {
+            core.info(`Issue #${issueNumber} already has a summary comment; skipping.`);
             core.setOutput('found', 'false');
-            core.setOutput('remaining_count', '0');
+            core.setOutput('issue_url', issue.html_url);
             return;
           }
 
-          eligible.sort((a, b) => a.number - b.number);
-          const issue = eligible[0];
-          core.info(`Summarizing ${issue.url} (${eligible.length - 1} more queued for subsequent runs).`);
+          core.info(`Summarizing ${issue.html_url}.`);
           core.setOutput('found', 'true');
-          core.setOutput('issue_number', String(issue.number));
-          core.setOutput('issue_url', issue.url);
-          core.setOutput('remaining_count', String(eligible.length - 1));
+          core.setOutput('issue_number', String(issueNumber));
+          core.setOutput('issue_url', issue.html_url);
 
     - name: Gather context and build prompt
       id: prepare
-      if: steps.scan.outputs.found == 'true'
+      if: steps.check.outputs.found == 'true'
       uses: actions/github-script@v8
       env:
         ACTION_PATH: ${{ github.action_path }}
         REPOSITORY: ${{ inputs.repository }}
-        ISSUE_NUMBER: ${{ steps.scan.outputs.issue_number }}
-        ISSUE_URL: ${{ steps.scan.outputs.issue_url }}
+        ISSUE_NUMBER: ${{ steps.check.outputs.issue_number }}
+        ISSUE_URL: ${{ steps.check.outputs.issue_url }}
         EXTRA_INSTRUCTIONS: ${{ inputs.extra-instructions }}
       with:
         github-token: ${{ inputs.github-token }}
@@ -335,7 +259,7 @@ runs:
 
     - name: Generate summary
       id: run_codex
-      if: steps.scan.outputs.found == 'true'
+      if: steps.check.outputs.found == 'true'
       uses: openai/codex-action@v1
       with:
         openai-api-key: ${{ inputs.openai-api-key }}
@@ -345,28 +269,20 @@ runs:
         safety-strategy: ${{ inputs.codex-safety-strategy }}
         prompt: ${{ steps.prepare.outputs.prompt }}
 
-    - name: Post summary and open the acceptance gate
+    - name: Post summary
       id: post
-      if: steps.scan.outputs.found == 'true'
+      if: steps.check.outputs.found == 'true'
       uses: actions/github-script@v8
       env:
         FINAL_MESSAGE: ${{ steps.run_codex.outputs.final-message }}
         REPOSITORY: ${{ inputs.repository }}
-        ISSUE_NUMBER: ${{ steps.scan.outputs.issue_number }}
+        ISSUE_NUMBER: ${{ steps.check.outputs.issue_number }}
         SUMMARY_MARKER: ${{ inputs.summary-marker }}
-        WORK_ORDER_PROJECT_OWNER: ${{ inputs.work-order-project-owner }}
-        WORK_ORDER_PROJECT_NUMBER: ${{ inputs.work-order-project-number }}
-        ACCEPTANCE_STATUS: ${{ inputs.acceptance-status }}
-        HARNESS_PROJECT_OWNER: ${{ inputs.harness-project-owner }}
-        STATUS_FIELD_NAME: ${{ inputs.status-field-name }}
       with:
         github-token: ${{ inputs.github-token }}
         script: |
-          // Banzai Codes treats the most recent comment without one of ITS OWN markers
-          // (banzai:meta / banzai:chat:*) as the candidate summary. Stray HTML comments
-          // from the model are stripped, then our idempotency marker is embedded in the
-          // summary comment itself — a separate marker comment posted afterwards would
-          // shadow the summary as the most recent candidate.
+          // Strip any stray HTML comments the model emitted, then embed our idempotency
+          // marker inside the summary comment itself so a reopen→close cycle finds it.
           const summary = (process.env.FINAL_MESSAGE || '').replace(/<!--[\s\S]*?-->/g, '').trim();
           if (!summary) {
             core.setFailed('Codex returned an empty summary; nothing was posted.');
@@ -384,100 +300,3 @@ runs:
           core.info(`Posted candidate summary: ${summaryComment.data.html_url}`);
           core.setOutput('processed', 'true');
           core.setOutput('summary_comment_url', summaryComment.data.html_url);
-
-          // Open the acceptance gate: move the work order's Product-board status so the
-          // Banzai Codes review gate surfaces the summary that now exists.
-          const workOrderProjectNumber = Number(process.env.WORK_ORDER_PROJECT_NUMBER || '');
-          if (!process.env.WORK_ORDER_PROJECT_NUMBER) {
-            core.info('work-order-project-number not set; leaving the Product board untouched.');
-            return;
-          }
-          if (!Number.isInteger(workOrderProjectNumber)) {
-            core.setFailed('work-order-project-number must be an integer when set.');
-            return;
-          }
-          const workOrderProjectOwner = process.env.WORK_ORDER_PROJECT_OWNER || process.env.HARNESS_PROJECT_OWNER;
-          const statusFieldName = process.env.STATUS_FIELD_NAME || 'Status';
-          const acceptanceStatus = process.env.ACCEPTANCE_STATUS || 'Acceptance';
-
-          const projectData = await github.graphql(
-            `
-              query($owner: String!, $number: Int!) {
-                organization(login: $owner) {
-                  projectV2(number: $number) {
-                    id
-                    fields(first: 50) {
-                      nodes {
-                        ... on ProjectV2SingleSelectField {
-                          id
-                          name
-                          options { id name }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            `,
-            { owner: workOrderProjectOwner, number: workOrderProjectNumber }
-          );
-          const project = projectData.organization && projectData.organization.projectV2;
-          if (!project) {
-            core.setFailed(`Project ${workOrderProjectNumber} not found for organization "${workOrderProjectOwner}" (user-owned projects are not supported).`);
-            return;
-          }
-          const statusField = project.fields.nodes.find(
-            (field) => field && field.name === statusFieldName && Array.isArray(field.options)
-          );
-          const statusOption = statusField && statusField.options.find((option) => option.name === acceptanceStatus);
-          if (!statusOption) {
-            core.setFailed(`Status option "${acceptanceStatus}" not found on work-order project ${workOrderProjectNumber}.`);
-            return;
-          }
-
-          const itemData = await github.graphql(
-            `
-              query($owner: String!, $repo: String!, $number: Int!, $statusField: String!) {
-                repository(owner: $owner, name: $repo) {
-                  issue(number: $number) {
-                    projectItems(first: 50, includeArchived: true) {
-                      nodes {
-                        id
-                        project { id }
-                        fieldValueByName(name: $statusField) {
-                          ... on ProjectV2ItemFieldSingleSelectValue { name }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
-            `,
-            { owner, repo, number: issueNumber, statusField: statusFieldName }
-          );
-          const item = itemData.repository.issue.projectItems.nodes.find(
-            (node) => node.project && node.project.id === project.id
-          );
-          if (!item) {
-            core.setFailed(`Issue #${issueNumber} is not on work-order project ${workOrderProjectNumber}; cannot open the acceptance gate.`);
-            return;
-          }
-          await github.graphql(
-            `
-              mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
-                updateProjectV2ItemFieldValue(
-                  input: {
-                    projectId: $projectId
-                    itemId: $itemId
-                    fieldId: $fieldId
-                    value: { singleSelectOptionId: $optionId }
-                  }
-                ) {
-                  projectV2Item { id }
-                }
-              }
-            `,
-            { projectId: project.id, itemId: item.id, fieldId: statusField.id, optionId: statusOption.id }
-          );
-          const previousStatus = (item.fieldValueByName && item.fieldValueByName.name) || '(none)';
-          core.info(`Moved work-order status ${previousStatus} → "${acceptanceStatus}" on project ${workOrderProjectNumber}.`);
