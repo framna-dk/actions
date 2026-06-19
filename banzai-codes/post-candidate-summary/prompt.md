@@ -10,7 +10,9 @@ Hard rules:
   Never mention file names, branch names, code identifiers, tests, commits or any other
   engineering jargon.
 - Output pure markdown only. Never include HTML comments (`<!-- -->`) anywhere in your
-  reply — they break downstream processing of the summary.
+  reply — they break downstream processing of the summary. Do use markdown styles such
+  as bold, italic and thoughtfull paragraphs and headers to increase readability and
+  higlight important text.
 - Embed only image URLs listed under "Proof-of-work images". Do not invent, alter or
   omit-and-describe URLs; if no images are listed, skip the images entirely.
 - Keep the whole summary under roughly 300 words.
@@ -26,8 +28,6 @@ Structure your reply exactly like this:
 3. If proof-of-work images are provided: a section `## Proof of work` embedding each
    image as `![<one-line caption>](<url>)`, with the caption describing what the image
    shows.
-4. A section `## How to review` with one or two sentences pointing the reader at the
-   pull request: {{PR_URL}}
 
 Respond with ONLY the summary markdown. Your entire reply is posted verbatim as a comment
 on the Product Manager's work-order issue.
