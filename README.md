@@ -7,6 +7,7 @@
 <div align="center">
 <a href="#-getting-started">🚀 Getting Started</a>&nbsp;&nbsp;&nbsp;&nbsp;
 <a href="#-actions">🧩 Actions</a>&nbsp;&nbsp;&nbsp;&nbsp;
+<a href="#-reusable-workflows">🔁 Reusable Workflows</a>&nbsp;&nbsp;&nbsp;&nbsp;
 <a href="#%EF%B8%8F-versioning-model">🏷️ Versioning Model</a>&nbsp;&nbsp;&nbsp;&nbsp;
 <a href="#%E2%80%8D-contributing">👩‍💻 Contributing</a>
 </div>
@@ -165,6 +166,25 @@ Click on any action name below to view detailed documentation, usage examples, a
     <tr>
       <td nowrap><a href="./upload-apk-shipshape/">upload-apk-shipshape</a></td>
       <td>Uploads an APK to Shipshape.</td>
+    </tr>
+  </tbody>
+</table>
+
+## 🔁 Reusable Workflows
+
+Unlike the actions above (which are `uses:`-ed at the step level), these are [reusable workflows](https://docs.github.com/en/actions/sharing-automations/reusing-workflows) called at the job level. They live under [`.github/workflows/`](./.github/workflows/).
+
+<table>
+  <thead>
+    <tr>
+      <th align="left">Workflow</th>
+      <th align="left">Description</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td nowrap><a href="./makeitfly-preview/">makeitfly-preview</a></td>
+      <td>Deploys a <a href="https://github.com/framna-dk/makeitfly">makeitfly</a> PR preview of a repo's Docker Compose stack to Fly.io, refreshes it on each push, tears it down on PR close, and keeps a sticky comment with the URL.</td>
     </tr>
   </tbody>
 </table>
