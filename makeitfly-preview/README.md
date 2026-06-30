@@ -28,10 +28,11 @@ jobs:
       compose-file: docker-compose.preview.yml
       name-prefix: atl
       health-path: /api/health
+      fly-org: ${{ vars.MAKEITFLY_FLY_ORG }}
     secrets:
-      fly-api-token: ${{ secrets.FLY_API_TOKEN }}
-      makeitfly-token: ${{ secrets.MAKEITFLY_TOKEN }}
-      name-salt: ${{ secrets.PREVIEW_NAME_SALT }}
+      fly-api-token: ${{ secrets.MAKEITFLY_FLY_API_TOKEN }}
+      makeitfly-token: ${{ secrets.MAKEITFLY_DOWNLOAD_TOKEN }}
+      name-salt: ${{ secrets.MAKEITFLY_NAME_SALT }}
 ```
 
 The caller owns the `pull_request` trigger (it must include `closed` to drive teardown) and the per-PR `concurrency` group. Everything else is in the reusable workflow.
