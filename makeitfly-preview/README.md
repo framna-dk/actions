@@ -23,7 +23,7 @@ concurrency:
 
 jobs:
   preview:
-    uses: shapehq/actions/.github/workflows/makeitfly-preview.yml@v1
+    uses: framna-dk/actions/.github/workflows/makeitfly-preview.yml@v1
     with:
       compose-file: docker-compose.preview.yml
       name-prefix: atl
