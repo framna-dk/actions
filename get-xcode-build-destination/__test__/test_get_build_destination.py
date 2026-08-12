@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from get_build_destination import SelectionError, parse_os_filter, select_device
+from get_build_destination import SelectionError, parse_os_filter, select_device, select_generic
 
 # Shaped like the "devices" object of `xcrun simctl list devices available --json`,
 # mirroring a runner with two iOS runtimes plus tvOS and watchOS runtimes installed.
@@ -132,6 +132,28 @@ class SelectDeviceTests(unittest.TestCase):
         with self.assertRaises(SelectionError) as context:
             select_device({}, "iOS")
         self.assertIn("none", str(context.exception))
+
+
+class SelectGenericTests(unittest.TestCase):
+    def test_generic_destination(self):
+        selected = select_generic("iOS")
+        self.assertEqual(selected["destination"], "generic/platform=iOS Simulator")
+        self.assertEqual(selected["udid"], "")
+        self.assertEqual(selected["name"], "")
+        self.assertEqual(selected["os-version"], "")
+
+    def test_generic_respects_platform(self):
+        selected = select_generic("tvOS")
+        self.assertEqual(selected["destination"], "generic/platform=tvOS Simulator")
+
+    def test_generic_rejects_os_filter(self):
+        with self.assertRaises(SelectionError) as context:
+            select_generic("iOS", os_filter="26.x")
+        self.assertIn("cannot be combined", str(context.exception))
+
+    def test_generic_rejects_device_filter(self):
+        with self.assertRaises(SelectionError):
+            select_generic("iOS", device_filter="iPhone 17 Pro")
 
 
 class ParseOsFilterTests(unittest.TestCase):

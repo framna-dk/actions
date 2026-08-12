@@ -20,6 +20,14 @@ inputs:
     description: "Simulator platform: iOS, tvOS, watchOS or visionOS"
     required: false
     default: "iOS"
+  generic:
+    description: >-
+      Set to "true" to get the generic simulator destination
+      (e.g. "generic/platform=iOS Simulator"), which requires no installed runtime.
+      Only valid for building, not for running tests, and cannot be combined with
+      the os or device inputs. The udid, name and os-version outputs will be empty.
+    required: false
+    default: "false"
 
 outputs:
   destination:
@@ -45,9 +53,14 @@ runs:
         PLATFORM: ${{ inputs.platform }}
         OS_FILTER: ${{ inputs.os }}
         DEVICE_FILTER: ${{ inputs.device }}
+        GENERIC: ${{ inputs.generic }}
       run: |
-        OUTPUTS=$(xcrun simctl list devices available --json \
-          | python3 "${GITHUB_ACTION_PATH}/get_build_destination.py")
+        if [ "${GENERIC}" = "true" ]; then
+          OUTPUTS=$(python3 "${GITHUB_ACTION_PATH}/get_build_destination.py" < /dev/null)
+        else
+          OUTPUTS=$(xcrun simctl list devices available --json \
+            | python3 "${GITHUB_ACTION_PATH}/get_build_destination.py")
+        fi
         echo "$OUTPUTS" >> "$GITHUB_OUTPUT"
         DESTINATION=$(echo "$OUTPUTS" | grep "^destination=" | cut -d= -f2-)
         echo "BUILD_DESTINATION=${DESTINATION}" >> "$GITHUB_ENV"

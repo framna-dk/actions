@@ -79,6 +79,26 @@ The following pins the device by exact name, on the newest OS runtime that has i
 
 If nothing matches the filters, the action fails and lists the OS versions that are installed on the runner for the requested device.
 
+### Compile-only jobs
+
+Jobs that only build — no test running — don't need a concrete simulator at all. Pass `generic: true` to get the generic destination (`generic/platform=iOS Simulator`), which works regardless of which runtimes are installed:
+
+```yaml
+- name: Get Build Destination
+  uses: framna-dk/actions/get-xcode-build-destination@v1
+  with:
+    generic: true
+
+- name: Build
+  run: |
+    xcodebuild build \
+      -scheme MyApp \
+      -sdk iphonesimulator \
+      -destination "${BUILD_DESTINATION}"
+```
+
+`generic` cannot be combined with `os` or `device` (a generic destination has no specific OS or device), and the `udid`, `name` and `os-version` outputs will be empty. A generic destination cannot run tests — use the simulator selection above for test jobs.
+
 ## Tests
 
 The selection logic is covered by unit tests, run automatically on pull requests that touch this action:

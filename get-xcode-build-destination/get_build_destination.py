@@ -41,6 +41,19 @@ def matches_os(version, template_parts):
     return True
 
 
+def select_generic(platform, os_filter="", device_filter=""):
+    """Returns the generic simulator destination for the platform, which requires
+    no installed runtime. Only valid for building, not for running tests."""
+    if os_filter or device_filter:
+        raise SelectionError("The 'generic' input cannot be combined with the 'os' or 'device' inputs")
+    return {
+        "destination": f"generic/platform={platform} Simulator",
+        "udid": "",
+        "name": "",
+        "os-version": "",
+    }
+
+
 def select_device(runtimes, platform, os_filter="", device_filter=""):
     """Selects a simulator from simctl's runtime-to-devices mapping.
 
@@ -81,14 +94,22 @@ def main():
     platform = os.environ["PLATFORM"]
     os_filter = os.environ.get("OS_FILTER", "").strip()
     device_filter = os.environ.get("DEVICE_FILTER", "").strip()
+    generic = os.environ.get("GENERIC", "").strip().lower()
 
-    runtimes = json.load(sys.stdin)["devices"]
+    if generic not in ("", "true", "false"):
+        sys.exit(f"Invalid generic input '{generic}': must be 'true' or 'false'")
+
     try:
-        selected = select_device(runtimes, platform, os_filter, device_filter)
+        if generic == "true":
+            selected = select_generic(platform, os_filter, device_filter)
+            print(f"Using generic {platform} Simulator destination", file=sys.stderr)
+        else:
+            runtimes = json.load(sys.stdin)["devices"]
+            selected = select_device(runtimes, platform, os_filter, device_filter)
+            print(f"Selected {selected['name']} ({platform} {selected['os-version']}, {selected['udid']})", file=sys.stderr)
     except SelectionError as error:
         sys.exit(str(error))
 
-    print(f"Selected {selected['name']} ({platform} {selected['os-version']}, {selected['udid']})", file=sys.stderr)
     for key, value in selected.items():
         print(f"{key}={value}")
 
