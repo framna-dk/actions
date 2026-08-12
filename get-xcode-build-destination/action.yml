@@ -1,0 +1,53 @@
+name: Get Xcode Build Destination
+description: Finds an available simulator on the runner and exposes it as an xcodebuild destination specifier.
+branding:
+  icon: smartphone
+  color: blue
+
+inputs:
+  os:
+    description: >-
+      OS version to match, e.g. "26.5" for an exact version or "26.x" to match any
+      minor version. Defaults to the newest installed runtime.
+    required: false
+    default: ""
+  device:
+    description: >-
+      Device name to match exactly, e.g. "iPhone 17 Pro". Defaults to any iPhone.
+    required: false
+    default: ""
+  platform:
+    description: "Simulator platform: iOS, tvOS, watchOS or visionOS"
+    required: false
+    default: "iOS"
+
+outputs:
+  destination:
+    description: "Value for xcodebuild's -destination flag, targeting the selected simulator by UDID. Also exported to the job environment as BUILD_DESTINATION."
+    value: ${{ steps.select.outputs.destination }}
+  udid:
+    description: "UDID of the selected simulator"
+    value: ${{ steps.select.outputs.udid }}
+  name:
+    description: "Device name of the selected simulator"
+    value: ${{ steps.select.outputs.name }}
+  os-version:
+    description: "OS version of the selected simulator"
+    value: ${{ steps.select.outputs.os-version }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Get build destination
+      id: select
+      shell: bash
+      env:
+        PLATFORM: ${{ inputs.platform }}
+        OS_FILTER: ${{ inputs.os }}
+        DEVICE_FILTER: ${{ inputs.device }}
+      run: |
+        OUTPUTS=$(xcrun simctl list devices available --json \
+          | python3 "${GITHUB_ACTION_PATH}/get_build_destination.py")
+        echo "$OUTPUTS" >> "$GITHUB_OUTPUT"
+        DESTINATION=$(echo "$OUTPUTS" | grep "^destination=" | cut -d= -f2-)
+        echo "BUILD_DESTINATION=${DESTINATION}" >> "$GITHUB_ENV"
