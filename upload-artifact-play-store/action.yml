@@ -14,6 +14,10 @@ inputs:
   proguardMappingFilePath:
     required: false
     description: "File path to a Proguard/R8 mapping file to be uploaded in addition to an APK"
+  inAppUpdatePriority:
+    description: "In-app update priority. Integer from 0 to 5 (inclusive). Defaults to 0 (lowest priority)."
+    default: "0"
+    required: false
 outputs:
   internal-sharing-url:
     description: "URL for internal sharing of the uploaded app"
