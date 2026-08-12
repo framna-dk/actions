@@ -53150,6 +53150,22 @@ function requireBuild () {
 
 var buildExports = requireBuild();
 
+/**
+ * Parses and validates the `inAppUpdatePriority` action input.
+ */
+function parseInAppUpdatePriority(raw) {
+    if (raw === undefined || raw.trim() === "")
+        return 0;
+    const priority = Number(raw.trim());
+    if (!Number.isInteger(priority)) {
+        throw new Error(`inAppUpdatePriority must be an integer between 0 and 5, got "${raw}"`);
+    }
+    if (priority < 0 || priority > 5) {
+        throw new Error(`inAppUpdatePriority must be between 0 and 5, got ${priority}`);
+    }
+    return priority;
+}
+
 async function createAuthClient(serviceAccountKeyPath) {
     return new buildExports.auth.GoogleAuth({
         keyFile: serviceAccountKeyPath,
@@ -53311,18 +53327,6 @@ async function uploadProguardMappingFile(publisher, editId, packageName, version
             },
         });
     }
-}
-function parseInAppUpdatePriority(raw) {
-    if (raw === undefined || raw.trim() === "")
-        return 0;
-    const priority = Number(raw.trim());
-    if (!Number.isInteger(priority)) {
-        throw new Error(`inAppUpdatePriority must be an integer between 0 and 5, got "${raw}"`);
-    }
-    if (priority < 0 || priority > 5) {
-        throw new Error(`inAppUpdatePriority must be between 0 and 5, got ${priority}`);
-    }
-    return priority;
 }
 async function run() {
     try {
@@ -62788,6 +62792,4 @@ var multipartParser = /*#__PURE__*/Object.freeze({
     __proto__: null,
     toFormData: toFormData
 });
-
-export { parseInAppUpdatePriority };
 //# sourceMappingURL=index.js.map

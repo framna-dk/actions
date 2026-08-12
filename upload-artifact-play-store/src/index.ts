@@ -2,6 +2,8 @@ import * as core from "@actions/core";
 import * as google from "@googleapis/androidpublisher";
 import * as fs from "fs";
 
+import { parseInAppUpdatePriority } from "./parse-update-priority.js";
+
 import type { androidpublisher_v3 } from "@googleapis/androidpublisher";
 import type { GoogleAuth } from "google-auth-library";
 
@@ -201,20 +203,6 @@ async function uploadProguardMappingFile(
       },
     });
   }
-}
-
-export function parseInAppUpdatePriority(raw: string | undefined): number {
-  if (raw === undefined || raw.trim() === "") return 0;
-
-  const priority = Number(raw.trim());
-
-  if (!Number.isInteger(priority)) {
-    throw new Error(`inAppUpdatePriority must be an integer between 0 and 5, got "${raw}"`);
-  }
-  if (priority < 0 || priority > 5) {
-    throw new Error(`inAppUpdatePriority must be between 0 and 5, got ${priority}`);
-  }
-  return priority;
 }
 
 async function run(): Promise<void> {
