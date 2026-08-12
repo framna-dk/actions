@@ -22,6 +22,7 @@ async function publishApp(
   packageName: string,
   bundlePath: string,
   proguardMappingFilePath: string | undefined,
+  inAppUpdatePriority: number,
 ): Promise<string> {
   const authClient = await createAuthClient(serviceAccountKeyPath);
   const publisher = google.androidpublisher({
@@ -37,7 +38,8 @@ async function publishApp(
   if (proguardMappingFilePath) {
     await uploadProguardMappingFile(publisher, editId, packageName, versionCode, proguardMappingFilePath);
   }
-  await updateTrack(publisher, editId, packageName, versionCode);
+
+  await updateTrack(publisher, editId, packageName, versionCode, inAppUpdatePriority);
   await commitEdit(publisher, editId, packageName);
 
   // Return the internal sharing URL
@@ -107,9 +109,10 @@ async function updateTrack(
   editId: string,
   packageName: string,
   versionCode: number,
+  inAppUpdatePriority: number = 0,
   track: string = "internal",
 ): Promise<Track> {
-  core.info(`Updating track "${track}" in "${packageName}" with build "${versionCode}"`);
+  core.info(`Updating track "${track}" in "${packageName}" with build "${versionCode}" at update priority ${inAppUpdatePriority}`);
   const res = await publisher.edits.tracks.update({
     packageName: packageName,
     editId: editId,
@@ -120,6 +123,7 @@ async function updateTrack(
         {
           versionCodes: [versionCode.toString()],
           status: "completed",
+          inAppUpdatePriority: inAppUpdatePriority,
         },
       ],
     },
@@ -199,14 +203,29 @@ async function uploadProguardMappingFile(
   }
 }
 
+export function parseInAppUpdatePriority(raw: string | undefined): number {
+  if (raw === undefined || raw.trim() === "") return 0;
+
+  const priority = Number(raw.trim());
+
+  if (!Number.isInteger(priority)) {
+    throw new Error(`inAppUpdatePriority must be an integer between 0 and 5, got "${raw}"`);
+  }
+  if (priority < 0 || priority > 5) {
+    throw new Error(`inAppUpdatePriority must be between 0 and 5, got ${priority}`);
+  }
+  return priority;
+}
+
 async function run(): Promise<void> {
   try {
     const serviceAccountKeyPath = core.getInput("serviceAccountKeyPath", { required: true });
     const packageName = core.getInput("packageName", { required: true });
     const bundlePath = core.getInput("bundlePath", { required: true });
     const proguardMappingFilePath = core.getInput("proguardMappingFilePath");
+    const inAppUpdatePriority = parseInAppUpdatePriority(core.getInput("inAppUpdatePriority", { required: false }));
 
-    const internalSharingUrl = await publishApp(serviceAccountKeyPath, packageName, bundlePath, proguardMappingFilePath);
+    const internalSharingUrl = await publishApp(serviceAccountKeyPath, packageName, bundlePath, proguardMappingFilePath, inAppUpdatePriority);
     core.setOutput("internal-sharing-url", internalSharingUrl);
     core.info(`Internal sharing URL: ${internalSharingUrl}`);
   } catch (error) {
