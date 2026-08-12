@@ -225,7 +225,13 @@ async function run(): Promise<void> {
     const proguardMappingFilePath = core.getInput("proguardMappingFilePath");
     const inAppUpdatePriority = parseInAppUpdatePriority(core.getInput("inAppUpdatePriority", { required: false }));
 
-    const internalSharingUrl = await publishApp(serviceAccountKeyPath, packageName, bundlePath, proguardMappingFilePath, inAppUpdatePriority);
+    const internalSharingUrl = await publishApp(
+      serviceAccountKeyPath,
+      packageName,
+      bundlePath,
+      proguardMappingFilePath,
+      inAppUpdatePriority,
+    );
     core.setOutput("internal-sharing-url", internalSharingUrl);
     core.info(`Internal sharing URL: ${internalSharingUrl}`);
   } catch (error) {
