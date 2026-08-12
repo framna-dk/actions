@@ -12,13 +12,14 @@ import json
 import os
 import sys
 
-platform = os.environ["PLATFORM"]
-os_filter = os.environ.get("OS_FILTER", "").strip()
-device_filter = os.environ.get("DEVICE_FILTER", "").strip()
-runtime_marker = f".SimRuntime.{platform}-"
+
+class SelectionError(Exception):
+    pass
 
 
 def parse_os_filter(template):
+    """Parses an OS filter template like "26.5" or "26.x" into a list of
+    ints and Nones, where None matches any value at that position."""
     parts = []
     for part in template.split("."):
         if part.lower() == "x":
@@ -26,7 +27,7 @@ def parse_os_filter(template):
         elif part.isdigit():
             parts.append(int(part))
         else:
-            sys.exit(f"Invalid os filter '{template}': each component must be a number or 'x'")
+            raise SelectionError(f"Invalid os filter '{template}': each component must be a number or 'x'")
     return parts
 
 
@@ -40,32 +41,57 @@ def matches_os(version, template_parts):
     return True
 
 
-os_parts = parse_os_filter(os_filter) if os_filter else []
+def select_device(runtimes, platform, os_filter="", device_filter=""):
+    """Selects a simulator from simctl's runtime-to-devices mapping.
 
-runtimes = json.load(sys.stdin)["devices"]
-devices = sorted(
-    (tuple(int(part) for part in runtime.rsplit(runtime_marker, 1)[1].split("-")), device["name"], device["udid"])
-    for runtime, runtime_devices in runtimes.items()
-    if runtime_marker in runtime
-    for device in runtime_devices
-    if (device["name"] == device_filter if device_filter else device["name"].startswith("iPhone"))
-)
-matching = [entry for entry in devices if matches_os(entry[0], os_parts)]
+    Returns a dict with "destination", "udid", "name" and "os-version" keys.
+    Raises SelectionError if no device matches the filters.
+    """
+    runtime_marker = f".SimRuntime.{platform}-"
+    os_parts = parse_os_filter(os_filter) if os_filter else []
 
-if not matching:
-    wanted_device = f"device '{device_filter}'" if device_filter else "an iPhone"
-    wanted_os = f"{platform} {os_filter}" if os_filter else f"any {platform} version"
-    installed = ", ".join(sorted({".".join(map(str, entry[0])) for entry in devices})) or "none"
-    sys.exit(
-        f"No available simulator matching {wanted_device} on {wanted_os}. "
-        f"Installed {platform} versions with matching devices: {installed}"
+    devices = sorted(
+        (tuple(int(part) for part in runtime.rsplit(runtime_marker, 1)[1].split("-")), device["name"], device["udid"])
+        for runtime, runtime_devices in runtimes.items()
+        if runtime_marker in runtime
+        for device in runtime_devices
+        if (device["name"] == device_filter if device_filter else device["name"].startswith("iPhone"))
     )
+    matching = [entry for entry in devices if matches_os(entry[0], os_parts)]
 
-version, name, udid = matching[-1]
-os_version = ".".join(map(str, version))
-print(f"Selected {name} ({platform} {os_version}, {udid})", file=sys.stderr)
+    if not matching:
+        wanted_device = f"device '{device_filter}'" if device_filter else "an iPhone"
+        wanted_os = f"{platform} {os_filter}" if os_filter else f"any {platform} version"
+        installed = ", ".join(sorted({".".join(map(str, entry[0])) for entry in devices})) or "none"
+        raise SelectionError(
+            f"No available simulator matching {wanted_device} on {wanted_os}. "
+            f"Installed {platform} versions with matching devices: {installed}"
+        )
 
-print(f"destination=platform={platform} Simulator,id={udid}")
-print(f"udid={udid}")
-print(f"name={name}")
-print(f"os-version={os_version}")
+    version, name, udid = matching[-1]
+    return {
+        "destination": f"platform={platform} Simulator,id={udid}",
+        "udid": udid,
+        "name": name,
+        "os-version": ".".join(map(str, version)),
+    }
+
+
+def main():
+    platform = os.environ["PLATFORM"]
+    os_filter = os.environ.get("OS_FILTER", "").strip()
+    device_filter = os.environ.get("DEVICE_FILTER", "").strip()
+
+    runtimes = json.load(sys.stdin)["devices"]
+    try:
+        selected = select_device(runtimes, platform, os_filter, device_filter)
+    except SelectionError as error:
+        sys.exit(str(error))
+
+    print(f"Selected {selected['name']} ({platform} {selected['os-version']}, {selected['udid']})", file=sys.stderr)
+    for key, value in selected.items():
+        print(f"{key}={value}")
+
+
+if __name__ == "__main__":
+    main()

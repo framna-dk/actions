@@ -1,0 +1,16 @@
+name: Test get-xcode-build-destination
+on:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    paths:
+      - get-xcode-build-destination/**
+  workflow_dispatch:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Run tests
+        working-directory: get-xcode-build-destination
+        run: python3 -m unittest discover __test__ -v
