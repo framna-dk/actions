@@ -28359,24 +28359,6 @@ var ExitCode;
      */
     ExitCode[ExitCode["Failure"] = 1] = "Failure";
 })(ExitCode || (ExitCode = {}));
-//-----------------------------------------------------------------------
-// Variables
-//-----------------------------------------------------------------------
-/**
- * Sets env variable for this action and future actions in the job
- * @param name the name of the variable to set
- * @param val the value of the variable. Non-string values will be converted to a string via JSON.stringify
- */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function exportVariable(name, val) {
-    const convertedVal = toCommandValue(val);
-    process.env[name] = convertedVal;
-    const filePath = process.env['GITHUB_ENV'] || '';
-    if (filePath) {
-        return issueFileCommand('ENV', prepareKeyValueMessage(name, val));
-    }
-    issueCommand('set-env', { name }, convertedVal);
-}
 /**
  * Gets the value of an input.
  * Unless trimWhitespace is set to false in InputOptions, the value is also trimmed.
@@ -28564,6 +28546,5 @@ function emit(destination) {
     setOutput("udid", destination.udid);
     setOutput("name", destination.name);
     setOutput("os-version", destination.osVersion);
-    exportVariable("BUILD_DESTINATION", destination.destination);
 }
 //# sourceMappingURL=index.js.map

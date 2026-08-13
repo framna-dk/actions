@@ -7,23 +7,7 @@ Finds an available simulator on the runner and exposes it as a destination speci
 
 ## Using the result
 
-The action exposes the destination in two equivalent ways — pick whichever fits your workflow:
-
-**1. Via the `BUILD_DESTINATION` environment variable.** The action exports the destination to the job environment, so any later step in the same job can use it without wiring up step outputs:
-
-```yaml
-- name: Get Build Destination
-  uses: framna-dk/actions/get-xcode-build-destination@v1
-
-- name: Run unit tests
-  run: |
-    xcodebuild test \
-      -scheme MyApp \
-      -sdk iphonesimulator \
-      -destination "${BUILD_DESTINATION}"
-```
-
-**2. Via step outputs.** Give the step an `id` and reference its outputs. Use this when you need the value in a `with:`/`env:` block, in another job, or want the device metadata:
+Give the step an `id` and reference its outputs:
 
 ```yaml
 - name: Get Build Destination
@@ -48,7 +32,7 @@ The action exposes the destination in two equivalent ways — pick whichever fit
 
 | Output | Example | Description |
 | --- | --- | --- |
-| `destination` | `platform=iOS Simulator,id=23FE1E29-…` | Value for xcodebuild's `-destination` flag. Identical to `BUILD_DESTINATION`. |
+| `destination` | `platform=iOS Simulator,id=23FE1E29-…` | Value for xcodebuild's `-destination` flag. |
 | `udid` | `23FE1E29-E292-4D86-B8A8-B19057A182DC` | UDID of the selected simulator, e.g. for `xcrun simctl` commands. |
 | `name` | `iPhone 17 Pro` | Device name of the selected simulator. |
 | `os-version` | `26.5` | OS version of the selected simulator. |
@@ -85,6 +69,7 @@ Jobs that only build — no test running — don't need a concrete simulator at 
 
 ```yaml
 - name: Get Build Destination
+  id: destination
   uses: framna-dk/actions/get-xcode-build-destination@v1
   with:
     generic: true
@@ -94,7 +79,7 @@ Jobs that only build — no test running — don't need a concrete simulator at 
     xcodebuild build \
       -scheme MyApp \
       -sdk iphonesimulator \
-      -destination "${BUILD_DESTINATION}"
+      -destination "${{ steps.destination.outputs.destination }}"
 ```
 
 `generic` cannot be combined with `os` or `device` (a generic destination has no specific OS or device), and the `udid`, `name` and `os-version` outputs will be empty. A generic destination cannot run tests — use the simulator selection above for test jobs.

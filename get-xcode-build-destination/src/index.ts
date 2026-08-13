@@ -24,5 +24,4 @@ function emit(destination: { destination: string, udid: string, name: string, os
   core.setOutput("udid", destination.udid)
   core.setOutput("name", destination.name)
   core.setOutput("os-version", destination.osVersion)
-  core.exportVariable("BUILD_DESTINATION", destination.destination)
 }

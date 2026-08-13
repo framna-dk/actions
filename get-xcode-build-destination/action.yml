@@ -31,7 +31,7 @@ inputs:
 
 outputs:
   destination:
-    description: "Value for xcodebuild's -destination flag, targeting the selected simulator by UDID. Also exported to the job environment as BUILD_DESTINATION."
+    description: "Value for xcodebuild's -destination flag, targeting the selected simulator by UDID."
   udid:
     description: "UDID of the selected simulator"
   name:
