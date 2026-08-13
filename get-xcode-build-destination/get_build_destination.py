@@ -102,11 +102,12 @@ def main():
     try:
         if generic == "true":
             selected = select_generic(platform, os_filter, device_filter)
-            print(f"Using generic {platform} Simulator destination", file=sys.stderr)
+            print(f"The generic {platform} Simulator destination was selected.", file=sys.stderr)
         else:
             runtimes = json.load(sys.stdin)["devices"]
             selected = select_device(runtimes, platform, os_filter, device_filter)
-            print(f"Selected {selected['name']} ({platform} {selected['os-version']}, {selected['udid']})", file=sys.stderr)
+            print(f"{selected['name']} ({platform} {selected['os-version']}) was selected.", file=sys.stderr)
+        print(f"Build destination: {selected['destination']}", file=sys.stderr)
     except SelectionError as error:
         sys.exit(str(error))
 
