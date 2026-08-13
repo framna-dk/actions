@@ -15,6 +15,11 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 24
+          cache: npm
+          cache-dependency-path: get-xcode-build-destination/package-lock.json
+      - name: Install dependencies
+        working-directory: get-xcode-build-destination
+        run: npm ci
       - name: Run tests
         working-directory: get-xcode-build-destination
-        run: node --test
+        run: npm test

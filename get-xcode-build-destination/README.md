@@ -105,5 +105,6 @@ The selection logic is covered by unit tests, run automatically on pull requests
 
 ```bash
 cd get-xcode-build-destination
-node --test
+npm ci
+npm test
 ```

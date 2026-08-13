@@ -6,7 +6,7 @@ on:
 permissions:
   contents: write
 env:
-  ALL_PACKAGES: xcode-select,upload-artifact-play-store
+  ALL_PACKAGES: xcode-select,upload-artifact-play-store,get-xcode-build-destination
 jobs:
   changes:
     runs-on: ubuntu-latest
