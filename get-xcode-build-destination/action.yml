@@ -64,3 +64,14 @@ runs:
         echo "$OUTPUTS" >> "$GITHUB_OUTPUT"
         DESTINATION=$(echo "$OUTPUTS" | grep "^destination=" | cut -d= -f2-)
         echo "BUILD_DESTINATION=${DESTINATION}" >> "$GITHUB_ENV"
+        # Close the group the runner auto-wraps composite steps in, so the
+        # selection is visible in the UI without unfolding the step.
+        echo "::endgroup::"
+        if [ "${GENERIC}" = "true" ]; then
+          echo "The generic ${PLATFORM} Simulator destination was selected."
+        else
+          NAME=$(echo "$OUTPUTS" | grep "^name=" | cut -d= -f2-)
+          OS_VERSION=$(echo "$OUTPUTS" | grep "^os-version=" | cut -d= -f2-)
+          echo "${NAME} (${PLATFORM} ${OS_VERSION}) was selected."
+        fi
+        echo "Build destination: ${DESTINATION}"
