@@ -11,6 +11,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
       - name: Run tests
         working-directory: get-xcode-build-destination
-        run: python3 -m unittest discover __test__ -v
+        run: node --test

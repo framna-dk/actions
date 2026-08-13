@@ -32,46 +32,13 @@ inputs:
 outputs:
   destination:
     description: "Value for xcodebuild's -destination flag, targeting the selected simulator by UDID. Also exported to the job environment as BUILD_DESTINATION."
-    value: ${{ steps.select.outputs.destination }}
   udid:
     description: "UDID of the selected simulator"
-    value: ${{ steps.select.outputs.udid }}
   name:
     description: "Device name of the selected simulator"
-    value: ${{ steps.select.outputs.name }}
   os-version:
     description: "OS version of the selected simulator"
-    value: ${{ steps.select.outputs.os-version }}
 
 runs:
-  using: "composite"
-  steps:
-    - name: Get build destination
-      id: select
-      shell: bash
-      env:
-        PLATFORM: ${{ inputs.platform }}
-        OS_FILTER: ${{ inputs.os }}
-        DEVICE_FILTER: ${{ inputs.device }}
-        GENERIC: ${{ inputs.generic }}
-      run: |
-        if [ "${GENERIC}" = "true" ]; then
-          OUTPUTS=$(python3 "${GITHUB_ACTION_PATH}/get_build_destination.py" < /dev/null)
-        else
-          OUTPUTS=$(xcrun simctl list devices available --json \
-            | python3 "${GITHUB_ACTION_PATH}/get_build_destination.py")
-        fi
-        echo "$OUTPUTS" >> "$GITHUB_OUTPUT"
-        DESTINATION=$(echo "$OUTPUTS" | grep "^destination=" | cut -d= -f2-)
-        echo "BUILD_DESTINATION=${DESTINATION}" >> "$GITHUB_ENV"
-        # Close the group the runner auto-wraps composite steps in, so the
-        # selection is visible in the UI without unfolding the step.
-        echo "::endgroup::"
-        if [ "${GENERIC}" = "true" ]; then
-          echo "The generic ${PLATFORM} Simulator destination was selected."
-        else
-          NAME=$(echo "$OUTPUTS" | grep "^name=" | cut -d= -f2-)
-          OS_VERSION=$(echo "$OUTPUTS" | grep "^os-version=" | cut -d= -f2-)
-          echo "${NAME} (${PLATFORM} ${OS_VERSION}) was selected."
-        fi
-        echo "Build destination: ${DESTINATION}"
+  using: node24
+  main: index.js
