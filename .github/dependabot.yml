@@ -1,6 +1,14 @@
 version: 2
 updates:
   - package-ecosystem: "npm"
+    directory: "/build-android"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm:
+        patterns:
+          - "*"
+  - package-ecosystem: "npm"
     directory: "/render-ios-app-icon-badge"
     schedule:
       interval: "weekly"
