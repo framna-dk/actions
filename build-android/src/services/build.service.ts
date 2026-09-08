@@ -25,8 +25,10 @@ export async function executeGradleBuild(config: Config): Promise<void> {
   core.info(`$ ${gradlewPath} ${cmdArgs.join(' ')}`)
   core.info('')
 
-  const exitCode = await exec.exec(gradlewPath, cmdArgs, {
-    cwd: config.projectLocation
+  // Resolve the wrapper relative to cwd so spaces in the project path are not
+  // parsed as command-line argument separators by @actions/exec.
+  const exitCode = await exec.exec('./gradlew', cmdArgs, {
+    cwd: absPath
   })
 
   if (exitCode !== 0) {

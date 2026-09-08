@@ -33218,8 +33218,10 @@ async function executeGradleBuild(config) {
     info('');
     info(`$ ${gradlewPath} ${cmdArgs.join(' ')}`);
     info('');
-    const exitCode = await exec(gradlewPath, cmdArgs, {
-        cwd: config.projectLocation
+    // Resolve the wrapper relative to cwd so spaces in the project path are not
+    // parsed as command-line argument separators by @actions/exec.
+    const exitCode = await exec('./gradlew', cmdArgs, {
+        cwd: absPath
     });
     if (exitCode !== 0) {
         throw new Error(`Build task failed with exit code: ${exitCode}`);
