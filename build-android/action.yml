@@ -1,0 +1,48 @@
+name: 'Android Build'
+description: 'Builds your Android project with Gradle.'
+author: 'Gerard Sala'
+
+inputs:
+  project-location:
+    description:
+      'The root directory of your Android project. For example, where your root build gradle file exist (also gradlew, settings.gradle, and
+      so on)'
+    required: false
+    default: '.'
+  module:
+    description:
+      'Set the module that you want to build. To see your available modules, please open your project in Android Studio and go in [Project
+      Structure] and see the list on the left.'
+    required: false
+    default: 'app'
+  variant:
+    description:
+      'Set the build variants you want to create. To see your available variants, open your project in Android Studio and go in [Project
+      Structure] -> variants section. This input also accepts multiple variants, comma-separated.'
+    required: false
+    default: 'debug'
+  artifact-type:
+    description: 'Set the build type that you want to build. Can be `apk` or `aab`.'
+    required: false
+    default: 'apk'
+  arguments:
+    description: 'Extra arguments passed to the gradle task'
+    required: false
+    default: ''
+
+outputs:
+  artifact-path:
+    description:
+      'Path of the generated APK/AAB after filtering. If the build generates more than one matching artifact, this output will contain the
+      last ones path.'
+  artifact-path-list:
+    description: 'List of the generated APK/AAB paths after filtering. The paths are separated with | character.'
+  manifest-path:
+    description:
+      'Path of the merged AndroidManifest.xml after filtering. If more than one match is found, this output will contain the last ones path.'
+  manifest-path-list:
+    description: 'List of the merged AndroidManifest.xml paths after filtering. The paths are separated with | character.'
+
+runs:
+  using: 'node24'
+  main: 'dist/index.js'
