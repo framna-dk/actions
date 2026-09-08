@@ -4,11 +4,10 @@ import { processConfig, executeGradleBuild, discoverArtifacts, discoverManifests
 
 async function run(): Promise<void> {
   try {
-    const startTime = new Date()
     const config: Config = await processConfig()
     await executeGradleBuild(config)
-    const { appFiles } = await discoverArtifacts(config, startTime)
-    const { manifestFiles } = await discoverManifests(config, startTime)
+    const { appFiles } = await discoverArtifacts(config)
+    const { manifestFiles } = await discoverManifests(config)
     const result: Result = {
       appFiles,
       manifestFiles

@@ -4,7 +4,7 @@ import * as crypto from 'crypto';
 import * as fs from 'fs';
 import { promises } from 'fs';
 import * as path from 'path';
-import { extname, basename } from 'path';
+import { basename } from 'path';
 import http from 'http';
 import https from 'https';
 import 'net';
@@ -33101,116 +33101,47 @@ function parseVariants(input) {
         .filter((v) => v.length > 0);
     return variants;
 }
-function capitalizeVariant(variant) {
-    if (!variant) {
-        return variant;
-    }
-    return variant.charAt(0).toUpperCase() + variant.slice(1);
-}
-function getFileExtension(filePath) {
-    return extname(filePath);
-}
 function getBaseName(filePath) {
     return basename(filePath);
 }
+function modulePath(module) {
+    return module.replace(/^:/u, '').replace(/:/g, '/') || '**';
+}
 function generateAppPathPatterns(module, variants, appType) {
+    const prefix = `${modulePath(module)}/build/outputs`;
     const patterns = [];
-    // Generate specific patterns based on module and variants
-    if (module && variants.length > 0) {
-        const modulePrefix = module.startsWith(':') ? module.substring(1) : module;
+    if (appType === AAB_APP_TYPE) {
+        for (const variant of variants.length > 0 ? variants : ['*']) {
+            patterns.push(`${prefix}/bundle/${variant}/*.aab`);
+        }
+    }
+    else if (appType === APK_APP_TYPE) {
+        if (variants.length === 0) {
+            patterns.push(`${prefix}/apk/**/*.apk`);
+        }
         for (const variant of variants) {
-            if (variant.trim()) {
-                if (appType === APK_APP_TYPE) {
-                    // Specific module and variant APK patterns
-                    patterns.push(`${modulePrefix}/build/outputs/apk/${variant}/*.apk`);
-                    patterns.push(`${modulePrefix}/build/outputs/apk/*${variant}*/*.apk`);
-                }
-                else if (appType === AAB_APP_TYPE) {
-                    // Specific module and variant AAB patterns
-                    patterns.push(`${modulePrefix}/build/outputs/bundle/${variant}Release/*.aab`);
-                    patterns.push(`${modulePrefix}/build/outputs/bundle/*${variant}*/*.aab`);
+            patterns.push(`${prefix}/apk/${variant}/*.apk`);
+            // AGP separates the combined flavor name and build type with a slash.
+            // Try each camel-case boundary because both names can contain capitals.
+            for (let index = 1; index < variant.length; index++) {
+                if (/[A-Z]/u.test(variant[index])) {
+                    const flavor = variant.slice(0, index);
+                    const buildType = variant[index].toLowerCase() + variant.slice(index + 1);
+                    patterns.push(`${prefix}/apk/${flavor}/${buildType}/*.apk`);
                 }
             }
         }
+        patterns.push(`!${prefix}/apk/androidTest/**`);
     }
-    else if (module) {
-        // Module specified but no variants - search all variants in the module
-        const modulePrefix = module.startsWith(':') ? module.substring(1) : module;
-        if (appType === APK_APP_TYPE) {
-            patterns.push(`${modulePrefix}/build/outputs/apk/*/*.apk`);
-        }
-        else if (appType === AAB_APP_TYPE) {
-            patterns.push(`${modulePrefix}/build/outputs/bundle/*/*.aab`);
-        }
-    }
-    else if (variants.length > 0) {
-        // Variants specified but no module - search all modules for these variants
-        for (const variant of variants) {
-            if (variant.trim()) {
-                if (appType === APK_APP_TYPE) {
-                    patterns.push(`*/build/outputs/apk/${variant}/*.apk`);
-                    patterns.push(`*/build/outputs/apk/*${variant}*/*.apk`);
-                }
-                else if (appType === AAB_APP_TYPE) {
-                    patterns.push(`*/build/outputs/bundle/${variant}Release/*.aab`);
-                    patterns.push(`*/build/outputs/bundle/*${variant}*/*.aab`);
-                }
-            }
-        }
-    }
-    // Always add broad fallback patterns to catch any missed cases
-    if (appType === APK_APP_TYPE) {
-        patterns.push('*/build/outputs/apk/*/*.apk');
-        patterns.push('*/build/outputs/apk/*.apk');
-    }
-    else if (appType === AAB_APP_TYPE) {
-        patterns.push('*/build/outputs/bundle/*/*.aab');
-        patterns.push('*/build/outputs/bundle/*.aab');
-    }
-    // Remove duplicates while preserving order
     return [...new Set(patterns)];
 }
 function generateManifestPathPatterns(module, variants) {
+    const prefix = `${modulePath(module)}/build/intermediates`;
     const patterns = [];
-    const modulePrefix = module && module.startsWith(':') ? module.substring(1) : module;
-    const hasModule = Boolean(modulePrefix);
-    const hasVariants = variants.length > 0;
-    const addVariantPatterns = (prefix, variant) => {
-        const trimmed = variant.trim();
-        if (!trimmed) {
-            return;
-        }
-        const variantCap = capitalizeVariant(trimmed);
-        patterns.push(`${prefix}/build/intermediates/merged_manifests/${trimmed}/process${variantCap}Manifest/AndroidManifest.xml`);
-        patterns.push(`${prefix}/build/intermediates/merged_manifest/${trimmed}/AndroidManifest.xml`);
-        patterns.push(`${prefix}/build/intermediates/merged_manifest/${trimmed}/merged/AndroidManifest.xml`);
-        patterns.push(`${prefix}/build/intermediates/merged_manifests/${trimmed}/AndroidManifest.xml`);
-        patterns.push(`${prefix}/build/intermediates/merged_manifests/${trimmed}/merged/AndroidManifest.xml`);
-        patterns.push(`${prefix}/build/intermediates/merged_manifest/*${trimmed}*/AndroidManifest.xml`);
-        patterns.push(`${prefix}/build/intermediates/merged_manifests/*${trimmed}*/AndroidManifest.xml`);
-    };
-    if (hasModule && hasVariants) {
-        for (const variant of variants) {
-            addVariantPatterns(modulePrefix, variant);
-        }
+    for (const variant of variants.length > 0 ? variants : ['*']) {
+        patterns.push(`${prefix}/merged_manifest/${variant}/**/AndroidManifest.xml`);
+        patterns.push(`${prefix}/merged_manifests/${variant}/**/AndroidManifest.xml`);
     }
-    else if (hasModule) {
-        patterns.push(`${modulePrefix}/build/intermediates/merged_manifests/*/process*Manifest/AndroidManifest.xml`);
-        patterns.push(`${modulePrefix}/build/intermediates/merged_manifest/*/AndroidManifest.xml`);
-        patterns.push(`${modulePrefix}/build/intermediates/merged_manifest/*/merged/AndroidManifest.xml`);
-        patterns.push(`${modulePrefix}/build/intermediates/merged_manifests/*/AndroidManifest.xml`);
-        patterns.push(`${modulePrefix}/build/intermediates/merged_manifests/*/merged/AndroidManifest.xml`);
-    }
-    else if (hasVariants) {
-        for (const variant of variants) {
-            addVariantPatterns('*', variant);
-        }
-    }
-    patterns.push('*/build/intermediates/merged_manifests/*/process*Manifest/AndroidManifest.xml');
-    patterns.push('*/build/intermediates/merged_manifest/*/AndroidManifest.xml');
-    patterns.push('*/build/intermediates/merged_manifest/*/merged/AndroidManifest.xml');
-    patterns.push('*/build/intermediates/merged_manifests/*/AndroidManifest.xml');
-    patterns.push('*/build/intermediates/merged_manifests/*/merged/AndroidManifest.xml');
     return [...new Set(patterns)];
 }
 
@@ -35413,190 +35344,49 @@ function create(patterns, options) {
     });
 }
 
-async function discoverArtifacts(config, started) {
-    info('');
-    info('Export Artifacts:');
-    // Generate app path patterns based on module, variants, and build type
-    const appPathPatterns = generateAppPathPatterns(config.module, config.variants, config.artifactType);
-    const projectRoot = path.resolve(config.projectLocation).replace(/\\/g, '/').replace(/\/+$/u, '');
-    const scopedPatterns = appPathPatterns.map((pattern) => `${projectRoot}/${pattern.replace(/^\/+/u, '')}`);
+async function findOutputFiles(projectLocation, patterns) {
+    const projectRoot = path.resolve(projectLocation).replace(/\\/g, '/').replace(/\/+$/u, '');
+    const scopedPatterns = patterns.map((pattern) => pattern.startsWith('!') ? `!${projectRoot}/${pattern.slice(1)}` : `${projectRoot}/${pattern}`);
     info('Generated search patterns:');
     scopedPatterns.forEach((pattern) => info(`  ${pattern}`));
-    const appArtifacts = await getArtifacts(config.projectLocation, started, scopedPatterns, false, config);
-    printAppSearchInfo(appArtifacts, scopedPatterns);
-    info(`Exporting artifacts with the selected app type: ${config.artifactType}`);
-    // Filter appFiles by build type
-    const filteredArtifacts = appArtifacts.filter((artifact) => getFileExtension(artifact.path) === `.${config.artifactType}`);
-    if (filteredArtifacts.length === 0) {
-        warning(`No app artifacts found with generated patterns:\n${scopedPatterns.join('\n')}`);
-        warning('If you have customized APK/AAB output paths in your gradle files, the automatic pattern generation may not find your artifacts.');
-    }
-    return {
-        appFiles: filteredArtifacts
-    };
-}
-async function getArtifacts(projectLocation, started, patterns, includeModule, config) {
-    const artifacts = [];
-    const seenPaths = new Set();
-    for (const pattern of patterns) {
-        try {
-            const afs = await findArtifacts(projectLocation, started, pattern, includeModule, config);
-            for (const artifact of afs) {
-                if (seenPaths.has(artifact.path)) {
-                    continue;
-                }
-                seenPaths.add(artifact.path);
-                artifacts.push(artifact);
-            }
-        }
-        catch (error) {
-            warning(`Failed to find artifact with pattern ( ${pattern} ), error: ${error}`);
-            continue;
-        }
-    }
-    if (artifacts.length === 0) {
-        if (started.getTime() > 0) {
-            warning(`No app files found with patterns: ${patterns.join(', ')} that has modification time after: ${started}`);
-            warning('Retrying without modtime check....');
-            info('');
-            return getArtifacts(projectLocation, new Date(0), patterns, includeModule, config);
-        }
-        warning(`No app files found with pattern: ${patterns.join(', ')} without modtime check`);
-    }
-    return artifacts;
-}
-async function findArtifacts(projectLocation, generatedAfter, pattern, includeModuleInName, config) {
-    const artifacts = [];
-    try {
-        const globber = await create(pattern, {
-            followSymbolicLinks: false,
-            implicitDescendants: true
-        });
-        const files = await globber.glob();
-        for (const file of files) {
-            try {
-                const stats = await fs.promises.stat(file);
-                // Check if file was generated after the specified time
-                if (generatedAfter && stats.mtime < generatedAfter) {
-                    continue;
-                }
-                let artifactName = getBaseName(file);
-                if (includeModuleInName) ;
-                artifacts.push({
-                    path: file,
-                    name: artifactName,
-                    type: config.artifactType
-                });
-            }
-            catch (error) {
-                warning(`Failed to stat file ${file}: ${error}`);
-            }
-        }
-    }
-    catch (error) {
-        throw new Error(`Failed to find artifacts with pattern ${pattern}: ${error}`);
-    }
-    return artifacts;
-}
-function printAppSearchInfo(appArtifacts, appPathPatterns) {
-    const artPaths = appArtifacts.map((a) => a.path);
-    const formattedPatterns = appPathPatterns.length > 0 ? appPathPatterns.map((p) => `  - ${p}`).join('\n') : '  - (none)';
-    const formattedArtifacts = artPaths.length > 0 ? artPaths.map((p) => `  - ${p}`).join('\n') : '  - (none)';
-    info('Artifact Discovery Summary:');
-    info(`  Search patterns: ${appPathPatterns.length}`);
-    info(formattedPatterns);
-    info(`  Found app artifacts: ${artPaths.length}`);
-    info(formattedArtifacts);
-    info('');
+    const globber = await create(scopedPatterns.join('\n'), {
+        followSymbolicLinks: false,
+        implicitDescendants: false,
+        matchDirectories: false
+    });
+    // Gradle can leave valid UP-TO-DATE outputs untouched. Select by module and
+    // variant, not modification time, so a partly rebuilt set stays complete.
+    return [...new Set(await globber.glob())].sort();
 }
 
-async function discoverManifests(config, started) {
+async function discoverArtifacts(config) {
+    info('');
+    info('Export Artifacts:');
+    const patterns = generateAppPathPatterns(config.module, config.variants, config.artifactType);
+    const files = await findOutputFiles(config.projectLocation, patterns);
+    const appFiles = files.map((file) => ({ path: file, name: getBaseName(file), type: config.artifactType }));
+    info(`Found app artifacts: ${appFiles.length}`);
+    files.forEach((file) => info(`  - ${file}`));
+    if (appFiles.length === 0) {
+        warning('No app artifacts found for the requested module and variants.');
+        warning('If you have customized APK/AAB output paths in your Gradle files, automatic discovery may not find your artifacts.');
+    }
+    return { appFiles };
+}
+
+async function discoverManifests(config) {
     info('');
     info('Export Merged Manifests:');
-    const manifestPathPatterns = generateManifestPathPatterns(config.module, config.variants);
-    const projectRoot = path.resolve(config.projectLocation).replace(/\\/g, '/').replace(/\/+$/u, '');
-    const scopedPatterns = manifestPathPatterns.map((pattern) => `${projectRoot}/${pattern.replace(/^\/+/u, '')}`);
-    info('Generated search patterns:');
-    scopedPatterns.forEach((pattern) => info(`  ${pattern}`));
-    const manifestFiles = await getManifests(config.projectLocation, started, scopedPatterns);
-    printManifestSearchInfo(manifestFiles, scopedPatterns);
+    const patterns = generateManifestPathPatterns(config.module, config.variants);
+    const files = await findOutputFiles(config.projectLocation, patterns);
+    const manifestFiles = files.map((file) => ({ path: file, name: getBaseName(file) }));
+    info(`Found merged manifests: ${manifestFiles.length}`);
+    files.forEach((file) => info(`  - ${file}`));
     if (manifestFiles.length === 0) {
-        warning(`No merged manifests found with generated patterns:\n${scopedPatterns.join('\n')}`);
+        warning('No merged manifests found for the requested module and variants.');
         warning('The merged manifest location can vary across AGP versions; please verify your build outputs.');
     }
-    return {
-        manifestFiles
-    };
-}
-async function getManifests(projectLocation, started, patterns) {
-    const manifests = [];
-    const seenPaths = new Set();
-    for (const pattern of patterns) {
-        try {
-            const files = await findManifests(projectLocation, started, pattern);
-            for (const manifest of files) {
-                if (seenPaths.has(manifest.path)) {
-                    continue;
-                }
-                seenPaths.add(manifest.path);
-                manifests.push(manifest);
-            }
-        }
-        catch (error) {
-            warning(`Failed to find manifest with pattern ( ${pattern} ), error: ${error}`);
-            continue;
-        }
-    }
-    if (manifests.length === 0) {
-        if (started.getTime() > 0) {
-            warning(`No merged manifests found with patterns: ${patterns.join(', ')} that has modification time after: ${started}`);
-            warning('Retrying without modtime check....');
-            info('');
-            return getManifests(projectLocation, new Date(0), patterns);
-        }
-        warning(`No merged manifests found with pattern: ${patterns.join(', ')} without modtime check`);
-    }
-    return manifests;
-}
-async function findManifests(projectLocation, generatedAfter, pattern) {
-    const manifests = [];
-    try {
-        const globber = await create(pattern, {
-            followSymbolicLinks: false,
-            implicitDescendants: true
-        });
-        const files = await globber.glob();
-        for (const file of files) {
-            try {
-                const stats = await fs.promises.stat(file);
-                if (generatedAfter && stats.mtime < generatedAfter) {
-                    continue;
-                }
-                manifests.push({
-                    path: file,
-                    name: getBaseName(file)
-                });
-            }
-            catch (error) {
-                warning(`Failed to stat file ${file}: ${error}`);
-            }
-        }
-    }
-    catch (error) {
-        throw new Error(`Failed to find manifests with pattern ${pattern}: ${error}`);
-    }
-    return manifests;
-}
-function printManifestSearchInfo(manifestFiles, patterns) {
-    const manifestPaths = manifestFiles.map((m) => m.path);
-    const formattedPatterns = patterns.length > 0 ? patterns.map((p) => `  - ${p}`).join('\n') : '  - (none)';
-    const formattedManifests = manifestPaths.length > 0 ? manifestPaths.map((p) => `  - ${p}`).join('\n') : '  - (none)';
-    info('Merged Manifest Discovery Summary:');
-    info(`  Search patterns: ${patterns.length}`);
-    info(formattedPatterns);
-    info(`  Found merged manifests: ${manifestPaths.length}`);
-    info(formattedManifests);
-    info('');
+    return { manifestFiles };
 }
 
 async function exportResult(result) {
@@ -35630,11 +35420,10 @@ async function exportResult(result) {
 
 async function run() {
     try {
-        const startTime = new Date();
         const config = await processConfig();
         await executeGradleBuild(config);
-        const { appFiles } = await discoverArtifacts(config, startTime);
-        const { manifestFiles } = await discoverManifests(config, startTime);
+        const { appFiles } = await discoverArtifacts(config);
+        const { manifestFiles } = await discoverManifests(config);
         const result = {
             appFiles,
             manifestFiles
