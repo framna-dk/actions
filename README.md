@@ -50,6 +50,10 @@ Click on any action name below to view detailed documentation, usage examples, a
       <td>Builds an Xcode project, archives the app, exports an IPA from the archive, and uploads it to App Store Connect.</td>
     </tr>
     <tr>
+      <td nowrap><a href="./build-android/">build-android</a></td>
+      <td>Builds Android APKs or app bundles with Gradle and exposes artifact and merged manifest paths.</td>
+    </tr>
+    <tr>
       <td nowrap><a href="./connect-to-vpn/">connect-to-vpn</a></td>
       <td>Connects the runner to our a predefined Tailscale exit node.</td>
     </tr>
