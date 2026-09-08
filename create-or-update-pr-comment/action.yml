@@ -7,8 +7,12 @@ inputs:
     description: "GitHub token with issues:write (usually secrets.GITHUB_TOKEN)"
     required: true
   body-file:
-    description: "Path to a Markdown file with the comment body"
+    description: "Path to a Markdown file with the comment body; treated as a template by default unless render-template is false"
     required: true
+  render-template:
+    description: "Treat body-file as a template and replace {{PLACEHOLDER}} tokens from TPL_ prefixed environment variables"
+    required: false
+    default: "true"
   pr-number:
     description: "Pull request number; auto-detected on PR events if omitted"
     required: false
@@ -50,37 +54,14 @@ runs:
         fi
         echo "pr=$PR" >> "$GITHUB_OUTPUT"
 
-    - name: Prepare comment body
-      id: prepare
-      shell: bash
-      env:
-        BODY_FILE: ${{ inputs['body-file'] }}
-        RAW_MARKER: ${{ inputs['update-marker'] }}
-      run: |
-        # Wrap marker in HTML comment to hide it from the PR body
-        MARKER="<!-- ${RAW_MARKER} -->"
-
-        COMMENT_FILE="$RUNNER_TEMP/comment_body.md"
-        # Validate input file exists and prepend marker
-        if [[ -z "${BODY_FILE:-}" || ! -f "$BODY_FILE" ]]; then
-          echo "::error::body-file does not exist: ${BODY_FILE:-<empty>}"
-          exit 1
-        fi
-        {
-          echo "$MARKER"
-          cat "$BODY_FILE"
-        } > "$COMMENT_FILE"
-
-        echo "comment_file=$COMMENT_FILE" >> "$GITHUB_OUTPUT"
-        echo "normalized_marker=$MARKER" >> "$GITHUB_OUTPUT"
-
     - name: Create or update comment
       id: upsert
-      uses: actions/github-script@v8
+      uses: actions/github-script@v9
       env:
         PR: ${{ steps.resolve.outputs.pr }}
-        MARKER: ${{ steps.prepare.outputs.normalized_marker }}
-        COMMENT_FILE: ${{ steps.prepare.outputs.comment_file }}
+        BODY_FILE: ${{ inputs['body-file'] }}
+        RENDER_TEMPLATE: ${{ inputs['render-template'] }}
+        RAW_MARKER: ${{ inputs['update-marker'] }}
       with:
         github-token: ${{ inputs.token }}
         script: |
@@ -90,13 +71,32 @@ runs:
             core.setFailed('Invalid PR number')
             return
           }
-          const marker = process.env.MARKER || ''
-          const commentFile = process.env.COMMENT_FILE
-          if (!commentFile) {
-            core.setFailed('COMMENT_FILE env var not set')
+          const bodyFile = process.env.BODY_FILE || ''
+          if (!bodyFile || !fs.existsSync(bodyFile) || !fs.statSync(bodyFile).isFile()) {
+            core.setFailed(`body-file does not exist: ${bodyFile || '<empty>'}`)
             return
           }
-          const body = fs.readFileSync(commentFile, 'utf8')
+          const renderTemplate = /^true$/i.test(process.env.RENDER_TEMPLATE || 'false')
+          const marker = `<!-- ${process.env.RAW_MARKER || ''} -->`
+          let body = fs.readFileSync(bodyFile, 'utf8')
+          if (renderTemplate) {
+            const missingPlaceholders = new Set()
+            body = body.replace(/\{\{\s*([A-Za-z_][A-Za-z0-9_]*)\s*\}\}/g, (match, placeholder) => {
+              const envKey = `TPL_${placeholder}`
+              if (Object.prototype.hasOwnProperty.call(process.env, envKey)) {
+                return process.env[envKey] ?? ''
+              }
+
+              missingPlaceholders.add(placeholder)
+              return match
+            })
+
+            for (const placeholder of missingPlaceholders) {
+              core.warning(`No value provided for template placeholder ${placeholder}; leaving token unchanged.`)
+            }
+          }
+          body = `${marker}\n${body}`
+
           const owner = context.repo.owner
           const repo = context.repo.repo
           let existingId

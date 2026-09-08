@@ -156,7 +156,7 @@ runs:
           export_ipa
         fi
     - name: Archive the dSYMs
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: ${{ inputs.dsyms-archive-name }}
         path: ${{ inputs.working-directory }}/${{ inputs.scheme }}.xcarchive/dSYMs/*

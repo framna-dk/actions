@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json.schemastore.org/tsconfig",
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "declaration": false,
@@ -19,8 +18,9 @@
     "resolveJsonModule": true,
     "strict": true,
     "strictNullChecks": true,
-    "target": "ES2022"
+    "target": "ES2022",
+    "rootDir": "./src"
   },
-  "exclude": ["__fixtures__", "__tests__", "coverage", "dist", "node_modules", "src/**/*.test.ts"],
+  "exclude": ["__test__", "dist", "node_modules"],
   "include": ["src"]
 }

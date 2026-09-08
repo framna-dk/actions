@@ -1,4 +1,4 @@
-import recursive from "recursive-readdir"
+import listFiles from "./list-files"
 import findIconFiles from "./find-icon-files"
 
 export interface AppIconFiles {
@@ -16,7 +16,7 @@ export default async function (dir: string): Promise<AppIconFiles> {
     }
   }
 
-  const files: string[] = await recursive(dir)
+  const files: string[] = await listFiles(dir)
   const imageFiles = files.filter(file => {
     var isInAppIconSet = file.indexOf(".appiconset") != -1
     var isImage = file.match(/.(png|jpg|jpeg|gif)$/)

@@ -62,6 +62,10 @@ Click on any action name below to view detailed documentation, usage examples, a
       <td>Creates (or updates if already exists) a PR comment. Always updates the same comment by default using a hidden marker.</td>
     </tr>
     <tr>
+      <td nowrap><a href="./get-xcode-build-destination/">get-xcode-build-destination</a></td>
+      <td>Finds an available simulator on the runner and exposes it as an xcodebuild destination specifier.</td>
+    </tr>
+    <tr>
       <td nowrap><a href="./install-appiconannotator/">install-appiconannotator</a></td>
       <td>Installs <a href="https://github.com/shapehq/appiconannotator">appiconannotator</a>.</td>
     </tr>

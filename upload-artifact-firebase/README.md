@@ -6,9 +6,9 @@ The action has the following inputs:
 
 | Name                            | Required | Description                                                                          |
 | ------------------------------- | -------- | ------------------------------------------------------------------------------------ |
-| `serviceCredentialsOpReference` | YES      | 1Password reference to Google service account credentials json file (without quotes) |
 | `appId`                         | YES      | Firebase App ID                                                                      |
 | `apkPath`                       | YES      | Path to the APK that will be uploaded                                                |
+| `serviceCredentialsOpReference` | NO       | 1Password reference to Google service account credentials json file (without quotes). Omit if authentication is handled externally (e.g. `google-github-actions/auth` with workload identity federation). |
 | `releaseNotes`                  | NO       | Release notes for this distribution                                                  |
 | `groups`                        | NO       | Comma separated list of Firebase tester group names                                  |
 | `testers`                       | NO       | Comma separated email list of testers to invite                                      |

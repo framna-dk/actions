@@ -45,7 +45,7 @@ runs:
 
     - name: Install 1Password CLI
       if: ${{ env.ONEPASSWORD_NOT_INSTALLED }}
-      uses: 1password/install-cli-action@v2
+      uses: 1password/install-cli-action@v3
 
     - name: Install CI SSH Key
       uses: shapehq/actions/install-ci-ssh-key@v1

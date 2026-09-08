@@ -3,10 +3,6 @@ description: "Uploads an APK to Firebase App Distribution"
 author: "Mikkel Schläger"
 
 inputs:
-  serviceCredentialsOpReference:
-    description: "1Password reference to Google service account credentials json file (without quotes)"
-    required: true
-
   appId:
     description: "Firebase App ID"
     required: true
@@ -14,6 +10,10 @@ inputs:
   apkPath:
     description: "Path to the APK that will be uploaded"
     required: true
+
+  serviceCredentialsOpReference:
+    description: "1Password reference to Google service account credentials json file (without quotes). Optional if the caller has already authenticated with Google APIs via another mechanism (e.g. google-github-actions/auth with workload identity federation)."
+    required: false
 
   releaseNotes:
     description: "Release notes for this distribution"
@@ -49,17 +49,16 @@ runs:
 
     - name: Load credentials
       id: upload-artifact-firebase-credentials
-      uses: 1password/load-secrets-action@v3
+      if: ${{ inputs.serviceCredentialsOpReference != '' }}
+      uses: 1password/load-secrets-action@v4
       env:
         SERVICE_ACCOUNT_CREDENTIALS: ${{ inputs.serviceCredentialsOpReference }}
 
-    - name: Write credentials file
-      shell: bash
-      env:
-        SERVICE_ACCOUNT_CREDENTIALS: ${{ steps.upload-artifact-firebase-credentials.outputs.SERVICE_ACCOUNT_CREDENTIALS }}
-      run: |
-        echo "$SERVICE_ACCOUNT_CREDENTIALS" > service-account.json
-        echo "GOOGLE_APPLICATION_CREDENTIALS=service-account.json" >> $GITHUB_ENV
+    - name: Authenticate with Google
+      if: ${{ inputs.serviceCredentialsOpReference != '' }}
+      uses: google-github-actions/auth@v3
+      with:
+        credentials_json: ${{ steps.upload-artifact-firebase-credentials.outputs.SERVICE_ACCOUNT_CREDENTIALS }}
 
     - name: "Distribute apk"
       id: distribute

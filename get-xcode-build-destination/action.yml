@@ -1,0 +1,44 @@
+name: Get Xcode Build Destination
+description: Finds an available simulator on the runner and exposes it as an xcodebuild destination specifier.
+branding:
+  icon: smartphone
+  color: blue
+
+inputs:
+  os:
+    description: >-
+      OS version to match, e.g. "26.5" for an exact version or "26.x" to match any
+      minor version. Defaults to the newest installed runtime.
+    required: false
+    default: ""
+  device:
+    description: >-
+      Device name to match exactly, e.g. "iPhone 17 Pro". Defaults to any iPhone.
+    required: false
+    default: ""
+  platform:
+    description: "Simulator platform: iOS, tvOS, watchOS or visionOS"
+    required: false
+    default: "iOS"
+  generic:
+    description: >-
+      Set to "true" to get the generic simulator destination
+      (e.g. "generic/platform=iOS Simulator"), which requires no installed runtime.
+      Only valid for building, not for running tests, and cannot be combined with
+      the os or device inputs. The udid, name and os-version outputs will be empty.
+    required: false
+    default: "false"
+
+outputs:
+  destination:
+    description: "Value for xcodebuild's -destination flag, targeting the selected simulator by UDID."
+  udid:
+    description: "UDID of the selected simulator"
+  name:
+    description: "Device name of the selected simulator"
+  os-version:
+    description: "OS version of the selected simulator"
+
+runs:
+  using: node24
+  main: dist/index.js

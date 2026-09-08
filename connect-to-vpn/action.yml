@@ -6,7 +6,7 @@ runs:
   steps:
     - name: Load secret
       id: credentials
-      uses: 1password/load-secrets-action@v3
+      uses: 1password/load-secrets-action@v4
       env:
         TS_CLIENT_ID: op://25dt53lxtmov37u7s4b72weu3a/rf6g2bxlkerchywnft3jmldayq/Client ID
         TS_CLIENT_SECRET: op://25dt53lxtmov37u7s4b72weu3a/rf6g2bxlkerchywnft3jmldayq/Client Secret

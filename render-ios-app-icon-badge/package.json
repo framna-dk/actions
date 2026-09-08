@@ -12,11 +12,10 @@
     "@vercel/ncc": "^0.38.4"
   },
   "devDependencies": {
-    "@types/node": "^25.1.0",
-    "commander": "^14.0.2",
-    "recursive-readdir": "^2.2.3",
+    "@types/node": "^25.5.0",
+    "commander": "^14.0.3",
     "tmp": "^0.2.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.9.3"
+    "typescript": "^6.0.2"
   }
 }
