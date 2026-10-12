@@ -41,7 +41,7 @@ export async function processConfig(): Promise<Config> {
   } catch (error) {
     if (error instanceof z.ZodError) {
       const errorMessages = error.issues.map((err: z.ZodIssue) => `${err.path.join('.')}: ${err.message}`).join(', ')
-      throw new Error(`Input validation failed: ${errorMessages}`)
+      throw new Error(`Input validation failed: ${errorMessages}`, { cause: error })
     }
     throw error
   }
