@@ -50,7 +50,7 @@ runs:
     - name: Load credentials
       id: upload-artifact-firebase-credentials
       if: ${{ inputs.serviceCredentialsOpReference != '' }}
-      uses: 1password/load-secrets-action@v4
+      uses: 1password/load-secrets-action@v5
       env:
         SERVICE_ACCOUNT_CREDENTIALS: ${{ inputs.serviceCredentialsOpReference }}
 
