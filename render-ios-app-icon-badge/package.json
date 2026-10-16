@@ -12,7 +12,7 @@
     "@vercel/ncc": "^0.45.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.4",
+    "@types/node": "^26.6.5",
     "commander": "^15.0.0",
     "tmp": "^0.2.7",
     "ts-node": "^10.9.2",
