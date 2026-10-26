@@ -50,6 +50,10 @@ Click on any action name below to view detailed documentation, usage examples, a
       <td>Builds an Xcode project, archives the app, exports an IPA from the archive, and uploads it to App Store Connect.</td>
     </tr>
     <tr>
+      <td nowrap><a href="./build-android/">build-android</a></td>
+      <td>Builds Android APKs or app bundles with Gradle and exposes artifact and merged manifest paths.</td>
+    </tr>
+    <tr>
       <td nowrap><a href="./connect-to-vpn/">connect-to-vpn</a></td>
       <td>Connects the runner to our a predefined Tailscale exit node.</td>
     </tr>
@@ -60,6 +64,10 @@ Click on any action name below to view detailed documentation, usage examples, a
     <tr>
       <td nowrap><a href="./create-or-update-pr-comment/">create-or-update-pr-comment</a></td>
       <td>Creates (or updates if already exists) a PR comment. Always updates the same comment by default using a hidden marker.</td>
+    </tr>
+    <tr>
+      <td nowrap><a href="./get-xcode-build-destination/">get-xcode-build-destination</a></td>
+      <td>Finds an available simulator on the runner and exposes it as an xcodebuild destination specifier.</td>
     </tr>
     <tr>
       <td nowrap><a href="./install-appiconannotator/">install-appiconannotator</a></td>

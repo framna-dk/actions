@@ -53150,13 +53150,29 @@ function requireBuild () {
 
 var buildExports = requireBuild();
 
+/**
+ * Parses and validates the `inAppUpdatePriority` action input.
+ */
+function parseInAppUpdatePriority(raw) {
+    if (raw === undefined || raw.trim() === "")
+        return 0;
+    const priority = Number(raw.trim());
+    if (!Number.isInteger(priority)) {
+        throw new Error(`inAppUpdatePriority must be an integer between 0 and 5, got "${raw}"`);
+    }
+    if (priority < 0 || priority > 5) {
+        throw new Error(`inAppUpdatePriority must be between 0 and 5, got ${priority}`);
+    }
+    return priority;
+}
+
 async function createAuthClient(serviceAccountKeyPath) {
     return new buildExports.auth.GoogleAuth({
         keyFile: serviceAccountKeyPath,
         scopes: ["https://www.googleapis.com/auth/androidpublisher"],
     });
 }
-async function publishApp(serviceAccountKeyPath, packageName, bundlePath, proguardMappingFilePath) {
+async function publishApp(serviceAccountKeyPath, packageName, bundlePath, proguardMappingFilePath, inAppUpdatePriority) {
     const authClient = await createAuthClient(serviceAccountKeyPath);
     const publisher = buildExports.androidpublisher({
         version: "v3",
@@ -53168,7 +53184,7 @@ async function publishApp(serviceAccountKeyPath, packageName, bundlePath, progua
     if (proguardMappingFilePath) {
         await uploadProguardMappingFile(publisher, editId, packageName, versionCode, proguardMappingFilePath);
     }
-    await updateTrack(publisher, editId, packageName, versionCode);
+    await updateTrack(publisher, editId, packageName, versionCode, inAppUpdatePriority);
     await commitEdit(publisher, editId, packageName);
     // Return the internal sharing URL
     return `https://play.google.com/apps/test/${packageName}/${versionCode}`;
@@ -53231,8 +53247,8 @@ async function uploadReleaseFiles(publisher, editId, packageName, releaseFile) {
         throw Error(`${releaseFile} is invalid.`);
     }
 }
-async function updateTrack(publisher, editId, packageName, versionCode, track = "internal") {
-    info(`Updating track "${track}" in "${packageName}" with build "${versionCode}"`);
+async function updateTrack(publisher, editId, packageName, versionCode, inAppUpdatePriority = 0, track = "internal") {
+    info(`Updating track "${track}" in "${packageName}" with build "${versionCode}" at update priority ${inAppUpdatePriority}`);
     const res = await publisher.edits.tracks.update({
         packageName: packageName,
         editId: editId,
@@ -53243,6 +53259,7 @@ async function updateTrack(publisher, editId, packageName, versionCode, track = 
                 {
                     versionCodes: [versionCode.toString()],
                     status: "completed",
+                    inAppUpdatePriority: inAppUpdatePriority,
                 },
             ],
         },
@@ -53317,7 +53334,8 @@ async function run() {
         const packageName = getInput("packageName", { required: true });
         const bundlePath = getInput("bundlePath", { required: true });
         const proguardMappingFilePath = getInput("proguardMappingFilePath");
-        const internalSharingUrl = await publishApp(serviceAccountKeyPath, packageName, bundlePath, proguardMappingFilePath);
+        const inAppUpdatePriority = parseInAppUpdatePriority(getInput("inAppUpdatePriority", { required: false }));
+        const internalSharingUrl = await publishApp(serviceAccountKeyPath, packageName, bundlePath, proguardMappingFilePath, inAppUpdatePriority);
         setOutput("internal-sharing-url", internalSharingUrl);
         info(`Internal sharing URL: ${internalSharingUrl}`);
     }
