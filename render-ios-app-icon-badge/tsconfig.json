@@ -1,13 +1,11 @@
 {
   "compilerOptions": {
-    "target": "es6",
-    "module": "commonjs",
-    "moduleResolution": "node",
-    "lib": ["es6"],
+    "target": "ES2022",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022"],
     "types": ["node"],
-    "outDir": "./lib",
-    "rootDir": "./src",
-    "declaration": true,
+    "noEmit": true,
     "strict": true,
     "noImplicitAny": false,
     "esModuleInterop": true,

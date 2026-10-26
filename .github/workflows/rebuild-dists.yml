@@ -6,7 +6,7 @@ on:
 permissions:
   contents: write
 env:
-  ALL_PACKAGES: xcode-select,upload-artifact-play-store,get-xcode-build-destination,build-android
+  ALL_PACKAGES: xcode-select,upload-artifact-play-store,get-xcode-build-destination,build-android,render-ios-app-icon-badge
 jobs:
   changes:
     runs-on: ubuntu-latest
