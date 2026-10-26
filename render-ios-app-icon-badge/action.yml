@@ -24,13 +24,9 @@ runs:
         brew install imagemagick
       fi
     shell: bash
-  - name: Install Dependencies
-    working-directory: ${{ github.action_path }}
-    run: npm install
-    shell: bash
   - name: Run Script
     run: |
-      npx ts-node ${{ github.action_path }}/src/index.ts render ${{ inputs.search-directory }}\
+      node ${{ github.action_path }}/dist/index.js render ${{ inputs.search-directory }}\
         --style ${{ inputs.style }}\
         --curl-color ${{ inputs.curl-color }}
     shell: bash
