@@ -35077,7 +35077,7 @@ async function processConfig() {
     catch (error) {
         if (error instanceof ZodError) {
             const errorMessages = error.issues.map((err) => `${err.path.join('.')}: ${err.message}`).join(', ');
-            throw new Error(`Input validation failed: ${errorMessages}`);
+            throw new Error(`Input validation failed: ${errorMessages}`, { cause: error });
         }
         throw error;
     }
