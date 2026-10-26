@@ -15,6 +15,7 @@
     "noUnusedLocals": true,
     "noUnusedParameters": false,
     "outDir": "./dist",
+    "rootDir": "./src",
     "pretty": true,
     "resolveJsonModule": true,
     "strict": true,
