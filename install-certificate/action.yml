@@ -37,13 +37,10 @@ runs:
         fi
         op read --out-file $CERTIFICATE_FILE_PATH "${{ inputs.certificate-op-reference }}"
         CERTIFICATE_PEM_PATH=$(mktemp)
-        OPENSSL_VERSION=$(openssl version)
-        if echo "$OPENSSL_VERSION" | grep -qE 'OpenSSL 3'; then
-          OPENSSL_PKCS12_FLAGS="-legacy"
-        else
-          OPENSSL_PKCS12_FLAGS=""
-        fi
-        if ! openssl pkcs12 $OPENSSL_PKCS12_FLAGS -in "$CERTIFICATE_FILE_PATH" -clcerts -nokeys -passin pass:"$CERTIFICATE_PASSWORD" -out "$CERTIFICATE_PEM_PATH" 2>&1; then
+        # Keychain Access exports certificates with RC2-40-CBC, which OpenSSL 3 and later only read with -legacy.
+        # Fall back to a plain read for LibreSSL and other builds without the -legacy flag.
+        if ! openssl pkcs12 -legacy -in "$CERTIFICATE_FILE_PATH" -clcerts -nokeys -passin pass:"$CERTIFICATE_PASSWORD" -out "$CERTIFICATE_PEM_PATH" 2>/dev/null \
+          && ! openssl pkcs12 -in "$CERTIFICATE_FILE_PATH" -clcerts -nokeys -passin pass:"$CERTIFICATE_PASSWORD" -out "$CERTIFICATE_PEM_PATH" 2>&1; then
           echo "::error::Failed to read certificate file. Check that the certificate and password are correct."
           rm -f "$CERTIFICATE_PEM_PATH"
           exit 1
