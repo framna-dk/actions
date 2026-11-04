@@ -1,11 +1,11 @@
-## [upload-artifact-play-store](https://github.com/shapehq/actions/tree/main/upload-artifact-play-store/action.yml)
+## [upload-artifact-play-store](https://github.com/framna-dk/actions/tree/main/upload-artifact-play-store/action.yml)
 
 Uploads a release build (.apk or .aab) to the internal track of the Play Store.
 
 ```yml
 - name: Upload to Google Play
   id: upload
-  uses: shapehq/actions/upload-artifact-play-store@v1
+  uses: framna-dk/actions/upload-artifact-play-store@v1
   with:
     serviceAccountKeyPath: play_service_account.json
     packageName: com.example.app

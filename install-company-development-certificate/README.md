@@ -1,17 +1,17 @@
-## [install-company-development-certificate](https://github.com/shapehq/actions/blob/main/install-company-development-certificate/action.yml)
+## [install-company-development-certificate](https://github.com/framna-dk/actions/blob/main/install-company-development-certificate/action.yml)
 
 Installs our default company development certificate in the keychain.
 
 ```yml
 - name: Install Company Development Certificate
-  uses: shapehq/actions/install-company-development-certificate@v1
+  uses: framna-dk/actions/install-company-development-certificate@v1
 ```
 
 The action makes the keychain the default keychain on the system. You can disable this as shown below.
 
 ```yml
 - name: Install Company Development Certificate
-  uses: shapehq/actions/install-company-development-certificate@v1
+  uses: framna-dk/actions/install-company-development-certificate@v1
   with:
     set-default-keychain: false
 ```
@@ -20,10 +20,10 @@ You may optionally specify the name of the keychain to install the certificate a
 
 ```yml
 - name: Install Company Development Certificate
-  uses: shapehq/actions/install-company-development-certificate@v1
+  uses: framna-dk/actions/install-company-development-certificate@v1
   with:
     keychain-name: signing.keychain
     keychain-password: h3ll0w0rld
 ```
 
-Use the [install-certificate](https://github.com/shapehq/actions?tab=readme-ov-file#install-certificate) action to install a specified certificate.
+Use the [install-certificate](https://github.com/framna-dk/actions?tab=readme-ov-file#install-certificate) action to install a specified certificate.

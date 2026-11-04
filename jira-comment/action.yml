@@ -39,7 +39,7 @@ runs:
         JIRA_USER_EMAIL: ${{ inputs.jira-user-email }}
         JIRA_API_TOKEN: ${{ steps.api-token.outputs.token }}
     - name: Comment on issues
-      uses: shapehq/gajira-comment@feature/multiple-issues
+      uses: framna-dk/gajira-comment@feature/multiple-issues
       with:
         issues: ${{ inputs.issues }}
         comment: ${{ inputs.message }}

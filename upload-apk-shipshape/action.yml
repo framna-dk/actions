@@ -48,10 +48,10 @@ runs:
       uses: 1password/install-cli-action@v4
 
     - name: Install CI SSH Key
-      uses: shapehq/actions/install-ci-ssh-key@v1
+      uses: framna-dk/actions/install-ci-ssh-key@v1
 
     - name: Install Shipshape
-      uses: shapehq/actions/install-shipshape@v1
+      uses: framna-dk/actions/install-shipshape@v1
 
     - name: Create shape-app.config
       shell: bash

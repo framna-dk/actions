@@ -71,7 +71,7 @@ Click on any action name below to view detailed documentation, usage examples, a
     </tr>
     <tr>
       <td nowrap><a href="./install-appiconannotator/">install-appiconannotator</a></td>
-      <td>Installs <a href="https://github.com/shapehq/appiconannotator">appiconannotator</a>.</td>
+      <td>Installs <a href="https://github.com/framna-dk/appiconannotator">appiconannotator</a>.</td>
     </tr>
     <tr>
       <td nowrap><a href="./install-artifactory-profile/">install-artifactory-profile</a></td>
@@ -194,5 +194,5 @@ Pull requests with bugfixes and new features are appreciated. We are happy to re
 Clone the repository to get started:
 
 ```
-git clone git@github.com:shapehq/actions.git
+git clone git@github.com:framna-dk/actions.git
 ```

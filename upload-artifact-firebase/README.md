@@ -1,4 +1,4 @@
-## [upload-artifact-firebase](https://github.com/shapehq/actions/tree/main/upload-artifact-firebase/action.yml)
+## [upload-artifact-firebase](https://github.com/framna-dk/actions/tree/main/upload-artifact-firebase/action.yml)
 
 Uploads an APK to Firebase App Distribution.
 
@@ -24,7 +24,7 @@ Example:
 
 ```yml
 - name: Upload to Firebase distribution
-  uses: shapehq/actions/upload-artifact-firebase@v1
+  uses: framna-dk/actions/upload-artifact-firebase@v1
   with:
     serviceCredentialsOpReference: op://1Password vault/1Password json key item/credentials-file-name.json
     appId: 1:123456789012:android:1234567890abcdef1234567

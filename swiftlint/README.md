@@ -1,17 +1,17 @@
-## [swiftlint](https://github.com/shapehq/actions/tree/main/swiftlint/action.yml)
+## [swiftlint](https://github.com/framna-dk/actions/tree/main/swiftlint/action.yml)
 
 Runs [SwiftLint](https://github.com/realm/SwiftLint) on a codebase.
 
 ```yml
 - name: SwiftLint
-  uses: shapehq/actions/swiftlint@v1
+  uses: framna-dk/actions/swiftlint@v1
 ```
 
 You may optionally run SwiftLint in strict mode as shown below. This treats warnings as errors.
 
 ```yml
 - name: SwiftLint
-  uses: shapehq/actions/swiftlint@v1
+  uses: framna-dk/actions/swiftlint@v1
   with:
     args: --strict
 ```

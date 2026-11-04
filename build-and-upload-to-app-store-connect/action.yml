@@ -59,14 +59,14 @@ runs:
   steps:
     - name: Install App Store Connect API Key
       id: install-app-store-connect-api-key
-      uses: shapehq/actions/install-asc-api-key@v1
+      uses: framna-dk/actions/install-asc-api-key@v1
       with:
         op-asc-key-issuer-id-reference: ${{ inputs.op-app-store-connect-api-key-issuer-id-reference }}
         op-asc-key-id-reference: ${{ inputs.op-app-store-connect-api-key-id-reference }}
         op-asc-key-file-reference: ${{ inputs.op-app-store-connect-api-key-file-reference }}
         output-asc-key-file-directory: ~/.private_keys
     - name: Install Development Certificate
-      uses: shapehq/actions/install-certificate@v1
+      uses: framna-dk/actions/install-certificate@v1
       with:
         password-op-reference: ${{ inputs.op-development-certificate-password-reference }}
         certificate-op-reference: ${{ inputs.op-development-certificate-reference }}

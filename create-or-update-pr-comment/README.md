@@ -1,4 +1,4 @@
-## [create-or-update-pr-comment](https://github.com/shapehq/actions/blob/main/create-or-update-pr-comment/action.yml)
+## [create-or-update-pr-comment](https://github.com/framna-dk/actions/blob/main/create-or-update-pr-comment/action.yml)
 
 Creates (or updates if already exists) a PR comment. Always updates the same comment by default using a hidden marker. If you need to create more than one comment, you need to pass different markers as a parameter.
 
@@ -32,7 +32,7 @@ and the following outputs:
 
 - name: Create or update comment
   id: comment
-  uses: shapehq/actions/create-or-update-pr-comment@v1
+  uses: framna-dk/actions/create-or-update-pr-comment@v1
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
     body-file: ${{ steps.prep-comment.outputs.comment_file }}
@@ -56,7 +56,7 @@ Workflow step:
 ```yml
 - name: Create or update comment
   id: comment
-  uses: shapehq/actions/create-or-update-pr-comment@v1
+  uses: framna-dk/actions/create-or-update-pr-comment@v1
   with:
     token: ${{ secrets.GITHUB_TOKEN }}
     body-file: .github/actions/pr-template.md

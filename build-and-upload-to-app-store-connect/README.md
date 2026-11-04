@@ -1,11 +1,11 @@
-## [build-and-upload-to-app-store-connect](https://github.com/shapehq/actions/blob/main/build-and-upload-to-app-store-connect/action.yml)
+## [build-and-upload-to-app-store-connect](https://github.com/framna-dk/actions/blob/main/build-and-upload-to-app-store-connect/action.yml)
 
 Builds an Xcode project, archives the app, exports an IPA from the archive, and uploads it to App Store Connect.
 As a side effect, the action will upload the dSYM files as an artifact to the job.
 
 ```yml
 - name: Build and Upload to App Store Connect
-  uses: shapehq/actions/build-and-upload-to-app-store-connect@v1
+  uses: framna-dk/actions/build-and-upload-to-app-store-connect@v1
   with:
     scheme: Example
     configuration: Debug
@@ -20,7 +20,7 @@ You may use the `marketing-version` and `build-number` inputs to automatically s
 
 ```yml
 - name: Build and Upload to App Store Connect
-  uses: shapehq/actions/build-and-upload-to-app-store-connect@v1
+  uses: framna-dk/actions/build-and-upload-to-app-store-connect@v1
   with:
     scheme: Example
     configuration: Debug
