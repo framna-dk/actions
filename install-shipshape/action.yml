@@ -10,7 +10,7 @@ runs:
   using: composite
   steps:
     - name: Install Shipshape
-      run: npm install -g git+ssh://git@github.com:shapehq/ship-shape-cli.git
+      run: npm install -g git+ssh://git@github.com:framna-dk/ship-shape-cli.git
       shell: bash
     - name: Setup Shipshape Activation Code
       run: |

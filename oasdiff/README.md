@@ -7,7 +7,7 @@ Runs [oasdiff](https://github.com/tufin/oasdiff) changelog between two OpenAPI s
 ```yaml
 - name: Diff OpenAPI Specs
   id: oasdiff
-  uses: shapehq/actions/oasdiff@v1
+  uses: framna-dk/actions/oasdiff@v1
   with:
     base: path/to/base-spec.yml
     head: path/to/head-spec.yml
@@ -48,7 +48,7 @@ jobs:
 
       - name: Diff API
         id: diff
-        uses: shapehq/actions/oasdiff@v1
+        uses: framna-dk/actions/oasdiff@v1
         with:
           base: base/openapi.yml
           head: pr/openapi.yml
@@ -65,7 +65,7 @@ jobs:
           EOF
 
       - name: Post PR comment
-        uses: shapehq/actions/create-or-update-pr-comment@v1
+        uses: framna-dk/actions/create-or-update-pr-comment@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           body-file: comment.md
@@ -79,14 +79,14 @@ For projects with multiple OpenAPI specs:
 ```yaml
 - name: Diff Invoicing API
   id: diff-invoicing
-  uses: shapehq/actions/oasdiff@v1
+  uses: framna-dk/actions/oasdiff@v1
   with:
     base: base/invoicing-api.yml
     head: pr/invoicing-api.yml
 
 - name: Diff Reporting API
   id: diff-reporting
-  uses: shapehq/actions/oasdiff@v1
+  uses: framna-dk/actions/oasdiff@v1
   with:
     base: base/reporting-api.yml
     head: pr/reporting-api.yml

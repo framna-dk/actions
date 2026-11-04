@@ -10,7 +10,7 @@ runs:
   using: composite
   steps:
     - name: Install CI SSH Key
-      uses: shapehq/actions/install-ssh-key@v1
+      uses: framna-dk/actions/install-ssh-key@v1
       with:
         op-reference: op://GitHub Actions/CI SSH Private Key/ci-ssh-key
         filename: ${{ inputs.filename }}

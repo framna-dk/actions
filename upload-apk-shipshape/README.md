@@ -1,4 +1,4 @@
-## [upload-apk-shipshape](https://github.com/shapehq/actions/tree/main/upload-apk-shipshape/action.yml)
+## [upload-apk-shipshape](https://github.com/framna-dk/actions/tree/main/upload-apk-shipshape/action.yml)
 
 Uploads an APK to Shipshape.
 
@@ -19,7 +19,7 @@ Example:
 
 ```yml
 - name: Upload to Shipshape
-  uses: shapehq/actions/upload-apk-shipshape@v1
+  uses: framna-dk/actions/upload-apk-shipshape@v1
   with:
     projectName: Client
     targetName: Client (${{ env.BUILD_TYPE }})

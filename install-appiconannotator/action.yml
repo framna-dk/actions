@@ -5,5 +5,5 @@ runs:
   using: composite
   steps:
     - name: Install appiconannotator
-      run: npm install -g git+ssh://git@github.com:shapehq/appiconannotator.git
+      run: npm install -g git+ssh://git@github.com:framna-dk/appiconannotator.git
       shell: bash

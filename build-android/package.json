@@ -7,7 +7,7 @@
   "main": "lib/index.js",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/shapehq/actions.git"
+    "url": "git+https://github.com/framna-dk/actions.git"
   },
   "keywords": [
     "actions",

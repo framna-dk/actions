@@ -1,8 +1,8 @@
-## [install-appiconannotator](https://github.com/shapehq/actions/blob/main/install-appiconannotator/action.yml)
+## [install-appiconannotator](https://github.com/framna-dk/actions/blob/main/install-appiconannotator/action.yml)
 
-Installs [appiconannotator](https://github.com/shapehq/appiconannotator).
+Installs [appiconannotator](https://github.com/framna-dk/appiconannotator).
 
 ```yml
 - name: Install appiconannotator
-  uses: shapehq/actions/install-appiconannotator@v1
+  uses: framna-dk/actions/install-appiconannotator@v1
 ```

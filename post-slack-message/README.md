@@ -1,10 +1,10 @@
-## [post-slack-message](https://github.com/shapehq/actions/tree/main/post-slack-message/action.yml)
+## [post-slack-message](https://github.com/framna-dk/actions/tree/main/post-slack-message/action.yml)
 
 Posts a message to Slack.
 
 ```yml
 - name: Post to Slack
-  uses: shapehq/actions/post-slack-message@v1
+  uses: framna-dk/actions/post-slack-message@v1
   with:
     channel: "#my-channel"
     message: "Started a new build 🏃‍♀️"
@@ -23,7 +23,7 @@ The details above can be omitted by setting the `add-workflow-info-fields` and `
 
 ```yml
 - name: Post to Slack
-  uses: shapehq/actions/post-slack-message@v1
+  uses: framna-dk/actions/post-slack-message@v1
   with:
     channel: "#my-channel"
     message: "Started a new build 🏃‍♀️"
@@ -37,7 +37,7 @@ If you wish to only post to Slack if the jobs fails you can use the `failure()` 
 ```yml
 - name: Post Slack message on failure
   if: ${{ failure() }}
-  uses: shapehq/actions/post-slack-message@v1
+  uses: framna-dk/actions/post-slack-message@v1
   with:
     channel: "#my-channel"
     message: "Failed building project 💥"
@@ -49,7 +49,7 @@ Similarly, you can have the action only post a message on success using the `suc
 ```yml
 - name: Post Slack message on success
   if: ${{ success() }}
-  uses: shapehq/actions/post-slack-message@v1
+  uses: framna-dk/actions/post-slack-message@v1
   with:
     channel: "#my-channel"
     message: "Successfully built project 🚀"
@@ -60,7 +60,7 @@ Custom fields and buttons can be added to the message as shown below. The fields
 
 ```yml
 - name: Post to Slack
-  uses: shapehq/actions/post-slack-message@v1
+  uses: framna-dk/actions/post-slack-message@v1
   with:
     channel: "#my-channel"
     message: Hello world!
@@ -73,7 +73,7 @@ You may use the Slack token residing in the shared GitHub Actions vault to post 
 
 ```yml
 - name: Post to Slack
-  uses: shapehq/actions/post-slack-message@v1
+  uses: framna-dk/actions/post-slack-message@v1
   with:
     channel: "#my-channel"
     message: "Hello world!"
