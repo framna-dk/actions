@@ -36,6 +36,14 @@ function matchesOsVersion(version: readonly number[], templateComponents: readon
   })
 }
 
+function compareVersions(a: readonly number[], b: readonly number[]): number {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) {
+    const difference = (a[i] ?? 0) - (b[i] ?? 0)
+    if (difference !== 0) return difference
+  }
+  return 0
+}
+
 // Returns the generic simulator destination for the platform, which requires
 // no installed runtime. Only valid for building, not for running tests.
 export function selectGenericDestination(platform: string, osFilter = "", deviceFilter = ""): BuildDestination {
@@ -52,39 +60,46 @@ export function selectGenericDestination(platform: string, osFilter = "", device
 
 // Selects a simulator from simctl's runtime-to-devices mapping, filtered by
 // the platform and the optional os and device filters, preferring the newest
-// OS version among the matches. Throws SelectionError if nothing matches.
+// OS version among the matches. Unless os is explicit, maximumOsVersion caps
+// selection at the selected Xcode simulator SDK. Throws if nothing matches.
 export function selectDeviceDestination(
   deviceList: DeviceList,
   platform: string,
   osFilter = "",
-  deviceFilter = ""
+  deviceFilter = "",
+  maximumOsVersion?: string
 ): BuildDestination {
   const runtimeMarker = `.SimRuntime.${platform}-`
   const templateComponents = osFilter.length > 0 ? parseOsVersionTemplate(osFilter) : []
+
+  const maximumVersion = osFilter.length === 0 && maximumOsVersion !== undefined
+    ? maximumOsVersion.split(".").map(Number)
+    : undefined
 
   const devices = Object.entries(deviceList)
     .filter(([runtime]) => runtime.includes(runtimeMarker))
     .flatMap(([runtime, runtimeDevices]) => {
       const versionString = runtime.slice(runtime.lastIndexOf(runtimeMarker) + runtimeMarker.length)
-      const version = versionString.split("-").map(component => parseInt(component, 10))
+      // Runtime identifiers can include a beta suffix, e.g. iOS-27-2-beta-4.
+      const version = versionString.match(/^\d+(?:-\d+)*/)?.[0].split("-").map(Number)
+      if (!version) return []
       return runtimeDevices
         .filter(device => deviceFilter.length > 0 ? device.name === deviceFilter : device.name.startsWith("iPhone"))
         .map(device => ({ version, name: device.name, udid: device.udid }))
     })
     .sort((a, b) => {
-      for (let i = 0; i < Math.max(a.version.length, b.version.length); i++) {
-        const difference = (a.version[i] ?? 0) - (b.version[i] ?? 0)
-        if (difference !== 0) {
-          return difference
-        }
-      }
+      const difference = compareVersions(a.version, b.version)
+      if (difference !== 0) return difference
       return a.name < b.name ? -1 : a.name > b.name ? 1 : 0
     })
 
-  const matching = devices.filter(device => matchesOsVersion(device.version, templateComponents))
+  const matching = devices.filter(device => matchesOsVersion(device.version, templateComponents)
+    && (maximumVersion === undefined || compareVersions(device.version, maximumVersion) <= 0))
   if (matching.length === 0) {
     const wantedDevice = deviceFilter.length > 0 ? `device '${deviceFilter}'` : "an iPhone"
-    const wantedOs = osFilter.length > 0 ? `${platform} ${osFilter}` : `any ${platform} version`
+    const wantedOs = osFilter.length > 0 ? `${platform} ${osFilter}`
+      : maximumVersion !== undefined ? `${platform} <= ${maximumOsVersion} (selected Xcode simulator SDK)`
+      : `any ${platform} version`
     const installed = [...new Set(devices.map(device => device.version.join(".")))].sort().join(", ") || "none"
     throw new SelectionError(
       `No available simulator matching ${wantedDevice} on ${wantedOs}. `

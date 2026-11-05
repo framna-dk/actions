@@ -8,7 +8,8 @@ inputs:
   os:
     description: >-
       OS version to match, e.g. "26.5" for an exact version or "26.x" to match any
-      minor version. Defaults to the newest installed runtime.
+      minor version. Defaults to the newest installed runtime no newer than the selected
+      Xcode simulator SDK. An explicit os input overrides this ceiling.
     required: false
     default: ""
   device:
