@@ -1,0 +1,245 @@
+# makeitfly PR preview environments (reusable workflow)
+#
+# Deploys a live preview of a repo's Docker Compose stack to Fly.io for every
+# pull request, refreshes it in place on each push, and tears it down when the
+# PR closes - then posts a single sticky comment with the URL for reviewers.
+#
+# Call it from a caller workflow triggered on `pull_request` (including the
+# `closed` type, which drives teardown). See makeitfly-preview/README.md.
+
+name: makeitfly preview
+
+on:
+  workflow_call:
+    inputs:
+      compose-file:
+        description: "Path to the Compose file to deploy."
+        type: string
+        default: docker-compose.yml
+      name-prefix:
+        description: "Prefix for the preview environment name, e.g. `atl` gives `atl-pr-<n>-<hash>`. Empty gives `pr-<n>-<hash>`."
+        type: string
+        default: ""
+      makeitfly-repo:
+        description: "Repo to download the makeitfly release binary from."
+        type: string
+        default: framna-dk/makeitfly
+      makeitfly-version:
+        description: "makeitfly release tag (e.g. v0.3.0) or `latest`."
+        type: string
+        default: latest
+      fly-org:
+        description: "Fly org new apps are created under. Empty uses makeitfly's default (`personal`)."
+        type: string
+        default: ""
+      fly-region:
+        description: "Fly region to deploy to. Empty uses makeitfly's default (`fra`)."
+        type: string
+        default: ""
+      health-path:
+        description: "If set, gate the preview URL on this path returning HTTP 200 before advertising it, e.g. `/api/health`. Empty skips the health gate."
+        type: string
+        default: ""
+      health-timeout-seconds:
+        description: "How long to wait for the health path to return 200 before failing the deploy."
+        type: number
+        default: 300
+      runs-on:
+        description: "Runner label for both jobs."
+        type: string
+        default: ubuntu-latest
+    secrets:
+      fly-api-token:
+        description: "Fly API token with access to the target org."
+        required: true
+      makeitfly-token:
+        description: "Token with read access to the makeitfly repo's releases. Required when that repo is private."
+        required: false
+      name-salt:
+        description: "Salt mixed into the preview name hash so the resulting URL is unguessable. Optional but recommended."
+        required: false
+
+jobs:
+  deploy:
+    if: github.event.action != 'closed'
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Build exactly the PR head, not the merge commit.
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      # Readable prefix + a stable, hard-to-guess suffix: a hash of the branch
+      # name (constant for the life of the PR, so redeploys replace in place),
+      # salted by the optional name-salt secret so the URL is unguessable
+      # without the salt.
+      - name: Resolve preview env name
+        env:
+          PREFIX: ${{ inputs.name-prefix }}
+          PR: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          SALT: ${{ secrets.name-salt }}
+        run: |
+          hash=$(printf '%s' "${BRANCH}|${SALT}" | sha256sum | cut -c1-10)
+          name="pr-${PR}-${hash}"
+          [ -n "$PREFIX" ] && name="${PREFIX}-${name}"
+          echo "ENV_NAME=${name}" >> "$GITHUB_ENV"
+
+      # Download the self-contained makeitfly binary (embeds its runtime; needs
+      # no Node). The linux-x64 asset matches an ubuntu-latest runner.
+      - name: Install makeitfly
+        env:
+          GH_TOKEN: ${{ secrets.makeitfly-token || github.token }}
+          MAKEITFLY_REPO: ${{ inputs.makeitfly-repo }}
+          MAKEITFLY_VERSION: ${{ inputs.makeitfly-version }}
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          tag=""
+          [ "$MAKEITFLY_VERSION" != "latest" ] && tag="$MAKEITFLY_VERSION"
+          gh release download $tag --repo "$MAKEITFLY_REPO" \
+            --pattern 'makeitfly-linux-x64' --output "$HOME/.local/bin/makeitfly" --clobber
+          chmod +x "$HOME/.local/bin/makeitfly"
+          "$HOME/.local/bin/makeitfly" --help >/dev/null
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install flyctl
+        run: |
+          curl -L https://fly.io/install.sh | sh
+          echo "$HOME/.fly/bin" >> "$GITHUB_PATH"
+
+      - name: Deploy preview
+        id: deploy
+        env:
+          COMPOSE_FILE: ${{ inputs.compose-file }}
+          FLY_API_TOKEN: ${{ secrets.fly-api-token }}
+          FLY_ORG: ${{ inputs.fly-org }}
+          MAKEITFLY_REGION: ${{ inputs.fly-region }}
+        run: |
+          set -o pipefail
+          makeitfly up -n "$ENV_NAME" -s none -f "$COMPOSE_FILE" | tee /tmp/mif.log
+          url=$(sed -n 's/^URL: //p' /tmp/mif.log | tail -1)
+          if [ -z "$url" ]; then
+            echo "Could not determine preview URL from makeitfly output" >&2
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      # `makeitfly up` returns as soon as the Fly Machines API accepts the new
+      # machine config - the containers still have to boot, run migrations, and
+      # start serving. When a health path is given, gate on it so the job only
+      # succeeds (and the URL is advertised) once the deployment actually serves.
+      # A deploy that never comes healthy fails here instead of posting a dead
+      # link.
+      - name: Wait for deployment
+        if: inputs.health-path != ''
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+          HEALTH_PATH: ${{ inputs.health-path }}
+          TIMEOUT: ${{ inputs.health-timeout-seconds }}
+        run: |
+          probe="${URL%/}/${HEALTH_PATH#/}"
+          echo "Waiting for ${probe} to return 200..."
+          deadline=$(( $(date +%s) + TIMEOUT ))
+          until [ "$(date +%s)" -ge "$deadline" ]; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${probe}" || true)
+            [ -z "$code" ] && code=000
+            if [ "$code" = "200" ]; then
+              echo "Deployment healthy (HTTP 200 from ${HEALTH_PATH})."
+              exit 0
+            fi
+            echo "Not ready yet (status ${code}); retrying in 5s..."
+            sleep 5
+          done
+          echo "Deployment did not become healthy within ${TIMEOUT}s." >&2
+          exit 1
+
+      - name: Render preview comment
+        env:
+          URL: ${{ steps.deploy.outputs.url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          updated=$(date -u +"%Y-%m-%d %H:%M UTC")
+          cat > "$RUNNER_TEMP/preview-comment.md" <<EOF
+          ### 🚀 Preview environment
+
+          **$URL**
+
+          | | |
+          |---|---|
+          | Commit | \`${SHA:0:7}\` |
+          | Updated | ${updated} |
+
+          Re-deployed on every push to this PR; torn down when it closes.
+          EOF
+
+      - name: Post preview comment
+        uses: shapehq/actions/create-or-update-pr-comment@v1
+        with:
+          token: ${{ github.token }}
+          body-file: ${{ runner.temp }}/preview-comment.md
+          render-template: "false"
+          update-marker: makeitfly-preview
+
+  teardown:
+    if: github.event.action == 'closed'
+    runs-on: ${{ inputs.runs-on }}
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      # Recompute the exact same name the deploy used so we tear down the right
+      # app. The branch name is still available on the closed-PR event.
+      - name: Resolve preview env name
+        env:
+          PREFIX: ${{ inputs.name-prefix }}
+          PR: ${{ github.event.pull_request.number }}
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+          SALT: ${{ secrets.name-salt }}
+        run: |
+          hash=$(printf '%s' "${BRANCH}|${SALT}" | sha256sum | cut -c1-10)
+          name="pr-${PR}-${hash}"
+          [ -n "$PREFIX" ] && name="${PREFIX}-${name}"
+          echo "ENV_NAME=${name}" >> "$GITHUB_ENV"
+
+      # Teardown only talks to the Fly API (no Docker/flyctl needed), so just the
+      # binary plus FLY_API_TOKEN is enough.
+      - name: Install makeitfly
+        env:
+          GH_TOKEN: ${{ secrets.makeitfly-token || github.token }}
+          MAKEITFLY_REPO: ${{ inputs.makeitfly-repo }}
+          MAKEITFLY_VERSION: ${{ inputs.makeitfly-version }}
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          tag=""
+          [ "$MAKEITFLY_VERSION" != "latest" ] && tag="$MAKEITFLY_VERSION"
+          gh release download $tag --repo "$MAKEITFLY_REPO" \
+            --pattern 'makeitfly-linux-x64' --output "$HOME/.local/bin/makeitfly" --clobber
+          chmod +x "$HOME/.local/bin/makeitfly"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      # `down` derives the Fly app name from ENV_NAME and tolerates an
+      # already-gone app, so it works with no local state and is safe to re-run.
+      - name: Tear down preview
+        env:
+          FLY_API_TOKEN: ${{ secrets.fly-api-token }}
+          FLY_ORG: ${{ inputs.fly-org }}
+        run: makeitfly down "$ENV_NAME"
+
+      - name: Render teardown comment
+        run: |
+          cat > "$RUNNER_TEMP/preview-comment.md" <<'EOF'
+          ### 🧹 Preview environment torn down
+
+          The preview for this PR has been destroyed.
+          EOF
+
+      - name: Update preview comment
+        uses: shapehq/actions/create-or-update-pr-comment@v1
+        with:
+          token: ${{ github.token }}
+          body-file: ${{ runner.temp }}/preview-comment.md
+          render-template: "false"
+          update-marker: makeitfly-preview
