@@ -39,7 +39,9 @@ Give the step an `id` and reference its outputs:
 
 ## Choosing the simulator
 
-Without inputs, the action selects the newest available iPhone simulator — use this unless you need a specific OS or device.
+Without inputs, the action selects the newest available iPhone simulator whose OS version is no newer than the selected Xcode's simulator SDK. For example, an iOS 26.6 SDK excludes iOS 26.7 and 27.x runtimes even if they are installed. The ceiling uses the platform SDK version, rather than the Xcode app version, so it also works with older Xcode releases and other platforms.
+
+An explicit `os` input overrides this ceiling, including wildcard filters such as `27.x`. A `device` input alone keeps the ceiling. If SDK discovery fails or no simulator meets the ceiling, the action fails instead of falling back to a newer runtime. This upper bound avoids selecting newer runtimes by default; it does not guarantee that every older runtime works with the selected Xcode.
 
 The following pins the OS major version. As with `xcode-select`, `x` is a placeholder matching any value, so this selects the newest installed 26.* runtime:
 
@@ -50,7 +52,7 @@ The following pins the OS major version. As with `xcode-select`, `x` is a placeh
     os: 26.x
 ```
 
-The following pins the device by exact name, on the newest OS runtime that has it installed:
+The following pins the device by exact name, on the newest OS runtime that has it installed and is no newer than the selected Xcode's simulator SDK:
 
 ```yaml
 - name: Get Build Destination

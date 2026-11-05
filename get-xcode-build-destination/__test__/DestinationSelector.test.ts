@@ -27,6 +27,36 @@ const RUNTIMES: DeviceList = {
 }
 
 describe("selectDeviceDestination", () => {
+  const newerRuntimes: DeviceList = {
+    ...RUNTIMES,
+    "com.apple.CoreSimulator.SimRuntime.iOS-26-7": [{ name: "iPhone 17 Pro", udid: "NEWER-MINOR" }],
+    "com.apple.CoreSimulator.SimRuntime.iOS-27-2-beta-4": [{ name: "iPhone Duo", udid: "NEWER-MAJOR" }]
+  }
+
+  it("excludes newer major and minor runtimes by default when capped by the selected SDK", () => {
+    expect(selectDeviceDestination(newerRuntimes, "iOS", "", "", "26.6").osVersion).toBe("26.5")
+  })
+
+  it("keeps the SDK ceiling when only a device is specified", () => {
+    expect(selectDeviceDestination(newerRuntimes, "iOS", "", "iPhone 17 Pro", "26.6").udid)
+      .toBe("UDID-IPHONE-17-PRO-26-5")
+  })
+
+  it("allows an explicit OS filter to override the SDK ceiling, including a beta runtime", () => {
+    const selected = selectDeviceDestination(newerRuntimes, "iOS", "27.x", "", "26.6")
+    expect(selected.udid).toBe("NEWER-MAJOR")
+    expect(selected.osVersion).toBe("27.2")
+  })
+
+  it("accepts the SDK version itself including an omitted zero patch component", () => {
+    expect(selectDeviceDestination(RUNTIMES, "iOS", "", "", "26.5.0").osVersion).toBe("26.5")
+  })
+
+  it("fails clearly rather than falling back to a runtime newer than the SDK", () => {
+    expect(() => selectDeviceDestination(newerRuntimes, "iOS", "", "iPhone Duo", "26.6"))
+      .toThrow(/iOS <= 26\.6.*selected Xcode simulator SDK.*27\.2/s)
+  })
+
   it("defaults to an iPhone on the newest runtime", () => {
     const selected = selectDeviceDestination(RUNTIMES, "iOS")
     expect(selected.udid).toBe("UDID-IPHONE-17-PRO-MAX-26-5")

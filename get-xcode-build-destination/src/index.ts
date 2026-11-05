@@ -1,4 +1,5 @@
 import * as core from "@actions/core"
+import simulatorSdkVersion from "./SimulatorSdkVersion.js"
 import getOptions from "./getOptions.js"
 import listAvailableDevices from "./SimctlDeviceListRepository.js"
 import { selectDeviceDestination, selectGenericDestination } from "./DestinationSelector.js"
@@ -10,7 +11,11 @@ try {
     core.info(`The generic ${options.platform} Simulator destination was selected.`)
     emit(destination)
   } else {
-    const destination = selectDeviceDestination(listAvailableDevices(), options.platform, options.os, options.device)
+    const maximumOsVersion = options.os.length === 0 ? simulatorSdkVersion(options.platform) : undefined
+    if (maximumOsVersion !== undefined) {
+      core.info(`Limiting simulator selection to ${options.platform} <= ${maximumOsVersion} from the selected Xcode SDK.`)
+    }
+    const destination = selectDeviceDestination(listAvailableDevices(), options.platform, options.os, options.device, maximumOsVersion)
     core.info(`${destination.name} (${options.platform} ${destination.osVersion}) was selected.`)
     emit(destination)
   }

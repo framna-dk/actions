@@ -28436,20 +28436,6 @@ function info(message) {
     process.stdout.write(message + os.EOL);
 }
 
-function getOptions() {
-    return {
-        platform: getInput("platform") || "iOS",
-        os: getInput("os").trim(),
-        device: getInput("device").trim(),
-        generic: getBooleanInput("generic")
-    };
-}
-
-function listAvailableDevices() {
-    const json = execFileSync("xcrun", ["simctl", "list", "devices", "available", "--json"], { encoding: "utf8" });
-    return JSON.parse(json).devices;
-}
-
 class SelectionError extends Error {
 }
 // Parses an OS filter template like "26.5" or "26.x" into a list of
@@ -28470,6 +28456,14 @@ function matchesOsVersion(version, templateComponents) {
         return expected === null || (position < version.length ? version[position] : 0) === expected;
     });
 }
+function compareVersions(a, b) {
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+        const difference = (a[i] ?? 0) - (b[i] ?? 0);
+        if (difference !== 0)
+            return difference;
+    }
+    return 0;
+}
 // Returns the generic simulator destination for the platform, which requires
 // no installed runtime. Only valid for building, not for running tests.
 function selectGenericDestination(platform, osFilter = "", deviceFilter = "") {
@@ -28485,32 +28479,39 @@ function selectGenericDestination(platform, osFilter = "", deviceFilter = "") {
 }
 // Selects a simulator from simctl's runtime-to-devices mapping, filtered by
 // the platform and the optional os and device filters, preferring the newest
-// OS version among the matches. Throws SelectionError if nothing matches.
-function selectDeviceDestination(deviceList, platform, osFilter = "", deviceFilter = "") {
+// OS version among the matches. Unless os is explicit, maximumOsVersion caps
+// selection at the selected Xcode simulator SDK. Throws if nothing matches.
+function selectDeviceDestination(deviceList, platform, osFilter = "", deviceFilter = "", maximumOsVersion) {
     const runtimeMarker = `.SimRuntime.${platform}-`;
     const templateComponents = osFilter.length > 0 ? parseOsVersionTemplate(osFilter) : [];
+    const maximumVersion = osFilter.length === 0 && maximumOsVersion !== undefined
+        ? maximumOsVersion.split(".").map(Number)
+        : undefined;
     const devices = Object.entries(deviceList)
         .filter(([runtime]) => runtime.includes(runtimeMarker))
         .flatMap(([runtime, runtimeDevices]) => {
         const versionString = runtime.slice(runtime.lastIndexOf(runtimeMarker) + runtimeMarker.length);
-        const version = versionString.split("-").map(component => parseInt(component, 10));
+        // Runtime identifiers can include a beta suffix, e.g. iOS-27-2-beta-4.
+        const version = versionString.match(/^\d+(?:-\d+)*/)?.[0].split("-").map(Number);
+        if (!version)
+            return [];
         return runtimeDevices
             .filter(device => deviceFilter.length > 0 ? device.name === deviceFilter : device.name.startsWith("iPhone"))
             .map(device => ({ version, name: device.name, udid: device.udid }));
     })
         .sort((a, b) => {
-        for (let i = 0; i < Math.max(a.version.length, b.version.length); i++) {
-            const difference = (a.version[i] ?? 0) - (b.version[i] ?? 0);
-            if (difference !== 0) {
-                return difference;
-            }
-        }
+        const difference = compareVersions(a.version, b.version);
+        if (difference !== 0)
+            return difference;
         return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
     });
-    const matching = devices.filter(device => matchesOsVersion(device.version, templateComponents));
+    const matching = devices.filter(device => matchesOsVersion(device.version, templateComponents)
+        && (maximumVersion === undefined || compareVersions(device.version, maximumVersion) <= 0));
     if (matching.length === 0) {
         const wantedDevice = deviceFilter.length > 0 ? `device '${deviceFilter}'` : "an iPhone";
-        const wantedOs = osFilter.length > 0 ? `${platform} ${osFilter}` : `any ${platform} version`;
+        const wantedOs = osFilter.length > 0 ? `${platform} ${osFilter}`
+            : maximumVersion !== undefined ? `${platform} <= ${maximumOsVersion} (selected Xcode simulator SDK)`
+                : `any ${platform} version`;
         const installed = [...new Set(devices.map(device => device.version.join(".")))].sort().join(", ") || "none";
         throw new SelectionError(`No available simulator matching ${wantedDevice} on ${wantedOs}. `
             + `Installed ${platform} versions with matching devices: ${installed}`);
@@ -28524,6 +28525,38 @@ function selectDeviceDestination(deviceList, platform, osFilter = "", deviceFilt
     };
 }
 
+function simulatorSdkVersion(platform) {
+    const sdks = {
+        iOS: "iphonesimulator",
+        tvOS: "appletvsimulator",
+        watchOS: "watchsimulator",
+        visionOS: "xrsimulator"
+    };
+    const sdk = sdks[platform];
+    if (!sdk)
+        throw new SelectionError(`Unsupported simulator platform '${platform}'`);
+    // xcrun respects DEVELOPER_DIR and xcode-select, unlike the installed runtime list.
+    const version = execFileSync("xcrun", ["--sdk", sdk, "--show-sdk-version"], { encoding: "utf8" }).trim();
+    if (!/^\d+(?:\.\d+)*$/.test(version)) {
+        throw new SelectionError(`Cannot determine the selected Xcode's ${platform} simulator SDK version: '${version}'`);
+    }
+    return version;
+}
+
+function getOptions() {
+    return {
+        platform: getInput("platform") || "iOS",
+        os: getInput("os").trim(),
+        device: getInput("device").trim(),
+        generic: getBooleanInput("generic")
+    };
+}
+
+function listAvailableDevices() {
+    const json = execFileSync("xcrun", ["simctl", "list", "devices", "available", "--json"], { encoding: "utf8" });
+    return JSON.parse(json).devices;
+}
+
 try {
     const options = getOptions();
     if (options.generic) {
@@ -28532,7 +28565,11 @@ try {
         emit(destination);
     }
     else {
-        const destination = selectDeviceDestination(listAvailableDevices(), options.platform, options.os, options.device);
+        const maximumOsVersion = options.os.length === 0 ? simulatorSdkVersion(options.platform) : undefined;
+        if (maximumOsVersion !== undefined) {
+            info(`Limiting simulator selection to ${options.platform} <= ${maximumOsVersion} from the selected Xcode SDK.`);
+        }
+        const destination = selectDeviceDestination(listAvailableDevices(), options.platform, options.os, options.device, maximumOsVersion);
         info(`${destination.name} (${options.platform} ${destination.osVersion}) was selected.`);
         emit(destination);
     }
