@@ -1,0 +1,302 @@
+name: Banzai post candidate summary
+description: Generate a Product-Manager-facing summary for a closed issue and post it as a comment on the issue.
+
+inputs:
+  github-token:
+    description: GitHub App installation token with Issues read/write on the repository.
+    required: true
+  openai-api-key:
+    description: OpenAI API key used by Codex to generate the summary.
+    required: true
+  issue-number:
+    description: Number of the closed issue to summarize.
+    required: true
+  repository:
+    description: Repository (owner/repo) that owns the issue.
+    required: false
+    default: ${{ github.repository }}
+  summary-marker:
+    description: Marker embedded in the summary comment, making the post idempotent across repeated closes.
+    required: false
+    default: "<!-- banzai:summary:done -->"
+  codex-model:
+    description: Model used by Codex.
+    required: false
+    default: gpt-5.4
+  codex-effort:
+    description: Reasoning effort used by Codex.
+    required: false
+    default: ""
+  codex-sandbox:
+    description: Sandbox mode for Codex (summary generation needs no write access).
+    required: false
+    default: read-only
+  codex-safety-strategy:
+    description: Safety strategy passed to codex-action.
+    required: false
+    default: unsafe
+  extra-instructions:
+    description: Additional instructions appended to the summary prompt.
+    required: false
+    default: ""
+
+outputs:
+  processed:
+    description: Whether the issue was summarized by this run.
+    value: ${{ steps.post.outputs.processed || 'false' }}
+  issue-url:
+    description: URL of the issue handled by this run.
+    value: ${{ steps.check.outputs.issue_url }}
+  summary-comment-url:
+    description: URL of the summary comment posted on the issue.
+    value: ${{ steps.post.outputs.summary_comment_url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check issue
+      id: check
+      uses: actions/github-script@v8
+      env:
+        REPOSITORY: ${{ inputs.repository }}
+        ISSUE_NUMBER: ${{ inputs.issue-number }}
+        SUMMARY_MARKER: ${{ inputs.summary-marker }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const [owner, repo] = process.env.REPOSITORY.split('/');
+          const issueNumber = Number(process.env.ISSUE_NUMBER);
+          const summaryMarker = process.env.SUMMARY_MARKER;
+
+          if (!Number.isInteger(issueNumber)) {
+            core.setFailed('issue-number must be an integer.');
+            return;
+          }
+          if (!summaryMarker) {
+            core.setFailed('summary-marker must not be empty.');
+            return;
+          }
+
+          const issue = (await github.rest.issues.get({ owner, repo, issue_number: issueNumber })).data;
+
+          // Idempotency guard: a reopen→close cycle re-fires this action, so skip
+          // when a summary comment carrying the marker is already on the issue.
+          const comments = await github.paginate(github.rest.issues.listComments, {
+            owner,
+            repo,
+            issue_number: issueNumber,
+            per_page: 100,
+          });
+          if (comments.some((comment) => (comment.body || '').includes(summaryMarker))) {
+            core.info(`Issue #${issueNumber} already has a summary comment; skipping.`);
+            core.setOutput('found', 'false');
+            core.setOutput('issue_url', issue.html_url);
+            return;
+          }
+
+          core.info(`Summarizing ${issue.html_url}.`);
+          core.setOutput('found', 'true');
+          core.setOutput('issue_number', String(issueNumber));
+          core.setOutput('issue_url', issue.html_url);
+
+    - name: Gather context and build prompt
+      id: prepare
+      if: steps.check.outputs.found == 'true'
+      uses: actions/github-script@v8
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+        REPOSITORY: ${{ inputs.repository }}
+        ISSUE_NUMBER: ${{ steps.check.outputs.issue_number }}
+        ISSUE_URL: ${{ steps.check.outputs.issue_url }}
+        EXTRA_INSTRUCTIONS: ${{ inputs.extra-instructions }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const fs = require('fs');
+          const path = require('path');
+
+          const [owner, repo] = process.env.REPOSITORY.split('/');
+          const issueNumber = Number(process.env.ISSUE_NUMBER);
+
+          const issueData = await github.graphql(
+            `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  issue(number: $number) {
+                    title
+                    body
+                    closedByPullRequestsReferences(first: 10, includeClosedPrs: true) {
+                      nodes { number title body url state merged }
+                    }
+                    timelineItems(itemTypes: [CROSS_REFERENCED_EVENT], last: 50) {
+                      nodes {
+                        ... on CrossReferencedEvent {
+                          source {
+                            ... on PullRequest {
+                              number
+                              title
+                              body
+                              url
+                              state
+                              merged
+                              repository { nameWithOwner }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            `,
+            { owner, repo, number: issueNumber }
+          );
+          const issue = issueData.repository.issue;
+
+          // Prefer the PR that declares it closes this issue; fall back to the most
+          // recent same-repo PR that cross-references it.
+          const closingPrs = issue.closedByPullRequestsReferences.nodes.filter(Boolean);
+          const crossRefPrs = issue.timelineItems.nodes
+            .map((node) => node && node.source)
+            .filter((source) => source && source.url && source.repository.nameWithOwner.toLowerCase() === process.env.REPOSITORY.toLowerCase());
+          const candidates = closingPrs.length > 0 ? closingPrs : crossRefPrs;
+          const pullRequest = candidates.length > 0
+            ? candidates.reduce((latest, pr) => (pr.number > latest.number ? pr : latest))
+            : null;
+          if (!pullRequest) {
+            core.warning(`No linked pull request found for ${process.env.ISSUE_URL}; summarizing from the issue conversation alone.`);
+          }
+
+          const issueComments = (await github.paginate(github.rest.issues.listComments, {
+            owner,
+            repo,
+            issue_number: issueNumber,
+            per_page: 100,
+          })).map((comment) => ({ author: comment.user.login, createdAt: comment.created_at, body: comment.body || '' }));
+
+          const prComments = pullRequest
+            ? (await github.paginate(github.rest.issues.listComments, {
+                owner,
+                repo,
+                issue_number: pullRequest.number,
+                per_page: 100,
+              })).map((comment) => ({ author: comment.user.login, createdAt: comment.created_at, body: comment.body || '' }))
+            : [];
+
+          const imageUrls = [];
+          const collectImages = (text) => {
+            for (const match of text.matchAll(/!\[[^\]]*\]\((https?:[^)\s]+)\)/g)) {
+              if (!imageUrls.includes(match[1])) imageUrls.push(match[1]);
+            }
+            for (const match of text.matchAll(/<img[^>]*src=["']([^"']+)["']/g)) {
+              if (!imageUrls.includes(match[1])) imageUrls.push(match[1]);
+            }
+          };
+          if (pullRequest) collectImages(pullRequest.body || '');
+          for (const comment of prComments) collectImages(comment.body);
+          for (const comment of issueComments) collectImages(comment.body);
+          core.info(`Found ${imageUrls.length} proof-of-work image(s).`);
+
+          const renderComments = (comments, dropped) => {
+            const parts = [];
+            if (dropped > 0) parts.push(`_(${dropped} earlier comment(s) omitted for length)_`);
+            for (const comment of comments) {
+              parts.push(`### Comment by ${comment.author} (${comment.createdAt})\n\n${comment.body}`);
+            }
+            return parts.join('\n\n') || '_(no comments)_';
+          };
+
+          let droppedIssueComments = 0;
+          let droppedPrComments = 0;
+          const assembleContext = () => {
+            const sections = [
+              `## Original requirements — issue #${issueNumber}: ${issue.title}`,
+              issue.body || '_(empty)_',
+              '## Conversation on the issue',
+              renderComments(issueComments, droppedIssueComments),
+            ];
+            if (pullRequest) {
+              sections.push(
+                `## Pull request: ${pullRequest.title} (${pullRequest.url}) — ${pullRequest.merged ? 'merged' : pullRequest.state.toLowerCase()}`,
+                pullRequest.body || '_(empty)_',
+                '## Conversation on the pull request',
+                renderComments(prComments, droppedPrComments)
+              );
+            } else {
+              sections.push('## Pull request', '_(no linked pull request was found)_');
+            }
+            sections.push(
+              '## Proof-of-work images',
+              imageUrls.length > 0 ? imageUrls.map((url) => `- ${url}`).join('\n') : '_(none)_'
+            );
+            return sections.join('\n\n');
+          };
+
+          const maxContextLength = 60000;
+          let contextText = assembleContext();
+          while (contextText.length > maxContextLength && (issueComments.length > 0 || prComments.length > 0)) {
+            if (issueComments.length > 0) {
+              issueComments.shift();
+              droppedIssueComments += 1;
+            } else {
+              prComments.shift();
+              droppedPrComments += 1;
+            }
+            contextText = assembleContext();
+          }
+          if (contextText.length > maxContextLength) {
+            contextText = `${contextText.slice(0, maxContextLength)}\n\n…(truncated for length)`;
+          }
+
+          const reviewUrl = pullRequest ? pullRequest.url : process.env.ISSUE_URL;
+          const template = fs.readFileSync(path.join(process.env.ACTION_PATH, 'prompt.md'), 'utf8');
+          let prompt = template.replaceAll('{{PR_URL}}', reviewUrl).replaceAll('{{CONTEXT}}', contextText);
+          const extra = (process.env.EXTRA_INSTRUCTIONS || '').trim();
+          if (extra) {
+            prompt += `\n\n# Additional instructions\n\n${extra}`;
+          }
+          core.setOutput('prompt', prompt);
+
+    - name: Generate summary
+      id: run_codex
+      if: steps.check.outputs.found == 'true'
+      uses: openai/codex-action@v1
+      with:
+        openai-api-key: ${{ inputs.openai-api-key }}
+        model: ${{ inputs.codex-model }}
+        effort: ${{ inputs.codex-effort }}
+        sandbox: ${{ inputs.codex-sandbox }}
+        safety-strategy: ${{ inputs.codex-safety-strategy }}
+        prompt: ${{ steps.prepare.outputs.prompt }}
+
+    - name: Post summary
+      id: post
+      if: steps.check.outputs.found == 'true'
+      uses: actions/github-script@v8
+      env:
+        FINAL_MESSAGE: ${{ steps.run_codex.outputs.final-message }}
+        REPOSITORY: ${{ inputs.repository }}
+        ISSUE_NUMBER: ${{ steps.check.outputs.issue_number }}
+        SUMMARY_MARKER: ${{ inputs.summary-marker }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          // Strip any stray HTML comments the model emitted, then embed our idempotency
+          // marker inside the summary comment itself so a reopen→close cycle finds it.
+          const summary = (process.env.FINAL_MESSAGE || '').replace(/<!--[\s\S]*?-->/g, '').trim();
+          if (!summary) {
+            core.setFailed('Codex returned an empty summary; nothing was posted.');
+            return;
+          }
+
+          const [owner, repo] = process.env.REPOSITORY.split('/');
+          const issueNumber = Number(process.env.ISSUE_NUMBER);
+          const summaryComment = await github.rest.issues.createComment({
+            owner,
+            repo,
+            issue_number: issueNumber,
+            body: `${process.env.SUMMARY_MARKER}\n\n${summary}`,
+          });
+          core.info(`Posted candidate summary: ${summaryComment.data.html_url}`);
+          core.setOutput('processed', 'true');
+          core.setOutput('summary_comment_url', summaryComment.data.html_url);

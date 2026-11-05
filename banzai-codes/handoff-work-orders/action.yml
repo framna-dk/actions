@@ -1,0 +1,295 @@
+name: Banzai handoff work orders
+description: Add work orders that reached the handoff status on the Product board to the harness Projects v2 board.
+
+inputs:
+  github-token:
+    description: GitHub App installation token with org Projects read/write and Issues read on the work-order repository.
+    required: true
+  work-order-project-owner:
+    description: Organization login that owns the work-order (Product) project.
+    required: true
+  work-order-project-number:
+    description: Work-order project number from the project URL.
+    required: true
+  work-order-status:
+    description: Status option on the work-order board that triggers the handoff.
+    required: false
+    default: In Progress
+  harness-project-owner:
+    description: Organization login that owns the harness (Development) project.
+    required: true
+  harness-project-number:
+    description: Harness project number from the project URL.
+    required: true
+  harness-status:
+    description: Initial status option set when an issue is added to the harness board.
+    required: false
+    default: Todo
+  status-field-name:
+    description: Name of the single-select status field on both boards.
+    required: false
+    default: Status
+  repository:
+    description: Optional repository (owner/repo) filter; when set, only issues in this repository are handed off.
+    required: false
+    default: ""
+  max-items:
+    description: Maximum number of work orders acted on per scan.
+    required: false
+    default: "10"
+  dry-run:
+    description: Log intended changes without performing any mutation.
+    required: false
+    default: "false"
+
+outputs:
+  added-issue-urls:
+    description: Newline-separated URLs of issues added to the harness board by this run.
+    value: ${{ steps.handoff.outputs.added_issue_urls }}
+  added-count:
+    description: Number of issues added to the harness board by this run.
+    value: ${{ steps.handoff.outputs.added_count }}
+  repaired-count:
+    description: Number of issues healed (given their missing initial status on the harness board).
+    value: ${{ steps.handoff.outputs.repaired_count }}
+  errors:
+    description: Newline-separated per-work-order error summaries (empty on a clean run).
+    value: ${{ steps.handoff.outputs.errors }}
+
+runs:
+  using: composite
+  steps:
+    - name: Hand off work orders
+      id: handoff
+      uses: actions/github-script@v8
+      env:
+        WORK_ORDER_PROJECT_OWNER: ${{ inputs.work-order-project-owner }}
+        WORK_ORDER_PROJECT_NUMBER: ${{ inputs.work-order-project-number }}
+        WORK_ORDER_STATUS: ${{ inputs.work-order-status }}
+        HARNESS_PROJECT_OWNER: ${{ inputs.harness-project-owner }}
+        HARNESS_PROJECT_NUMBER: ${{ inputs.harness-project-number }}
+        HARNESS_STATUS: ${{ inputs.harness-status }}
+        STATUS_FIELD_NAME: ${{ inputs.status-field-name }}
+        REPOSITORY: ${{ inputs.repository }}
+        MAX_ITEMS: ${{ inputs.max-items }}
+        DRY_RUN: ${{ inputs.dry-run }}
+      with:
+        github-token: ${{ inputs.github-token }}
+        script: |
+          const workOrderProjectOwner = process.env.WORK_ORDER_PROJECT_OWNER;
+          const workOrderProjectNumber = Number(process.env.WORK_ORDER_PROJECT_NUMBER);
+          const workOrderStatus = process.env.WORK_ORDER_STATUS || 'In Progress';
+          const harnessProjectOwner = process.env.HARNESS_PROJECT_OWNER;
+          const harnessProjectNumber = Number(process.env.HARNESS_PROJECT_NUMBER);
+          const harnessStatus = process.env.HARNESS_STATUS || 'Todo';
+          const statusFieldName = process.env.STATUS_FIELD_NAME || 'Status';
+          const repositoryFilter = (process.env.REPOSITORY || '').toLowerCase();
+          const maxItems = Number(process.env.MAX_ITEMS || '10');
+          const dryRun = (process.env.DRY_RUN || 'false').toLowerCase() === 'true';
+
+          if (!Number.isInteger(workOrderProjectNumber) || !Number.isInteger(harnessProjectNumber)) {
+            core.setFailed('work-order-project-number and harness-project-number must be integers.');
+            return;
+          }
+
+          const resolveProject = async (owner, number) => {
+            const data = await github.graphql(
+              `
+                query($owner: String!, $number: Int!) {
+                  organization(login: $owner) {
+                    projectV2(number: $number) {
+                      id
+                      title
+                      fields(first: 50) {
+                        nodes {
+                          ... on ProjectV2SingleSelectField {
+                            id
+                            name
+                            options { id name }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `,
+              { owner, number }
+            );
+            const project = data.organization && data.organization.projectV2;
+            if (!project) {
+              throw new Error(`Project ${number} not found for organization "${owner}" (user-owned projects are not supported).`);
+            }
+            return project;
+          };
+
+          const harnessProject = await resolveProject(harnessProjectOwner, harnessProjectNumber);
+
+          const harnessStatusField = harnessProject.fields.nodes.find(
+            (field) => field && field.name === statusFieldName && Array.isArray(field.options)
+          );
+          if (!harnessStatusField) {
+            core.setFailed(`Single-select field "${statusFieldName}" not found on harness project ${harnessProjectNumber}.`);
+            return;
+          }
+          const harnessStatusOption = harnessStatusField.options.find((option) => option.name === harnessStatus);
+          if (!harnessStatusOption) {
+            const available = harnessStatusField.options.map((option) => option.name).join(', ');
+            core.setFailed(`Status option "${harnessStatus}" not found on harness project ${harnessProjectNumber}. Available: ${available}.`);
+            return;
+          }
+
+          const workOrders = [];
+          let after = null;
+          while (true) {
+            const page = await github.graphql(
+              `
+                query($owner: String!, $number: Int!, $statusField: String!, $after: String) {
+                  organization(login: $owner) {
+                    projectV2(number: $number) {
+                      items(first: 50, after: $after) {
+                        pageInfo { hasNextPage endCursor }
+                        nodes {
+                          fieldValueByName(name: $statusField) {
+                            ... on ProjectV2ItemFieldSingleSelectValue { name }
+                          }
+                          content {
+                            ... on Issue {
+                              id
+                              number
+                              url
+                              state
+                              repository { nameWithOwner }
+                              projectItems(first: 50, includeArchived: true) {
+                                nodes {
+                                  id
+                                  project { id }
+                                  fieldValueByName(name: $statusField) {
+                                    ... on ProjectV2ItemFieldSingleSelectValue { name }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              `,
+              {
+                owner: workOrderProjectOwner,
+                number: workOrderProjectNumber,
+                statusField: statusFieldName,
+                after,
+              }
+            );
+            const project = page.organization && page.organization.projectV2;
+            if (!project) {
+              core.setFailed(`Project ${workOrderProjectNumber} not found for organization "${workOrderProjectOwner}" (user-owned projects are not supported).`);
+              return;
+            }
+            for (const item of project.items.nodes) {
+              const status = item.fieldValueByName && item.fieldValueByName.name;
+              const issue = item.content;
+              if (status !== workOrderStatus || !issue || !issue.id || issue.state !== 'OPEN') continue;
+              if (repositoryFilter && issue.repository.nameWithOwner.toLowerCase() !== repositoryFilter) continue;
+              workOrders.push(issue);
+            }
+            if (!project.items.pageInfo.hasNextPage) break;
+            after = project.items.pageInfo.endCursor;
+          }
+          core.info(`Found ${workOrders.length} work order(s) in "${workOrderStatus}" on project ${workOrderProjectNumber}.`);
+
+          const addToHarnessBoard = async (issueId) => {
+            const data = await github.graphql(
+              `
+                mutation($projectId: ID!, $contentId: ID!) {
+                  addProjectV2ItemById(input: { projectId: $projectId, contentId: $contentId }) {
+                    item { id }
+                  }
+                }
+              `,
+              { projectId: harnessProject.id, contentId: issueId }
+            );
+            return data.addProjectV2ItemById.item.id;
+          };
+
+          const setHarnessStatus = async (itemId) => {
+            await github.graphql(
+              `
+                mutation($projectId: ID!, $itemId: ID!, $fieldId: ID!, $optionId: String!) {
+                  updateProjectV2ItemFieldValue(
+                    input: {
+                      projectId: $projectId
+                      itemId: $itemId
+                      fieldId: $fieldId
+                      value: { singleSelectOptionId: $optionId }
+                    }
+                  ) {
+                    projectV2Item { id }
+                  }
+                }
+              `,
+              {
+                projectId: harnessProject.id,
+                itemId,
+                fieldId: harnessStatusField.id,
+                optionId: harnessStatusOption.id,
+              }
+            );
+          };
+
+          const addedIssueUrls = [];
+          const errors = [];
+          let repairedCount = 0;
+          let actedOn = 0;
+
+          for (const workOrder of workOrders) {
+            if (actedOn >= maxItems) {
+              core.info(`Reached max-items (${maxItems}); remaining work orders are picked up by the next scan.`);
+              break;
+            }
+            try {
+              const harnessItem = workOrder.projectItems.nodes.find(
+                (node) => node.project && node.project.id === harnessProject.id
+              );
+
+              if (!harnessItem) {
+                if (dryRun) {
+                  core.info(`[dry-run] Would add ${workOrder.url} to project ${harnessProjectNumber} with status "${harnessStatus}".`);
+                } else {
+                  const itemId = await addToHarnessBoard(workOrder.id);
+                  await setHarnessStatus(itemId);
+                  core.info(`Added ${workOrder.url} to the harness board with status "${harnessStatus}".`);
+                  addedIssueUrls.push(workOrder.url);
+                }
+                actedOn += 1;
+                continue;
+              }
+
+              // Already on the harness board: only heal a missing status — never
+              // overwrite one the orchestrator may have moved since.
+              if (!(harnessItem.fieldValueByName && harnessItem.fieldValueByName.name)) {
+                if (dryRun) {
+                  core.info(`[dry-run] Would set status "${harnessStatus}" on ${workOrder.url}.`);
+                } else {
+                  await setHarnessStatus(harnessItem.id);
+                  core.info(`Repaired ${workOrder.url}: set missing status "${harnessStatus}".`);
+                }
+                repairedCount += 1;
+                actedOn += 1;
+              }
+            } catch (error) {
+              const message = `${workOrder.url}: ${error.message}`;
+              core.warning(message);
+              errors.push(message);
+            }
+          }
+
+          core.setOutput('added_issue_urls', addedIssueUrls.join('\n'));
+          core.setOutput('added_count', String(addedIssueUrls.length));
+          core.setOutput('repaired_count', String(repairedCount));
+          core.setOutput('errors', errors.join('\n'));
+          if (errors.length > 0) {
+            core.setFailed(`Handoff failed for ${errors.length} work order(s):\n${errors.join('\n')}`);
+          }
