@@ -11,8 +11,8 @@
     "@actions/core": "^3.0.1"
   },
   "devDependencies": {
-    "@types/node": "^26.6.5",
-    "commander": "^15.0.0",
+    "@types/node": "^26.6.6",
+    "commander": "^15.1.0",
     "esbuild": "^0.28.2",
     "tmp": "^0.2.7",
     "typescript": "^7.0.2"
